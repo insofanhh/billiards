@@ -5,7 +5,7 @@ import { tablesApi } from '../api/tables';
 import { useAuthStore } from '../store/authStore';
 import type { Table } from '../types';
 import { ordersApi } from '../api/orders';
-import echo from '../echo';
+import { echo } from '../echo';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -16,23 +16,6 @@ export function HomePage() {
     queryKey: ['tables'],
     queryFn: tablesApi.getAll,
   });
-
-  useEffect(() => {
-    const channel = echo.channel('tables');
-    
-    channel.listen('.table.status.changed', () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-    });
-
-    echo.channel('orders').listen('.order.updated', () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-    });
-
-    return () => {
-      echo.leave('tables');
-      echo.leave('orders');
-    };
-  }, [queryClient]);
 
   const approveMutation = useMutation({
     mutationFn: (orderId: number) => ordersApi.approve(orderId),
@@ -61,6 +44,46 @@ export function HomePage() {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
     },
   });
+
+  useEffect(() => {
+    if (!user) return;
+
+    const ordersChannel = echo.channel('orders');
+    const staffChannel = echo.private('staff');
+
+    const handleOrderRequested = () => {
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+    };
+
+    const handleOrderEndRequested = () => {
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+    };
+
+    const handleTransactionCreated = () => {
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+      queryClient.invalidateQueries({ queryKey: ['order'] });
+    };
+
+    ordersChannel.listen('.order.requested', handleOrderRequested);
+    staffChannel.listen('.order.requested', handleOrderRequested);
+
+    ordersChannel.listen('.order.end.requested', handleOrderEndRequested);
+    staffChannel.listen('.order.end.requested', handleOrderEndRequested);
+
+    ordersChannel.listen('.transaction.created', handleTransactionCreated);
+    staffChannel.listen('.transaction.created', handleTransactionCreated);
+
+    return () => {
+      ordersChannel.stopListening('.order.requested');
+      ordersChannel.stopListening('.order.end.requested');
+      ordersChannel.stopListening('.transaction.created');
+      staffChannel.stopListening('.order.requested');
+      staffChannel.stopListening('.order.end.requested');
+      staffChannel.stopListening('.transaction.created');
+      echo.leave('orders');
+      echo.leave('staff');
+    };
+  }, [user, queryClient]);
 
   const handleTableClick = (code: string) => {
     navigate(`/table/${code}`);

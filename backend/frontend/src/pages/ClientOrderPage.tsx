@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
-import type { Service, Order } from '../types';
-import echo from '../echo';
+import type { Service } from '../types';
+import { echo } from '../echo';
 
 export function ClientOrderPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,24 +18,6 @@ export function ClientOrderPage() {
     queryFn: () => ordersApi.getById(Number(id)),
     enabled: !!id,
   });
-
-  useEffect(() => {
-    if (!id) return;
-
-    const channel = echo.channel(`order.${id}`);
-    
-    channel
-      .listen('.order.updated', (data: { data: Order }) => {
-        queryClient.setQueryData(['client-order', id], data.data || data);
-      })
-      .listen('.transaction.updated', () => {
-        queryClient.invalidateQueries({ queryKey: ['client-order', id] });
-      });
-
-    return () => {
-      echo.leave(`order.${id}`);
-    };
-  }, [id, queryClient]);
 
   const { data: services } = useQuery({
     queryKey: ['services'],
@@ -64,6 +46,91 @@ export function ClientOrderPage() {
 
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
   const hasPendingTransaction = order?.transactions?.some((t: any) => t.status === 'pending') ?? false;
+
+  useEffect(() => {
+    if (!id || !order) return;
+
+    const userId = order.user_id;
+    if (!userId) return;
+
+    const userChannel = echo.private(`user.${userId}`);
+    const ordersChannel = echo.channel('orders');
+
+    const handleOrderApproved = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['client-order', id] });
+      }
+    };
+
+    userChannel.listen('.order.approved', handleOrderApproved);
+    ordersChannel.listen('.order.approved', handleOrderApproved);
+
+    const handleOrderRejected = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['client-order', id] });
+      }
+    };
+
+    const handleOrderEndApproved = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['client-order', id] });
+      }
+    };
+
+    const handleOrderEndRejected = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['client-order', id] });
+      }
+    };
+
+    userChannel.listen('.order.rejected', handleOrderRejected);
+    ordersChannel.listen('.order.rejected', handleOrderRejected);
+
+    userChannel.listen('.order.end.approved', handleOrderEndApproved);
+    ordersChannel.listen('.order.end.approved', handleOrderEndApproved);
+
+    userChannel.listen('.order.end.rejected', handleOrderEndRejected);
+    ordersChannel.listen('.order.end.rejected', handleOrderEndRejected);
+
+    const handleTransactionConfirmed = (data: any) => {
+      if (data.transaction?.order_id === Number(id)) {
+        setShowPayment(false);
+        queryClient.invalidateQueries({ queryKey: ['client-order', id] });
+        queryClient.refetchQueries({ queryKey: ['client-order', id] });
+        setTimeout(() => {
+          const bill = document.getElementById('client-bill');
+          if (bill) {
+            bill.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            setTimeout(() => {
+              const billRetry = document.getElementById('client-bill');
+              if (billRetry) {
+                billRetry.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }, 500);
+          }
+        }, 300);
+      }
+    };
+
+    userChannel.listen('.transaction.confirmed', handleTransactionConfirmed);
+    ordersChannel.listen('.transaction.confirmed', handleTransactionConfirmed);
+
+    return () => {
+      userChannel.stopListening('.order.approved');
+      userChannel.stopListening('.order.rejected');
+      userChannel.stopListening('.order.end.approved');
+      userChannel.stopListening('.order.end.rejected');
+      userChannel.stopListening('.transaction.confirmed');
+      ordersChannel.stopListening('.order.approved');
+      ordersChannel.stopListening('.order.rejected');
+      ordersChannel.stopListening('.order.end.approved');
+      ordersChannel.stopListening('.order.end.rejected');
+      ordersChannel.stopListening('.transaction.confirmed');
+      echo.leave(`user.${userId}`);
+      echo.leave('orders');
+    };
+  }, [id, order, queryClient]);
 
   useEffect(() => {
     if (hasSuccessfulTransaction) {

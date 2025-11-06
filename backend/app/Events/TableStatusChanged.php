@@ -2,37 +2,35 @@
 
 namespace App\Events;
 
-use App\Http\Resources\TableResource;
-use App\Models\TableBilliard;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TableStatusChanged implements ShouldBroadcast
+class TableStatusChanged
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(
-        public TableBilliard $table
-    ) {}
+    /**
+     * Create a new event instance.
+     */
+    public function __construct()
+    {
+        //
+    }
 
+    /**
+     * Get the channels the event should broadcast on.
+     *
+     * @return array<int, \Illuminate\Broadcasting\Channel>
+     */
     public function broadcastOn(): array
     {
         return [
-            new Channel('tables'),
-            new Channel("table.{$this->table->id}"),
+            new PrivateChannel('channel-name'),
         ];
-    }
-
-    public function broadcastWith(): array
-    {
-        return (new TableResource($this->table->load(['status', 'tableType'])))->toArray(request());
-    }
-
-    public function broadcastAs(): string
-    {
-        return 'table.status.changed';
     }
 }

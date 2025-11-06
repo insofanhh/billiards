@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\OrderUpdated;
-use App\Events\TableStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TableResource;
 use App\Models\TableBilliard;
 use App\Models\User;
 use App\Models\Order;
+use App\Events\OrderRequested;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -84,11 +83,9 @@ class TableController extends Controller
             'status' => 'pending',
         ]);
 
-        $table->refresh()->load(['status', 'tableType']);
-        broadcast(new TableStatusChanged($table));
+        $order->load(['table', 'user']);
 
-        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
+        event(new OrderRequested($order));
 
         return response()->json([
             'user' => [
