@@ -3,9 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
-import { discountCodesApi } from '../api/discountCodes';
-import type { Order, Service, DiscountCode } from '../types';
-import echo from '../echo';
+import type { Service } from '../types';
+import { echo } from '../echo';
 
 export function OrderPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,8 +12,6 @@ export function OrderPage() {
   const queryClient = useQueryClient();
   const [showAddService, setShowAddService] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [discountCode, setDiscountCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
@@ -26,24 +23,6 @@ export function OrderPage() {
     queryKey: ['services'],
     queryFn: servicesApi.getAll,
   });
-
-  useEffect(() => {
-    if (!id) return;
-
-    const channel = echo.channel(`order.${id}`);
-    
-    channel
-      .listen('.order.updated', (data: { data: Order }) => {
-        queryClient.setQueryData(['order', id], data.data || data);
-      })
-      .listen('.transaction.updated', () => {
-        queryClient.invalidateQueries({ queryKey: ['order', id] });
-      });
-
-    return () => {
-      echo.leave(`order.${id}`);
-    };
-  }, [id, queryClient]);
 
   const approveEndMutation = useMutation({
     mutationFn: () => ordersApi.approveEnd(Number(id!)),
@@ -86,13 +65,6 @@ export function OrderPage() {
     },
   });
 
-  const checkDiscountMutation = useMutation({
-    mutationFn: discountCodesApi.check,
-    onSuccess: (data) => {
-      setAppliedDiscount(data);
-    },
-  });
-
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
       ordersApi.createTransaction(Number(id!), data),
@@ -118,6 +90,52 @@ export function OrderPage() {
       }, 1000);
     },
   });
+
+  useEffect(() => {
+    if (!id) return;
+
+    const ordersChannel = echo.channel('orders');
+    const staffChannel = echo.private('staff');
+
+    const handleOrderEndRequested = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.refetchQueries({ queryKey: ['order', id] });
+      }
+    };
+
+    const handleTransactionCreated = (data: any) => {
+      if (data.transaction?.order_id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.refetchQueries({ queryKey: ['order', id] });
+      }
+    };
+
+    const handleTransactionConfirmed = (data: any) => {
+      if (data.transaction?.order_id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.refetchQueries({ queryKey: ['order', id] });
+      }
+    };
+
+    ordersChannel.listen('.order.end.requested', handleOrderEndRequested);
+    staffChannel.listen('.order.end.requested', handleOrderEndRequested);
+    ordersChannel.listen('.transaction.created', handleTransactionCreated);
+    staffChannel.listen('.transaction.created', handleTransactionCreated);
+    ordersChannel.listen('.transaction.confirmed', handleTransactionConfirmed);
+    staffChannel.listen('.transaction.confirmed', handleTransactionConfirmed);
+
+    return () => {
+      ordersChannel.stopListening('.order.end.requested');
+      ordersChannel.stopListening('.transaction.created');
+      ordersChannel.stopListening('.transaction.confirmed');
+      staffChannel.stopListening('.order.end.requested');
+      staffChannel.stopListening('.transaction.created');
+      staffChannel.stopListening('.transaction.confirmed');
+      echo.leave('orders');
+      echo.leave('staff');
+    };
+  }, [id, queryClient]);
 
   if (isLoading) {
     return (

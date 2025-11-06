@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\Transaction;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class TransactionConfirmed implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public Transaction $transaction
+    ) {}
+
+    public function broadcastOn(): array
+    {
+        $order = $this->transaction->order;
+        return [
+            new PrivateChannel('user.' . $order->user_id),
+            new Channel('orders'),
+        ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'transaction.confirmed';
+    }
+
+    public function broadcastWith(): array
+    {
+        $order = $this->transaction->order;
+        return [
+            'transaction' => [
+                'id' => $this->transaction->id,
+                'order_id' => $this->transaction->order_id,
+                'status' => $this->transaction->status,
+                'method' => $this->transaction->method,
+                'amount' => $this->transaction->amount,
+            ],
+            'order' => [
+                'id' => $order->id,
+                'status' => $order->status,
+                'total_paid' => $order->total_paid,
+            ],
+        ];
+    }
+}
+

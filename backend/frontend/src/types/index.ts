@@ -56,6 +56,7 @@ export interface Service {
 export interface Order {
   id: number;
   order_code: string;
+  user_id?: number;
   table: {
     id: number;
     code: string;

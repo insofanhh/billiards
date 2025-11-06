@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\OrderUpdated;
-use App\Events\TableStatusChanged;
-use App\Events\TransactionUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
@@ -12,6 +9,13 @@ use App\Models\OrderItem;
 use App\Models\Service;
 use App\Models\TableBilliard;
 use App\Models\Transaction;
+use App\Events\OrderApproved;
+use App\Events\OrderRejected;
+use App\Events\OrderEndRequested;
+use App\Events\OrderEndApproved;
+use App\Events\OrderEndRejected;
+use App\Events\TransactionCreated;
+use App\Events\TransactionConfirmed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -56,11 +60,7 @@ class OrderController extends Controller
 
         $table->update(['status_id' => 2]);
 
-        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
-        broadcast(new TableStatusChanged($table));
-
-        return new OrderResource($order);
+        return new OrderResource($order->load(['table', 'priceRate']));
     }
 
     public function show(Request $request, $id)
@@ -104,9 +104,6 @@ class OrderController extends Controller
             'total_price' => $service->price * $request->qty,
         ]);
 
-        $order->refresh()->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
-
         return response()->json(['message' => 'Đã thêm dịch vụ thành công', 'item' => $orderItem], 201);
     }
 
@@ -131,9 +128,6 @@ class OrderController extends Controller
             'total_price' => $orderItem->unit_price * $request->qty,
         ]);
 
-        $order->refresh()->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
-
         return response()->json(['message' => 'Đã cập nhật số lượng dịch vụ', 'item' => $orderItem->load('service')]);
     }
 
@@ -151,9 +145,6 @@ class OrderController extends Controller
 
         $orderItem->delete();
 
-        $order->refresh()->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
-
         return response()->json(['message' => 'Đã xóa dịch vụ khỏi đơn hàng']);
     }
 
@@ -165,9 +156,9 @@ class OrderController extends Controller
             ->firstOrFail();
 
         $order->update(['status' => 'pending_end']);
+        $order->load(['table', 'user']);
 
-        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
+        event(new OrderEndRequested($order));
 
         return response()->json(['message' => 'Yêu cầu kết thúc giờ chơi đã được gửi'], 200);
     }
@@ -219,9 +210,8 @@ class OrderController extends Controller
 
         $order->table->update(['status_id' => 1]);
 
-        $order->load(['table', 'priceRate', 'items.service', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
-        broadcast(new TableStatusChanged($order->table));
+        $order->load(['table', 'priceRate', 'items.service', 'appliedDiscount', 'user']);
+        event(new OrderEndApproved($order));
 
         return new OrderResource($order);
     }
@@ -233,9 +223,9 @@ class OrderController extends Controller
             ->firstOrFail();
 
         $order->update(['status' => 'active']);
+        $order->load(['user']);
 
-        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
+        event(new OrderEndRejected($order));
 
         return response()->json(['message' => 'Đã từ chối yêu cầu kết thúc giờ chơi'], 200);
     }
@@ -253,11 +243,10 @@ class OrderController extends Controller
 
         if ($order->table) {
             $order->table->update(['status_id' => 2]);
-            broadcast(new TableStatusChanged($order->table));
         }
 
-        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
+        $order->load(['table', 'priceRate', 'user']);
+        event(new OrderApproved($order));
 
         return new OrderResource($order);
     }
@@ -269,9 +258,9 @@ class OrderController extends Controller
             ->firstOrFail();
 
         $order->update(['status' => 'cancelled']);
+        $order->load(['user']);
 
-        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new OrderUpdated($order));
+        event(new OrderRejected($order));
 
         return response()->json(['message' => 'Đã hủy yêu cầu'], 200);
     }
@@ -305,9 +294,8 @@ class OrderController extends Controller
             $order->update(['total_paid' => $request->amount]);
         }
 
-        $order->refresh()->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new TransactionUpdated($transaction, $order));
-        broadcast(new OrderUpdated($order));
+        $transaction->load(['order.table', 'order.user']);
+        event(new TransactionCreated($transaction));
 
         return response()->json([
             'message' => $shouldPending ? 'Yêu cầu thanh toán đã được gửi, vui lòng chờ nhân viên xác nhận' : 'Thanh toán thành công',
@@ -335,9 +323,8 @@ class OrderController extends Controller
             $order->update(['total_paid' => $transaction->amount]);
         }
 
-        $order->refresh()->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
-        broadcast(new TransactionUpdated($transaction, $order));
-        broadcast(new OrderUpdated($order));
+        $transaction->load(['order.user']);
+        event(new TransactionConfirmed($transaction));
 
         return response()->json(['message' => 'Đã xác nhận thanh toán', 'transaction' => $transaction->fresh()], 200);
     }
