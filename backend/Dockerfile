@@ -9,6 +9,8 @@ RUN apk add --no-cache \
     unzip \
     oniguruma-dev \
     postgresql-dev \
+    icu-dev \
+    icu-libs \
     nodejs \
     npm
 
@@ -21,7 +23,8 @@ RUN docker-php-ext-install \
     pcntl \
     bcmath \
     gd \
-    zip
+    zip \
+    intl
 
 WORKDIR /var/www/html
 
@@ -44,7 +47,7 @@ RUN php artisan view:cache || true
 RUN chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-EXPOSE 8000
+EXPOSE ${PORT:-8000}
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
 
