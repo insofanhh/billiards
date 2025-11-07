@@ -13,11 +13,13 @@ class OrderItem extends Model
         'qty',
         'unit_price',
         'total_price',
+        'is_confirmed',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'is_confirmed' => 'boolean',
     ];
 
     public function order(): BelongsTo

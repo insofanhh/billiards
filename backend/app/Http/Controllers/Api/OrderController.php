@@ -14,6 +14,10 @@ use App\Events\OrderRejected;
 use App\Events\OrderEndRequested;
 use App\Events\OrderEndApproved;
 use App\Events\OrderEndRejected;
+use App\Events\OrderServiceAdded;
+use App\Events\OrderServiceUpdated;
+use App\Events\OrderServiceRemoved;
+use App\Events\OrderServiceConfirmed;
 use App\Events\TransactionCreated;
 use App\Events\TransactionConfirmed;
 use Illuminate\Http\Request;
@@ -102,7 +106,12 @@ class OrderController extends Controller
             'qty' => $request->qty,
             'unit_price' => $service->price,
             'total_price' => $service->price * $request->qty,
+            'is_confirmed' => false,
         ]);
+
+        $order->refresh();
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
+        event(new OrderServiceAdded($order));
 
         return response()->json(['message' => 'Đã thêm dịch vụ thành công', 'item' => $orderItem], 201);
     }
@@ -123,10 +132,18 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
+        if ($orderItem->is_confirmed) {
+            return response()->json(['message' => 'Không thể chỉnh sửa dịch vụ đã được xác nhận hoàn thành'], 400);
+        }
+
         $orderItem->update([
             'qty' => $request->qty,
             'total_price' => $orderItem->unit_price * $request->qty,
         ]);
+
+        $order->refresh();
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
+        event(new OrderServiceUpdated($order));
 
         return response()->json(['message' => 'Đã cập nhật số lượng dịch vụ', 'item' => $orderItem->load('service')]);
     }
@@ -143,9 +160,38 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
+        if ($orderItem->is_confirmed) {
+            return response()->json(['message' => 'Không thể xóa dịch vụ đã được xác nhận hoàn thành'], 400);
+        }
+
         $orderItem->delete();
 
+        $order->refresh();
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
+        event(new OrderServiceRemoved($order));
+
         return response()->json(['message' => 'Đã xóa dịch vụ khỏi đơn hàng']);
+    }
+
+    public function confirmServiceItem(Request $request, $id, $itemId)
+    {
+        if (!$this->isStaff($request)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $order = Order::where('id', $id)->firstOrFail();
+
+        $orderItem = OrderItem::where('id', $itemId)
+            ->where('order_id', $order->id)
+            ->firstOrFail();
+
+        $orderItem->update(['is_confirmed' => true]);
+
+        $order->refresh();
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
+        event(new OrderServiceConfirmed($order));
+
+        return response()->json(['message' => 'Đã xác nhận dịch vụ', 'item' => $orderItem->fresh()->load('service')]);
     }
 
     public function requestEnd(Request $request, $id)

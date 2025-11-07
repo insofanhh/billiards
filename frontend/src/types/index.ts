@@ -41,7 +41,7 @@ export interface Table {
     id: number;
     order_code: string;
     start_at?: string;
-  };
+  } | null;
 }
 
 export interface Service {
@@ -83,6 +83,8 @@ export interface Order {
     qty: number;
     unit_price: number;
     total_price: number;
+    is_confirmed?: boolean;
+    created_at?: string;
   }>;
   applied_discount?: {
     code: string;
