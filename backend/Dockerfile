@@ -44,7 +44,7 @@ RUN php artisan view:cache || true
 RUN chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-EXPOSE 8000
+EXPOSE ${PORT:-8000}
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
 

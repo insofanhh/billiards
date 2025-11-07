@@ -7,6 +7,10 @@ use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\DiscountCodeController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok', 'timestamp' => now()]);
+});
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
