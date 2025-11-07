@@ -166,7 +166,7 @@ php artisan reverb:start
 #### Terminal 4: Frontend Dev Server
 
 ```bash
-cd backend/frontend
+cd frontend
 npm run dev
 ```
 
@@ -192,11 +192,11 @@ php artisan view:cache
 ### Frontend
 
 ```bash
-cd backend/frontend
+cd frontend
 npm run build
 ```
 
-File build sẽ được tạo trong thư mục `backend/frontend/dist`.
+File build sẽ được tạo trong thư mục `frontend/dist`.
 
 ## Cấu trúc dự án
 
@@ -211,14 +211,14 @@ billiards/
 │   ├── config/             # Configuration files
 │   ├── database/           # Migrations, Seeders, Factories
 │   ├── routes/             # Route definitions
-│   ├── frontend/           # React Frontend
-│   │   ├── src/            # Source code
-│   │   │   ├── api/        # API clients
-│   │   │   ├── components/ # React components
-│   │   │   ├── pages/      # Page components
-│   │   │   └── store/      # State management
-│   │   └── public/         # Public assets
 │   └── public/             # Public assets (Laravel)
+├── frontend/               # React Frontend
+│   ├── src/                # Source code
+│   │   ├── api/            # API clients
+│   │   ├── components/     # React components
+│   │   ├── pages/          # Page components
+│   │   └── store/          # State management
+│   └── public/             # Public assets
 └── README.md
 ```
 

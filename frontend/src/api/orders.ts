@@ -65,6 +65,10 @@ export const ordersApi = {
     await apiClient.delete(`/orders/${id}/services/${itemId}`);
   },
 
+  confirmServiceItem: async (id: number, itemId: number): Promise<void> => {
+    await apiClient.patch(`/orders/${id}/services/${itemId}/confirm`);
+  },
+
   createTransaction: async (id: number, data: CreateTransactionRequest): Promise<void> => {
     await apiClient.post(`/orders/${id}/transactions`, data);
   },

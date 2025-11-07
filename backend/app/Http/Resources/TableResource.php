@@ -21,6 +21,11 @@ class TableResource extends JsonResource
             ->with('user')
             ->first();
 
+        $activeOrder = $this->orders()
+            ->where('status', 'active')
+            ->latest()
+            ->first();
+
         return [
             'id' => $this->id,
             'code' => $this->code,
@@ -52,6 +57,11 @@ class TableResource extends JsonResource
                 'id' => $pendingEnd->id,
                 'order_code' => $pendingEnd->order_code,
                 'user_name' => optional($pendingEnd->user)->name,
+            ] : null,
+            'active_order' => $activeOrder ? [
+                'id' => $activeOrder->id,
+                'order_code' => $activeOrder->order_code,
+                'start_at' => $activeOrder->start_at?->toIso8601String(),
             ] : null,
         ];
     }

@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/orders/{id}/reject-end', [OrderController::class, 'rejectEnd']);
     Route::post('/orders/{id}/services', [OrderController::class, 'addService']);
     Route::patch('/orders/{id}/services/{itemId}', [OrderController::class, 'updateService']);
+    Route::patch('/orders/{id}/services/{itemId}/confirm', [OrderController::class, 'confirmServiceItem']);
     Route::delete('/orders/{id}/services/{itemId}', [OrderController::class, 'removeService']);
     Route::post('/orders/{id}/transactions', [OrderController::class, 'createTransaction']);
     Route::patch('/orders/{id}/transactions/{txnId}/confirm', [OrderController::class, 'confirmTransaction']);

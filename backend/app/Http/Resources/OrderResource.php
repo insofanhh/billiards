@@ -29,19 +29,21 @@ class OrderResource extends JsonResource
             'total_before_discount' => $this->total_before_discount,
             'total_discount' => $this->total_discount,
             'total_paid' => $this->total_paid,
-            'items' => $this->items->map(function ($item) {
+            'items' => $this->items->sortBy('created_at')->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'service' => [
                         'id' => $item->service->id,
                         'name' => $item->service->name,
-                        'price' => $item->service->price,
+                        'price' => (float) $item->service->price,
                     ],
-                    'qty' => $item->qty,
-                    'unit_price' => $item->unit_price,
-                    'total_price' => $item->total_price,
+                    'qty' => (int) $item->qty,
+                    'unit_price' => (float) $item->unit_price,
+                    'total_price' => (float) $item->total_price,
+                    'is_confirmed' => $item->is_confirmed ?? false,
+                    'created_at' => $item->created_at?->toIso8601String(),
                 ];
-            }),
+            })->values(),
             'applied_discount' => $this->appliedDiscount ? [
                 'code' => $this->appliedDiscount->code,
                 'discount_type' => $this->appliedDiscount->discount_type,

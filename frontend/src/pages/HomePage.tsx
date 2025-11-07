@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { tablesApi } from '../api/tables';
 import { useAuthStore } from '../store/authStore';
 import type { Table } from '../types';
@@ -9,8 +9,11 @@ import { echo } from '../echo';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuthStore();
   const queryClient = useQueryClient();
+  const [tablesWithNotifications, setTablesWithNotifications] = useState<Set<number>>(new Set());
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   const { data: tables, isLoading } = useQuery({
     queryKey: ['tables'],
@@ -33,8 +36,9 @@ export function HomePage() {
 
   const approveEndMutation = useMutation({
     mutationFn: (orderId: number) => ordersApi.approveEnd(orderId),
-    onSuccess: () => {
+    onSuccess: (_data, orderId) => {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
+      navigate(`/order/${orderId}`);
     },
   });
 
@@ -44,6 +48,47 @@ export function HomePage() {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
     },
   });
+
+  useEffect(() => {
+    if (!user || !tables || tables.length === 0 || hasInitialized) return;
+
+    const checkOrderHasUnconfirmedItems = async (orderId: number, tableId: number) => {
+      try {
+        const order = await ordersApi.getById(orderId);
+        const hasUnconfirmed = order.items?.some((item: any) => !item.is_confirmed);
+        setTablesWithNotifications(prev => {
+          const newSet = new Set(prev);
+          if (hasUnconfirmed) {
+            newSet.add(tableId);
+          } else {
+            newSet.delete(tableId);
+          }
+          return newSet;
+        });
+      } catch (error) {
+        console.error('Error checking order:', error);
+      }
+    };
+
+    const initializeNotifications = async () => {
+      try {
+        const currentPath = location.pathname;
+        const tablesToCheck = tables.filter((table: Table) => table.active_order?.id);
+        
+        for (const table of tablesToCheck) {
+          const isViewingOrderDetail = currentPath === `/order/${table.active_order!.id}`;
+          if (!isViewingOrderDetail) {
+            await checkOrderHasUnconfirmedItems(table.active_order!.id, table.id);
+          }
+        }
+        setHasInitialized(true);
+      } catch (error) {
+        console.error('Error initializing notifications:', error);
+      }
+    };
+
+    initializeNotifications();
+  }, [user, tables, location.pathname]);
 
   useEffect(() => {
     if (!user) return;
@@ -64,6 +109,81 @@ export function HomePage() {
       queryClient.invalidateQueries({ queryKey: ['order'] });
     };
 
+    const checkOrderHasUnconfirmedItems = async (orderId: number, tableId: number) => {
+      try {
+        const order = await ordersApi.getById(orderId);
+        const hasUnconfirmed = order.items?.some((item: any) => !item.is_confirmed);
+        setTablesWithNotifications(prev => {
+          const newSet = new Set(prev);
+          if (hasUnconfirmed) {
+            newSet.add(tableId);
+          } else {
+            newSet.delete(tableId);
+          }
+          return newSet;
+        });
+      } catch (error) {
+        console.error('Error checking order:', error);
+      }
+    };
+
+    const handleOrderServiceAdded = (data: any) => {
+      const orderId = data.order?.id;
+      if (!orderId) return;
+
+      const currentPath = location.pathname;
+      const isViewingOrderDetail = currentPath === `/order/${orderId}`;
+      
+      if (isViewingOrderDetail) return;
+
+      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+      if (currentTables) {
+        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
+        if (table) {
+          setTablesWithNotifications(prev => new Set(prev).add(table.id));
+        }
+      }
+    };
+
+    const handleOrderServiceUpdated = (data: any) => {
+      const orderId = data.order?.id;
+      if (!orderId) return;
+
+      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+      if (currentTables) {
+        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
+        if (table) {
+          checkOrderHasUnconfirmedItems(orderId, table.id);
+        }
+      }
+    };
+
+    const handleOrderServiceRemoved = (data: any) => {
+      const orderId = data.order?.id;
+      if (!orderId) return;
+
+      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+      if (currentTables) {
+        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
+        if (table) {
+          checkOrderHasUnconfirmedItems(orderId, table.id);
+        }
+      }
+    };
+
+    const handleOrderServiceConfirmed = (data: any) => {
+      const orderId = data.order?.id;
+      if (!orderId) return;
+
+      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+      if (currentTables) {
+        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
+        if (table) {
+          checkOrderHasUnconfirmedItems(orderId, table.id);
+        }
+      }
+    };
+
     ordersChannel.listen('.order.requested', handleOrderRequested);
     staffChannel.listen('.order.requested', handleOrderRequested);
 
@@ -73,17 +193,34 @@ export function HomePage() {
     ordersChannel.listen('.transaction.created', handleTransactionCreated);
     staffChannel.listen('.transaction.created', handleTransactionCreated);
 
+    ordersChannel.listen('.order.service.added', handleOrderServiceAdded);
+    staffChannel.listen('.order.service.added', handleOrderServiceAdded);
+    ordersChannel.listen('.order.service.updated', handleOrderServiceUpdated);
+    staffChannel.listen('.order.service.updated', handleOrderServiceUpdated);
+    ordersChannel.listen('.order.service.removed', handleOrderServiceRemoved);
+    staffChannel.listen('.order.service.removed', handleOrderServiceRemoved);
+    ordersChannel.listen('.order.service.confirmed', handleOrderServiceConfirmed);
+    staffChannel.listen('.order.service.confirmed', handleOrderServiceConfirmed);
+
     return () => {
       ordersChannel.stopListening('.order.requested');
       ordersChannel.stopListening('.order.end.requested');
       ordersChannel.stopListening('.transaction.created');
+      ordersChannel.stopListening('.order.service.added');
+      ordersChannel.stopListening('.order.service.updated');
+      ordersChannel.stopListening('.order.service.removed');
+      ordersChannel.stopListening('.order.service.confirmed');
       staffChannel.stopListening('.order.requested');
       staffChannel.stopListening('.order.end.requested');
       staffChannel.stopListening('.transaction.created');
+      staffChannel.stopListening('.order.service.added');
+      staffChannel.stopListening('.order.service.updated');
+      staffChannel.stopListening('.order.service.removed');
+      staffChannel.stopListening('.order.service.confirmed');
       echo.leave('orders');
       echo.leave('staff');
     };
-  }, [user, queryClient]);
+  }, [user, queryClient, location.pathname]);
 
   const handleTableClick = (code: string) => {
     navigate(`/table/${code}`);
@@ -130,11 +267,17 @@ export function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {tables?.map((table: Table) => (
+              {tables?.map((table: Table) => {
+                const hasNotification = tablesWithNotifications.has(table.id);
+                const currentPath = location.pathname;
+                const isViewingOrderDetail = table.active_order?.id && currentPath === `/order/${table.active_order.id}`;
+                const showNotification = hasNotification && !isViewingOrderDetail && table.active_order;
+
+                return (
                 <div
                   key={table.id}
                   onClick={() => handleTableClick(table.code)}
-                  className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg cursor-pointer transition-shadow"
+                  className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg cursor-pointer transition-shadow relative"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold text-gray-900">{table.code}</h3>
@@ -147,6 +290,13 @@ export function HomePage() {
                   <p className="text-sm text-gray-500">Số ghế: {table.seats}</p>
                   {table.location && (
                     <p className="text-sm text-gray-500">Vị trí: {table.location}</p>
+                  )}
+                  {showNotification && (
+                    <div className="absolute bottom-2 right-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 animate-pulse">
+                        Có dịch vụ mới
+                      </span>
+                    </div>
                   )}
                   {table.pending_order?.id && !approveMutation.isPending && !rejectMutation.isPending && (
                     <div className="mt-4 flex justify-end space-x-2">
@@ -185,7 +335,8 @@ export function HomePage() {
                     </div>
                   )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

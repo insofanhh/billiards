@@ -5,11 +5,13 @@ import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
 import type { Service } from '../types';
 import { echo } from '../echo';
+import { useNotification } from '../contexts/NotificationContext';
 
 export function OrderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showNotification } = useNotification();
   const [showAddService, setShowAddService] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
 
@@ -65,6 +67,14 @@ export function OrderPage() {
     },
   });
 
+  const confirmServiceItemMutation = useMutation({
+    mutationFn: (itemId: number) =>
+      ordersApi.confirmServiceItem(Number(id!), itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+    },
+  });
+
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
       ordersApi.createTransaction(Number(id!), data),
@@ -72,7 +82,7 @@ export function OrderPage() {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       setShowPayment(false);
-      alert('Thanh toán thành công!');
+      showNotification('Thanh toán thành công!');
       setTimeout(() => {
         navigate('/');
       }, 1000);
@@ -84,7 +94,7 @@ export function OrderPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
-      alert('Xác nhận thanh toán thành công!');
+      showNotification('Xác nhận thanh toán thành công!');
       setTimeout(() => {
         navigate('/');
       }, 1000);
@@ -118,20 +128,53 @@ export function OrderPage() {
       }
     };
 
+    const handleOrderServiceAdded = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.refetchQueries({ queryKey: ['order', id] });
+      }
+    };
+
+    const handleOrderServiceUpdated = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.refetchQueries({ queryKey: ['order', id] });
+      }
+    };
+
+    const handleOrderServiceRemoved = (data: any) => {
+      if (data.order?.id === Number(id)) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.refetchQueries({ queryKey: ['order', id] });
+      }
+    };
+
     ordersChannel.listen('.order.end.requested', handleOrderEndRequested);
     staffChannel.listen('.order.end.requested', handleOrderEndRequested);
     ordersChannel.listen('.transaction.created', handleTransactionCreated);
     staffChannel.listen('.transaction.created', handleTransactionCreated);
     ordersChannel.listen('.transaction.confirmed', handleTransactionConfirmed);
     staffChannel.listen('.transaction.confirmed', handleTransactionConfirmed);
+    ordersChannel.listen('.order.service.added', handleOrderServiceAdded);
+    staffChannel.listen('.order.service.added', handleOrderServiceAdded);
+    ordersChannel.listen('.order.service.updated', handleOrderServiceUpdated);
+    staffChannel.listen('.order.service.updated', handleOrderServiceUpdated);
+    ordersChannel.listen('.order.service.removed', handleOrderServiceRemoved);
+    staffChannel.listen('.order.service.removed', handleOrderServiceRemoved);
 
     return () => {
       ordersChannel.stopListening('.order.end.requested');
       ordersChannel.stopListening('.transaction.created');
       ordersChannel.stopListening('.transaction.confirmed');
+      ordersChannel.stopListening('.order.service.added');
+      ordersChannel.stopListening('.order.service.updated');
+      ordersChannel.stopListening('.order.service.removed');
       staffChannel.stopListening('.order.end.requested');
       staffChannel.stopListening('.transaction.created');
       staffChannel.stopListening('.transaction.confirmed');
+      staffChannel.stopListening('.order.service.added');
+      staffChannel.stopListening('.order.service.updated');
+      staffChannel.stopListening('.order.service.removed');
       echo.leave('orders');
       echo.leave('staff');
     };
@@ -244,56 +287,120 @@ export function OrderPage() {
           {order.items && order.items.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-4">Dịch vụ đã gọi</h3>
-              <div className="space-y-2">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.service.name}</p>
-                      {isActive && (
-                        <div className="flex items-center space-x-2 mt-2">
-                          <button
-                            onClick={() => {
-                              if (item.qty > 1) {
-                                updateServiceMutation.mutate({ itemId: item.id, qty: item.qty - 1 });
-                              }
-                            }}
-                            disabled={item.qty <= 1 || updateServiceMutation.isPending}
-                            className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            −
-                          </button>
-                          <span className="text-sm font-medium w-8 text-center">{item.qty}</span>
-                          <button
-                            onClick={() => {
-                              updateServiceMutation.mutate({ itemId: item.id, qty: item.qty + 1 });
-                            }}
-                            disabled={updateServiceMutation.isPending}
-                            className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-                          >
-                            +
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Bạn có chắc muốn xóa dịch vụ này?')) {
-                                removeServiceMutation.mutate(item.id);
-                              }
-                            }}
-                            disabled={removeServiceMutation.isPending}
-                            className="ml-4 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                          >
-                            Xóa
-                          </button>
+              <div className="space-y-4">
+                {(() => {
+                  const sortedItems = [...order.items].sort((a, b) => {
+                    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    return timeA - timeB;
+                  });
+                  
+                  const batches: typeof order.items[] = [];
+                  let currentBatch: typeof order.items = [];
+                  let lastTime = 0;
+                  const BATCH_TIME_THRESHOLD = 10000;
+                  
+                  sortedItems.forEach((item) => {
+                    const itemTime = item.created_at ? new Date(item.created_at).getTime() : 0;
+                    
+                    if (currentBatch.length === 0 || (itemTime - lastTime) < BATCH_TIME_THRESHOLD) {
+                      currentBatch.push(item);
+                    } else {
+                      batches.push(currentBatch);
+                      currentBatch = [item];
+                    }
+                    lastTime = itemTime;
+                  });
+                  
+                  if (currentBatch.length > 0) {
+                    batches.push(currentBatch);
+                  }
+                  
+                  return batches.map((batch, batchIndex) => {
+                    const orderNumber = batchIndex + 1;
+                    const allConfirmed = batch.every(item => item.is_confirmed);
+                    
+                    const handleConfirmBatch = () => {
+                      const unconfirmedItems = batch.filter(item => !item.is_confirmed);
+                      unconfirmedItems.forEach(item => {
+                        confirmServiceItemMutation.mutate(item.id);
+                      });
+                    };
+                    
+                    return (
+                      <div key={batchIndex} className={`border rounded-lg ${allConfirmed ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'}`}>
+                        <div className={`flex items-center justify-between px-4 py-3 border-b ${allConfirmed ? 'bg-green-100 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className="flex items-center gap-3">
+                            {isActive && (
+                              <input
+                                type="checkbox"
+                                checked={allConfirmed}
+                                onChange={handleConfirmBatch}
+                                disabled={allConfirmed || confirmServiceItemMutation.isPending}
+                                className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                              />
+                            )}
+                            {allConfirmed && (
+                              <span className="text-green-600 font-semibold text-lg">✓</span>
+                            )}
+                            <h4 className="font-semibold text-gray-900">Order {orderNumber}</h4>
+                          </div>
                         </div>
-                      )}
-                      {!isActive && (
-                        <p className="text-sm text-gray-500 mt-1">Số lượng: {item.qty}</p>
-                      )}
-                    </div>
-                    <p className="font-semibold ml-4">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.total_price)}
-                    </p>
-                  </div>
-                ))}
+                        <div className="p-2 space-y-2">
+                          {batch.map((item) => (
+                            <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                              <div className="flex-1">
+                                <p className="font-medium">{item.service.name}</p>
+                                {isActive && (
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <button
+                                      onClick={() => {
+                                        if (item.qty > 1) {
+                                          updateServiceMutation.mutate({ itemId: item.id, qty: item.qty - 1 });
+                                        }
+                                      }}
+                                      disabled={item.is_confirmed || item.qty <= 1 || updateServiceMutation.isPending}
+                                      className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      −
+                                    </button>
+                                    <span className="text-sm font-medium">Số lượng: {item.qty}</span>
+                                    <button
+                                      onClick={() => {
+                                        updateServiceMutation.mutate({ itemId: item.id, qty: item.qty + 1 });
+                                      }}
+                                      disabled={item.is_confirmed || updateServiceMutation.isPending}
+                                      className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
+                                    >
+                                      +
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm('Bạn có chắc muốn xóa dịch vụ này?')) {
+                                          removeServiceMutation.mutate(item.id);
+                                        }
+                                      }}
+                                      disabled={item.is_confirmed || removeServiceMutation.isPending}
+                                      className="ml-4 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                    >
+                                      Xóa
+                                    </button>
+                                  </div>
+                                )}
+                                {!isActive && (
+                                  <p className="text-sm text-gray-500 mt-1">Số lượng: {item.qty}</p>
+                                )}
+                              </div>
+                              <p className="font-semibold ml-4">
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.total_price)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
