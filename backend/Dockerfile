@@ -18,7 +18,7 @@ RUN curl -sS https://getcomposer.org/installer \
 WORKDIR /var/www/html
 
 # 1) Cài vendor (KHÔNG chạy scripts để tránh cần file artisan)
-COPY composer.json composer.lock ./
+COPY composer.json ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts
 
 # 2) Copy toàn bộ mã nguồn (có file artisan)
