@@ -9,6 +9,8 @@ RUN apk add --no-cache \
     unzip \
     oniguruma-dev \
     postgresql-dev \
+    icu-dev \
+    icu-libs \
     nodejs \
     npm
 
@@ -21,7 +23,8 @@ RUN docker-php-ext-install \
     pcntl \
     bcmath \
     gd \
-    zip
+    zip \
+    intl
 
 WORKDIR /var/www/html
 
