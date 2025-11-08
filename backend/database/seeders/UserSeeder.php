@@ -38,12 +38,12 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $adminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
         $staffRole = Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
         $customerRole = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
 
-        if (!$admin->hasRole('admin')) {
-            $admin->assignRole('admin');
+        if (!$admin->hasRole('super_admin')) {
+            $admin->assignRole('super_admin');
         }
         if (!$staff->hasRole('staff')) {
             $staff->assignRole('staff');
