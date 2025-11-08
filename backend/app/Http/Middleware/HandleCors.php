@@ -11,21 +11,25 @@ class HandleCors
     public function handle(Request $request, Closure $next): Response
     {
         $origin = $request->headers->get('Origin');
+        $appUrl = env('APP_URL', 'http://localhost:8000');
         
-        $allowedOrigins = array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173'))));
+        $allowedOrigins = array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', ''))));
         
-        if (empty($allowedOrigins)) {
+        $isSameOrigin = $origin && parse_url($origin, PHP_URL_HOST) === parse_url($appUrl, PHP_URL_HOST);
+        
+        if (empty($allowedOrigins) && env('APP_ENV') !== 'production') {
             $allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
         }
         
-        $allowOrigin = $origin && in_array($origin, $allowedOrigins) ? $origin : null;
-        
-        if (!$allowOrigin) {
-            if (env('APP_ENV') === 'local') {
-                $allowOrigin = $origin ?: '*';
-            } else {
-                $allowOrigin = $allowedOrigins[0] ?? '*';
-            }
+        $allowOrigin = null;
+        if ($isSameOrigin) {
+            $allowOrigin = $origin;
+        } elseif ($origin && !empty($allowedOrigins) && in_array($origin, $allowedOrigins)) {
+            $allowOrigin = $origin;
+        } elseif (env('APP_ENV') === 'local') {
+            $allowOrigin = $origin ?: '*';
+        } elseif (!empty($allowedOrigins)) {
+            $allowOrigin = $allowedOrigins[0];
         }
 
         if ($request->isMethod('OPTIONS')) {
