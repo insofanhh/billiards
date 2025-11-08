@@ -96,6 +96,11 @@ if [ $COMPOSER_EXIT_CODE -ne 0 ]; then
 fi
 php artisan migrate --force
 php artisan optimize:clear
+
+echo "👉 Thiết lập Filament Shield..."
+php artisan permission:cache-reset 2>/dev/null || true
+php artisan shield:generate --all 2>/dev/null || echo "⚠️  Shield permissions đã được tạo hoặc có lỗi"
+
 php artisan config:cache
 php artisan route:cache
 

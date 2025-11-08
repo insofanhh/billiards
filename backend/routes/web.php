@@ -13,7 +13,6 @@ Route::fallback(function () {
     $path = request()->path();
     
     if (str_starts_with($path, 'api') || 
-        str_starts_with($path, 'admin') || 
         str_starts_with($path, 'broadcasting') ||
         str_starts_with($path, '_')) {
         abort(404);
