@@ -21,3 +21,7 @@ npm install
 npm run build
 
 echo "Deploy hoàn tất!"
+
+echo "Setting permissions..."
+sudo chown -R www-data:www-data /var/www/billiards/backend/storage /var/www/billiards/backend/bootstrap/cache
+sudo chmod -R 775 /var/www/billiards/backend/storage /var/www/billiards/backend/bootstrap/cache
