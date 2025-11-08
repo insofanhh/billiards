@@ -198,6 +198,285 @@ npm run build
 
 File build sẽ được tạo trong thư mục `frontend/dist`.
 
+## Deploy lên Production
+
+### ⚠️ Lưu ý quan trọng về Domain
+
+Trong production, bạn có 2 lựa chọn về domain:
+
+#### **Cách 1: Cùng domain (Khuyến nghị)**
+- Frontend và Backend cùng domain: `https://example.com`
+- Frontend được build và serve từ Laravel public directory
+- Backend API: `https://example.com/api`
+- **Ưu điểm**: Không cần cấu hình CORS phức tạp, dễ bảo mật hơn
+
+#### **Cách 2: Khác domain/Subdomain**
+- Frontend: `https://example.com`
+- Backend API: `https://api.example.com` hoặc `https://backend.example.com`
+- **Ưu điểm**: Tách biệt rõ ràng, dễ scale riêng biệt
+
+### Chuẩn bị Deploy
+
+#### 1. Cấu hình Backend (.env)
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Chỉnh sửa file `.env` với các giá trị production:
+
+```env
+APP_NAME="Hệ thống Quản lý Bida"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://example.com
+
+# Nếu frontend và backend cùng domain:
+CORS_ALLOWED_ORIGINS=https://example.com
+SANCTUM_STATEFUL_DOMAINS=example.com
+
+# Nếu frontend và backend khác domain:
+# CORS_ALLOWED_ORIGINS=https://example.com,https://www.example.com
+# SANCTUM_STATEFUL_DOMAINS=example.com,www.example.com
+
+# Database
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=billiards_prod
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_secure_password
+
+# Reverb WebSocket (nếu sử dụng)
+REVERB_APP_ID=your_app_id
+REVERB_APP_KEY=your_app_key
+REVERB_APP_SECRET=your_app_secret
+REVERB_HOST=example.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+
+# Mail (cấu hình SMTP thật)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=your_email@example.com
+MAIL_PASSWORD=your_email_password
+MAIL_FROM_ADDRESS=noreply@example.com
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+#### 2. Cấu hình Frontend (.env)
+
+Nếu deploy riêng biệt, tạo file `.env` trong thư mục `frontend`:
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+Chỉnh sửa file `.env`:
+
+```env
+# Nếu backend và frontend cùng domain:
+VITE_API_URL=/api
+
+# Nếu backend và frontend khác domain:
+# VITE_API_URL=https://api.example.com/api
+
+VITE_REVERB_APP_KEY=your_reverb_app_key
+VITE_REVERB_HOST=example.com
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
+```
+
+### Cách 1: Deploy cùng domain
+
+#### Bước 1: Build Frontend
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+#### Bước 2: Copy build files vào Backend
+
+```bash
+# Copy tất cả files từ frontend/dist vào backend/public
+# Giữ lại các file/folder Laravel cần thiết: index.php, .htaccess, etc.
+cp -r frontend/dist/* ../backend/public/
+# Hoặc trên Windows:
+# xcopy /E /I frontend\dist\* backend\public\
+```
+
+#### Bước 3: Cấu hình Laravel để serve frontend
+
+Tạo route fallback trong `backend/routes/web.php`:
+
+```php
+Route::get('/{any}', function () {
+    return file_get_contents(public_path('index.html'));
+})->where('any', '^(?!api|admin|broadcasting).*$');
+```
+
+#### Bước 4: Build và optimize Backend
+
+```bash
+cd backend
+composer install --optimize-autoloader --no-dev
+npm run build
+php artisan key:generate
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan storage:link
+```
+
+#### Bước 5: Cấu hình Web Server (Nginx/Apache)
+
+**Nginx example:**
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+    root /var/www/billiards/backend/public;
+    index index.php;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location /api {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+```
+
+### Cách 2: Deploy khác domain
+
+#### Backend (api.example.com)
+
+```bash
+cd backend
+composer install --optimize-autoloader --no-dev
+npm run build
+php artisan key:generate
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Cấu hình Nginx cho API:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name api.example.com;
+    root /var/www/billiards/backend/public;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+```
+
+#### Frontend (example.com)
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+Serve từ Nginx hoặc CDN (Vercel, Netlify, Cloudflare Pages):
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+    root /var/www/billiards/frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+### Các lệnh cần chạy sau khi deploy
+
+```bash
+# Set permissions
+chmod -R 775 storage bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache
+
+# Clear cache
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# Optimize
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Queue worker (chạy bằng supervisor hoặc systemd)
+php artisan queue:work --tries=3
+
+# Reverb WebSocket (chạy bằng supervisor)
+php artisan reverb:start --host=0.0.0.0 --port=8080
+```
+
+### Checklist trước khi deploy
+
+- [ ] `APP_ENV=production`
+- [ ] `APP_DEBUG=false`
+- [ ] Đã cấu hình database production
+- [ ] Đã cấu hình `CORS_ALLOWED_ORIGINS` đúng domain frontend
+- [ ] Đã cấu hình `SANCTUM_STATEFUL_DOMAINS` đúng domain frontend
+- [ ] Đã cấu hình `APP_URL` đúng domain backend
+- [ ] Đã cấu hình SSL/HTTPS
+- [ ] Đã cấu hình mail server
+- [ ] Đã generate `APP_KEY`
+- [ ] Đã chạy migrations
+- [ ] Đã build frontend với đúng `VITE_API_URL`
+- [ ] Đã cache config, route, view
+- [ ] Đã setup queue worker
+- [ ] Đã setup Reverb WebSocket (nếu dùng)
+- [ ] Đã test API endpoints
+- [ ] Đã test authentication flow
+
 ## Cấu trúc dự án
 
 ```
