@@ -17,24 +17,35 @@ php artisan migrate --force
 echo "👉 3. Đảm bảo Spatie Permission tables đã được tạo..."
 php artisan permission:cache-reset 2>/dev/null || true
 
-echo "👉 4. Tạo super_admin role nếu chưa có..."
-php artisan db:seed --class=Spatie\\Permission\\Database\\Seeders\\DatabaseSeeder 2>/dev/null || true
-
-echo "👉 5. Tạo permissions cho Filament Shield..."
-php artisan shield:generate --all 2>/dev/null || echo "⚠️  Shield generate đã chạy hoặc có lỗi"
-
-echo "👉 6. Liệt kê các user hiện có..."
-php artisan tinker --execute="
-\$users = App\Models\User::all(['id', 'name', 'email']);
-if (\$users->count() > 0) {
-    echo 'Users trong database:' . PHP_EOL;
-    foreach (\$users as \$user) {
-        echo '  - ID: ' . \$user->id . ', Email: ' . \$user->email . ', Name: ' . \$user->name . PHP_EOL;
+echo "👉 4. Tạo super_admin role và kiểm tra setup..."
+if [ -f "scripts/fix-admin-setup.php" ]; then
+    php scripts/fix-admin-setup.php
+else
+    echo "⚠️  Script fix-admin-setup.php không tồn tại, đang tạo role thủ công..."
+    php artisan tinker --execute="
+    use Spatie\Permission\Models\Role;
+    try {
+        \$role = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+        echo '✅ Role super_admin đã được tạo hoặc đã tồn tại' . PHP_EOL;
+    } catch (Exception \$e) {
+        echo '⚠️  Lỗi: ' . \$e->getMessage() . PHP_EOL;
     }
-} else {
-    echo 'Không có user nào trong database!' . PHP_EOL;
-}
-"
+    " 2>&1 | grep -E "(✅|⚠️|Role)" || true
+fi
+
+echo ""
+echo "👉 5. Clear cache..."
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+php artisan cache:clear
+php artisan permission:cache-reset
+
+echo ""
+echo "👉 6. Rebuild cache..."
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
 echo ""
 echo "👉 7. Hướng dẫn assign super_admin role:"
@@ -46,20 +57,6 @@ echo "   php artisan tinker"
 echo "   \$user = App\Models\User::where('email', 'your-email@example.com')->first();"
 echo "   \$user->assignRole('super_admin');"
 echo "   exit"
-
-echo ""
-echo "👉 8. Clear cache..."
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
-php artisan permission:cache-reset
-
-echo ""
-echo "👉 9. Rebuild cache..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
 
 echo ""
 echo "=== Hoàn tất ==="
