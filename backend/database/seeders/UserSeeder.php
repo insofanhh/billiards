@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -18,7 +17,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Admin',
                 'phone' => '0123456789',
-                'password' => Hash::make('password'),
+                'password' => 'password',
             ]
         );
 
@@ -27,7 +26,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Staff',
                 'phone' => '0123456790',
-                'password' => Hash::make('password'),
+                'password' => 'password',
             ]
         );
 
@@ -36,7 +35,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Customer',
                 'phone' => '0123456791',
-                'password' => Hash::make('password'),
+                'password' => 'password',
             ]
         );
 
@@ -64,7 +63,6 @@ class UserSeeder extends Seeder
             Artisan::call('shield:generate', [
                 '--all' => true,
                 '--panel' => 'admin',
-                '--force' => true,
                 '--no-interaction' => true,
             ]);
             $this->command->info('Permissions and roles generated successfully.');
