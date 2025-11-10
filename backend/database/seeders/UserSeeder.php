@@ -7,12 +7,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::updateOrCreate(
+        $admin = User::firstOrCreate(
             ['email' => 'admin@billiards.com'],
             [
                 'name' => 'Admin',
@@ -21,7 +22,7 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $staff = User::updateOrCreate(
+        $staff = User::firstOrCreate(
             ['email' => 'staff@billiards.com'],
             [
                 'name' => 'Staff',
@@ -30,7 +31,7 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $customer = User::updateOrCreate(
+        $customer = User::firstOrCreate(
             ['email' => 'customer@billiards.com'],
             [
                 'name' => 'Customer',
@@ -57,13 +58,27 @@ class UserSeeder extends Seeder
             $this->command->info('Customer account already exists.');
         }
 
-        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']);
-        $staffRole = Role::firstOrCreate(['name' => 'staff']);
-        $customerRole = Role::firstOrCreate(['name' => 'customer']);
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        Artisan::call('shield:generate', [
+            '--all' => true,
+            '--panel' => 'admin',
+        ]);
+        $this->command->info('Permissions and roles generated successfully.');
+
+        $superAdminRole = Role::firstOrCreate(
+            ['name' => 'super_admin', 'guard_name' => 'web']
+        );
+        $staffRole = Role::firstOrCreate(
+            ['name' => 'staff', 'guard_name' => 'web']
+        );
+        $customerRole = Role::firstOrCreate(
+            ['name' => 'customer', 'guard_name' => 'web']
+        );
 
         if (!$admin->hasRole('super_admin')) {
             $admin->assignRole($superAdminRole);
-            $this->command->info('Assigned Super Admin role to admin. Please write down "admin" to continue!');
+            $this->command->info('Assigned Super Admin role to admin.');
         } else {
             $this->command->info('Admin already has Super Admin role.');
         }
@@ -82,10 +97,7 @@ class UserSeeder extends Seeder
             $this->command->info('Customer already has Customer role.');
         }
 
-        Artisan::call('shield:generate', [
-            '--all' => true,
-            '--panel' => 'admin',
-        ]);
-        $this->command->info('Permissions and roles generated successfully.');
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $this->command->info('Permission cache cleared.');
     }
 }
