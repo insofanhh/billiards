@@ -60,11 +60,15 @@ class UserSeeder extends Seeder
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        Artisan::call('shield:generate', [
-            '--all' => true,
-            '--panel' => 'admin',
-        ]);
-        $this->command->info('Permissions and roles generated successfully.');
+        if (! app()->environment('production')) {
+            Artisan::call('shield:generate', [
+                '--all' => true,
+                '--panel' => 'admin',
+                '--force' => true,
+                '--no-interaction' => true,
+            ]);
+            $this->command->info('Permissions and roles generated successfully.');
+        }
 
         $superAdminRole = Role::firstOrCreate(
             ['name' => 'super_admin', 'guard_name' => 'web']
