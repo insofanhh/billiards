@@ -12,7 +12,7 @@ window.Pusher = Pusher;
 
 const REVERB_APP_KEY = import.meta.env.VITE_REVERB_APP_KEY || '';
 const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || 'billiardscms.io.vn';
-const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || '8080';
+const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || '443';
 const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'https';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://billiardscms.io.vn/api';

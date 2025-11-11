@@ -6,6 +6,12 @@ import { router } from './router';
 import { NotificationProvider } from './contexts/NotificationContext';
 import './index.css';
 import './echo';
+import { debugWebSocket } from './debug-websocket';
+
+// Debug WebSocket trong development
+if (import.meta.env.DEV) {
+  debugWebSocket();
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
