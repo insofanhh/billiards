@@ -21,6 +21,16 @@ class HandleCors
             $allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
         }
         
+        // Debug log cho production
+        if (env('APP_ENV') === 'production') {
+            \Log::info('CORS Debug', [
+                'origin' => $origin,
+                'allowedOrigins' => $allowedOrigins,
+                'isSameOrigin' => $isSameOrigin,
+                'appUrl' => $appUrl
+            ]);
+        }
+        
         $allowOrigin = null;
         if ($isSameOrigin) {
             $allowOrigin = $origin;
