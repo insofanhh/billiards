@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Log;
 
 class HandleCors
 {
@@ -23,7 +24,7 @@ class HandleCors
         
         // Debug log cho production
         if (env('APP_ENV') === 'production') {
-            \Log::info('CORS Debug', [
+            Log::info('CORS Debug', [
                 'origin' => $origin,
                 'allowedOrigins' => $allowedOrigins,
                 'isSameOrigin' => $isSameOrigin,
