@@ -11,12 +11,12 @@ declare global {
 window.Pusher = Pusher;
 
 const REVERB_APP_KEY = import.meta.env.VITE_REVERB_APP_KEY || '';
-const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || 'localhost';
+const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || 'billiardscms.io.vn';
 const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || '8080';
-const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'http';
+const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'https';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const LARAVEL_BASE_URL = API_BASE_URL.replace('/api', '') || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://billiardscms.io.vn/api';
+const LARAVEL_BASE_URL = API_BASE_URL.replace('/api', '') || 'https://billiardscms.io.vn';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token') || '';
@@ -39,6 +39,9 @@ export const echo = new Echo({
     headers: getAuthHeaders(),
   },
   cluster: '',
+  // Thêm cấu hình cho production
+  encrypted: REVERB_SCHEME === 'https',
+  disableStats: true,
 });
 
 export const updateEchoAuth = () => {
