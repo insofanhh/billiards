@@ -97,16 +97,38 @@ export function HomePage() {
     const staffChannel = echo.private('staff');
 
     const handleOrderRequested = () => {
+      console.log('Order requested event received');
       queryClient.invalidateQueries({ queryKey: ['tables'] });
+      queryClient.refetchQueries({ queryKey: ['tables'] });
+    };
+
+    const handleOrderApproved = () => {
+      console.log('Order approved event received');
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+      queryClient.refetchQueries({ queryKey: ['tables'] });
+    };
+
+    const handleOrderRejected = () => {
+      console.log('Order rejected event received');
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+      queryClient.refetchQueries({ queryKey: ['tables'] });
     };
 
     const handleOrderEndRequested = () => {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
+      queryClient.refetchQueries({ queryKey: ['tables'] });
+    };
+
+    const handleOrderEndApproved = () => {
+      console.log('Order end approved event received');
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+      queryClient.refetchQueries({ queryKey: ['tables'] });
     };
 
     const handleTransactionCreated = () => {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: ['order'] });
+      queryClient.refetchQueries({ queryKey: ['tables'] });
     };
 
     const checkOrderHasUnconfirmedItems = async (orderId: number, tableId: number) => {
@@ -187,8 +209,17 @@ export function HomePage() {
     ordersChannel.listen('.order.requested', handleOrderRequested);
     staffChannel.listen('.order.requested', handleOrderRequested);
 
+    ordersChannel.listen('.order.approved', handleOrderApproved);
+    staffChannel.listen('.order.approved', handleOrderApproved);
+
+    ordersChannel.listen('.order.rejected', handleOrderRejected);
+    staffChannel.listen('.order.rejected', handleOrderRejected);
+
     ordersChannel.listen('.order.end.requested', handleOrderEndRequested);
     staffChannel.listen('.order.end.requested', handleOrderEndRequested);
+
+    ordersChannel.listen('.order.end.approved', handleOrderEndApproved);
+    staffChannel.listen('.order.end.approved', handleOrderEndApproved);
 
     ordersChannel.listen('.transaction.created', handleTransactionCreated);
     staffChannel.listen('.transaction.created', handleTransactionCreated);
@@ -204,14 +235,20 @@ export function HomePage() {
 
     return () => {
       ordersChannel.stopListening('.order.requested');
+      ordersChannel.stopListening('.order.approved');
+      ordersChannel.stopListening('.order.rejected');
       ordersChannel.stopListening('.order.end.requested');
+      ordersChannel.stopListening('.order.end.approved');
       ordersChannel.stopListening('.transaction.created');
       ordersChannel.stopListening('.order.service.added');
       ordersChannel.stopListening('.order.service.updated');
       ordersChannel.stopListening('.order.service.removed');
       ordersChannel.stopListening('.order.service.confirmed');
       staffChannel.stopListening('.order.requested');
+      staffChannel.stopListening('.order.approved');
+      staffChannel.stopListening('.order.rejected');
       staffChannel.stopListening('.order.end.requested');
+      staffChannel.stopListening('.order.end.approved');
       staffChannel.stopListening('.transaction.created');
       staffChannel.stopListening('.order.service.added');
       staffChannel.stopListening('.order.service.updated');
