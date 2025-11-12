@@ -26,12 +26,15 @@ const getAuthHeaders = () => {
   };
 };
 
+const isProduction = import.meta.env.PROD || REVERB_SCHEME === 'https';
+
 export const echo = new Echo({
   broadcaster: 'reverb',
   key: REVERB_APP_KEY,
   wsHost: REVERB_HOST,
   wsPort: REVERB_PORT,
   wssPort: REVERB_PORT,
+  wsPath: isProduction ? '/app' : '',
   forceTLS: REVERB_SCHEME === 'https',
   enabledTransports: ['ws', 'wss'],
   authEndpoint: `${LARAVEL_BASE_URL}/broadcasting/auth`,
@@ -39,7 +42,6 @@ export const echo = new Echo({
     headers: getAuthHeaders(),
   },
   cluster: '',
-  // Thêm cấu hình cho production
   encrypted: REVERB_SCHEME === 'https',
   disableStats: true,
 });
