@@ -23,6 +23,7 @@ use App\Events\TransactionConfirmed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -379,12 +380,34 @@ class OrderController extends Controller
     {
         $user = $request->user();
         if (!$user) return false;
+        
+        $user->load('roles');
+        
         try {
-            if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['admin','staff'])) return true;
-        } catch (\Throwable $e) {}
+            if (method_exists($user, 'hasAnyRole')) {
+                if ($user->hasAnyRole(['admin', 'staff', 'super_admin'])) {
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('isStaff role check error', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+        }
+        
         try {
-            if (method_exists($user, 'hasPermissionTo') && ($user->hasPermissionTo('login') || $user->hasPermissionTo('Login'))) return true;
-        } catch (\Throwable $e) {}
+            if (method_exists($user, 'hasPermissionTo')) {
+                if ($user->hasPermissionTo('login') || $user->hasPermissionTo('Login')) {
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('isStaff permission check error', ['error' => $e->getMessage(), 'user_id' => $user->id]);
+        }
+        
+        $roles = $user->roles->pluck('name')->toArray();
+        if (in_array('staff', $roles) || in_array('admin', $roles) || in_array('super_admin', $roles)) {
+            return true;
+        }
+        
         return false;
     }
 }
