@@ -379,9 +379,18 @@ class OrderController extends Controller
     private function isStaff(Request $request): bool
     {
         $user = $request->user();
-        if (!$user) return false;
+        if (!$user) {
+            return false;
+        }
         
-        $user->load('roles');
+        if (!$user->relationLoaded('roles')) {
+            $user->load('roles');
+        }
+        
+        $roles = $user->roles->pluck('name')->toArray();
+        if (in_array('staff', $roles) || in_array('admin', $roles) || in_array('super_admin', $roles)) {
+            return true;
+        }
         
         try {
             if (method_exists($user, 'hasAnyRole')) {
@@ -390,22 +399,12 @@ class OrderController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning('isStaff role check error', ['error' => $e->getMessage(), 'user_id' => $user->id]);
-        }
-        
-        try {
-            if (method_exists($user, 'hasPermissionTo')) {
-                if ($user->hasPermissionTo('login') || $user->hasPermissionTo('Login')) {
-                    return true;
-                }
+            if (config('app.debug')) {
+                Log::warning('isStaff role check error', [
+                    'error' => $e->getMessage(),
+                    'user_id' => $user->id
+                ]);
             }
-        } catch (\Throwable $e) {
-            Log::warning('isStaff permission check error', ['error' => $e->getMessage(), 'user_id' => $user->id]);
-        }
-        
-        $roles = $user->roles->pluck('name')->toArray();
-        if (in_array('staff', $roles) || in_array('admin', $roles) || in_array('super_admin', $roles)) {
-            return true;
         }
         
         return false;
