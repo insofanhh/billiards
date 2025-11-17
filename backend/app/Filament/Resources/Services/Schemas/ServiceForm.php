@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Services\Schemas;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -22,6 +23,26 @@ class ServiceForm
                     ->label('Mô tả')
                     ->rows(3)
                     ->columnSpanFull(),
+                FileUpload::make('image')
+                    ->label('Ảnh')
+                    ->image()
+                    ->directory('services')
+                    ->visibility('public')
+                    ->columnSpanFull(),
+                Select::make('category_service_id')
+                    ->label('Danh mục')
+                    ->relationship('categoryService', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Tên danh mục')
+                            ->required(),
+                        TextInput::make('slug')
+                            ->label('Slug'),
+                        Textarea::make('description')
+                            ->label('Mô tả'),
+                    ]),
                 TextInput::make('price')
                     ->label('Giá')
                     ->required()

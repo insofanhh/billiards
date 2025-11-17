@@ -11,7 +11,9 @@ class ServiceController extends Controller
 {
     public function index()
     {
-        $services = Service::where('active', true)->get();
+        $services = Service::where('active', true)
+            ->with('categoryService')
+            ->get();
         return ServiceResource::collection($services);
     }
 }
