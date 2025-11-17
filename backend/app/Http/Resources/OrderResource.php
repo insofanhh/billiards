@@ -35,6 +35,7 @@ class OrderResource extends JsonResource
                     'service' => [
                         'id' => $item->service->id,
                         'name' => $item->service->name,
+                        'image' => $item->service->image ? asset('storage/' . $item->service->image) : null,
                         'price' => (float) $item->service->price,
                     ],
                     'qty' => (int) $item->qty,
