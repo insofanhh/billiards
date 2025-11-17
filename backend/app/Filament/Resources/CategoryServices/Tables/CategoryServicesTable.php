@@ -1,59 +1,38 @@
 <?php
 
-namespace App\Filament\Resources\Services\Tables;
+namespace App\Filament\Resources\CategoryServices\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
-class ServicesTable
+class CategoryServicesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                ImageColumn::make('image')
-                    ->label('Ảnh')
-                    ->circular()
-                    ->toggleable(),
                 TextColumn::make('name')
-                    ->label('Tên dịch vụ')
+                    ->label('Tên danh mục')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
-                TextColumn::make('categoryService.name')
-                    ->label('Danh mục')
-                    ->sortable()
-                    ->searchable(),
+                TextColumn::make('slug')
+                    ->label('Slug')
+                    ->searchable()
+                    ->toggleable(),
                 TextColumn::make('description')
                     ->label('Mô tả')
                     ->limit(50)
                     ->toggleable(),
-                TextColumn::make('price')
-                    ->label('Giá')
-                    ->money('VND', locale: 'vi')
+                TextColumn::make('sort_order')
+                    ->label('Thứ tự')
                     ->sortable()
                     ->alignEnd(),
-                TextColumn::make('charge_type')
-                    ->label('Loại tính phí')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'per_unit' => 'info',
-                        'one_time' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'per_unit' => 'Theo đơn vị',
-                        'one_time' => 'Một lần',
-                        default => $state,
-                    })
-                    ->sortable(),
                 IconColumn::make('active')
                     ->label('Trạng thái')
                     ->boolean()
@@ -61,6 +40,10 @@ class ServicesTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger')
+                    ->sortable(),
+                TextColumn::make('services_count')
+                    ->label('Số dịch vụ')
+                    ->counts('services')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
@@ -79,15 +62,6 @@ class ServicesTable
                     ->placeholder('Tất cả')
                     ->trueLabel('Đang hoạt động')
                     ->falseLabel('Đã tắt'),
-                SelectFilter::make('charge_type')
-                    ->label('Loại tính phí')
-                    ->options([
-                        'per_unit' => 'Theo đơn vị',
-                        'one_time' => 'Một lần',
-                    ]),
-                SelectFilter::make('category_service_id')
-                    ->label('Danh mục')
-                    ->relationship('categoryService', 'name'),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -97,6 +71,7 @@ class ServicesTable
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('name', 'asc');
+            ->defaultSort('sort_order', 'asc');
     }
 }
+

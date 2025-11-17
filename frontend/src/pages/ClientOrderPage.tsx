@@ -15,6 +15,7 @@ export function ClientOrderPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [selected, setSelected] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['client-order', id],
@@ -36,6 +37,47 @@ export function ClientOrderPage() {
   });
 
   const hasSelected = useMemo(() => Object.keys(selected).length > 0, [selected]);
+
+  const categories = useMemo(() => {
+    if (!services) return [];
+    const categoryMap = new Map<number, { id: number; name: string; slug?: string }>();
+    services.forEach((service) => {
+      if (service.category_service) {
+        const cat = service.category_service;
+        if (!categoryMap.has(cat.id)) {
+          categoryMap.set(cat.id, cat);
+        }
+      }
+    });
+    return Array.from(categoryMap.values());
+  }, [services]);
+
+  const servicesByCategory = useMemo(() => {
+    if (!services) return new Map<number, Service[]>();
+    const map = new Map<number, Service[]>();
+    services.forEach((service) => {
+      const catId = service.category_service?.id || 0;
+      if (!map.has(catId)) {
+        map.set(catId, []);
+      }
+      map.get(catId)!.push(service);
+    });
+    return map;
+  }, [services]);
+
+  const displayedServices = useMemo(() => {
+    if (!services) return [];
+    if (selectedCategory === null) {
+      return services;
+    }
+    return servicesByCategory.get(selectedCategory) || [];
+  }, [services, selectedCategory, servicesByCategory]);
+
+  useEffect(() => {
+    if (categories.length > 0 && selectedCategory === null) {
+      setSelectedCategory(categories[0].id);
+    }
+  }, [categories, selectedCategory]);
 
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
@@ -312,38 +354,67 @@ export function ClientOrderPage() {
                   {showAddService ? 'Ẩn danh sách dịch vụ' : 'Gọi thêm dịch vụ'}
                 </button>
 
-                {showAddService && services && (
+                {showAddService && services && categories.length > 0 && (
                   <div className="mt-4">
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {services.map((service: Service) => {
+                    <div className="flex gap-2 overflow-x-auto pb-2 mb-4 border-b">
+                      {categories.map((category) => (
+                        <button
+                          key={category.id}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className={`px-4 py-2 whitespace-nowrap rounded-t-md transition-colors ${
+                            selectedCategory === category.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                      {displayedServices.map((service: Service) => {
                         const qty = selected[service.id] || 0;
                         return (
-                          <div key={service.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                            <div>
-                              <p className="font-medium">{service.name}</p>
-                              <p className="text-sm text-gray-500">{service.description}</p>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <p className="font-semibold">
+                          <div key={service.id} className="bg-white rounded-lg shadow-sm p-3 flex flex-col">
+                            {service.image && (
+                              <img
+                                src={service.image}
+                                alt={service.name}
+                                className="w-full h-32 object-cover rounded mb-2"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium text-sm mb-1">{service.name}</p>
+                              {service.description && (
+                                <p className="text-xs text-gray-500 mb-2 line-clamp-2">{service.description}</p>
+                              )}
+                              <p className="font-semibold text-blue-600 mb-2">
                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.price)}
                               </p>
+                            </div>
+                            <div className="flex items-center justify-between mt-auto">
                               <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => setSelected((s) => {
-                                    const current = s[service.id] || 0;
-                                    const next = Math.max(0, current - 1);
-                                    const copy = { ...s };
-                                    if (next === 0) delete copy[service.id]; else copy[service.id] = next;
-                                    return copy;
-                                  })}
-                                  className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded"
-                                >
-                                  −
-                                </button>
-                                <span className="w-8 text-center font-medium">{qty}</span>
+                                {qty > 0 && (
+                                  <>
+                                    <button
+                                      onClick={() => setSelected((s) => {
+                                        const current = s[service.id] || 0;
+                                        const next = Math.max(0, current - 1);
+                                        const copy = { ...s };
+                                        if (next === 0) delete copy[service.id]; else copy[service.id] = next;
+                                        return copy;
+                                      })}
+                                      className="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-sm"
+                                    >
+                                      −
+                                    </button>
+                                    <span className="w-6 text-center text-sm font-medium">{qty}</span>
+                                  </>
+                                )}
                                 <button
                                   onClick={() => setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }))}
-                                  className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded"
+                                  className="w-7 h-7 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded text-lg font-bold"
                                 >
                                   +
                                 </button>

@@ -48,9 +48,15 @@ export interface Service {
   id: number;
   name: string;
   description?: string;
+  image?: string | null;
   price: number;
   charge_type: 'per_unit' | 'one_time';
   active: boolean;
+  category_service?: {
+    id: number;
+    name: string;
+    slug?: string;
+  } | null;
 }
 
 export interface Order {
