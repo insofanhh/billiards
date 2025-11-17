@@ -20,6 +20,7 @@ class ServicesTable
             ->columns([
                 ImageColumn::make('image')
                     ->label('Ảnh')
+                    ->disk('public')
                     ->circular()
                     ->toggleable(),
                 TextColumn::make('name')
