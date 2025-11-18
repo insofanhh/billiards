@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QRCodeCanvas } from 'qrcode.react';
 import { tablesApi } from '../api/tables';
 import { ordersApi } from '../api/orders';
 import { useAuthStore } from '../store/authStore';
@@ -9,6 +11,7 @@ export function TableDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, logout } = useAuthStore();
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const { data: table, isLoading } = useQuery({
     queryKey: ['table', code],
     queryFn: () => tablesApi.getByCode(code!),
@@ -61,6 +64,15 @@ export function TableDetailPage() {
     if (code) {
       createOrderMutation.mutate({ table_code: code });
     }
+  };
+
+  const handleDownloadQr = () => {
+    if (!table || !qrCanvasRef.current) return;
+    const url = qrCanvasRef.current.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${table.code}-qr.png`;
+    link.click();
   };
 
   if (isLoading) {
@@ -254,8 +266,27 @@ export function TableDetailPage() {
 
           {table.qr_code && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-500 mb-2">Mã QR</p>
-              <p className="text-xs text-gray-600 break-all">{table.qr_code}</p>
+              <p className="text-sm text-gray-500 mb-3">Mã QR của bàn:</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="bg-white border rounded-lg p-4 w-fit">
+                  <QRCodeCanvas
+                    ref={qrCanvasRef}
+                    value={table.qr_code}
+                    size={160}
+                    includeMargin
+                    level="H"
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-600 break-all mb-3">{table.qr_code}</p>
+                  <button
+                    onClick={handleDownloadQr}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+                  >
+                    Tải mã QR
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
