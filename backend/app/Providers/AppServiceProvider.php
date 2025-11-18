@@ -3,22 +3,31 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        $directories = [
+            'services',
+        ];
+
+        foreach ($directories as $directory) {
+            $path = storage_path('app/public/' . $directory);
+            if (!file_exists($path)) {
+                Storage::disk('public')->makeDirectory($directory);
+            }
+        }
+
+        if (env('APP_ENV') === 'production') {
+            URL::forceScheme('https');
+        }
     }
 }

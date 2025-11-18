@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class OrderResource extends JsonResource
 {
@@ -35,7 +36,7 @@ class OrderResource extends JsonResource
                     'service' => [
                         'id' => $item->service->id,
                         'name' => $item->service->name,
-                        'image' => $item->service->image ? asset('storage/' . $item->service->image) : null,
+                        'image' => $item->service->image ? Storage::disk('public')->url($item->service->image) : null,
                         'price' => (float) $item->service->price,
                     ],
                     'qty' => (int) $item->qty,
