@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->profile(\Filament\Auth\Pages\EditProfile::class)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -42,7 +43,8 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\StatsOverview::class,
                 \App\Filament\Widgets\OrdersChart::class,
                 \App\Filament\Widgets\RevenueChart::class,
-                AccountWidget::class,
+                
+                \App\Filament\Widgets\ServicesSoldToday::class,
             ])
             ->middleware([
                 EncryptCookies::class,

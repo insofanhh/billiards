@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\DiscountCode;
 use App\Models\Service;
+use App\Models\ServiceInventory;
 use App\Models\TableBilliard;
 use App\Models\Transaction;
 use App\Events\OrderApproved;
@@ -24,15 +26,29 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $orders = Order::where('user_id', $request->user()->id)
-            ->with(['table', 'priceRate', 'items.service', 'transactions'])
-            ->latest()
-            ->get();
+        $query = Order::with(['table', 'priceRate', 'items.service', 'transactions', 'user']);
+
+        if (!$this->isStaff($request)) {
+            $query->where('user_id', $request->user()->id);
+        }
+
+        if ($request->filled('status')) {
+            $status = (array) $request->input('status');
+            $query->whereIn('status', $status);
+        }
+
+        if ($request->filled('table_id')) {
+            $query->where('table_id', $request->input('table_id'));
+        }
+
+        $orders = $query->latest()->get();
         
         return OrderResource::collection($orders);
     }
@@ -71,7 +87,7 @@ class OrderController extends Controller
     public function show(Request $request, $id)
     {
         $query = Order::where('id', $id)
-            ->with(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
+            ->with(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount', 'user']);
 
         if (!$this->isStaff($request)) {
             $query->where('user_id', $request->user()->id);
@@ -101,14 +117,20 @@ class OrderController extends Controller
             return response()->json(['message' => 'Dịch vụ không còn hoạt động'], 400);
         }
 
-        $orderItem = OrderItem::create([
+        $qty = (int) $request->qty;
+
+        $orderItem = DB::transaction(function () use ($order, $service, $qty) {
+            $this->ensureInventoryAvailable($service, $qty);
+
+            return OrderItem::create([
             'order_id' => $order->id,
             'service_id' => $service->id,
-            'qty' => $request->qty,
+                'qty' => $qty,
             'unit_price' => $service->price,
-            'total_price' => $service->price * $request->qty,
+                'total_price' => $service->price * $qty,
             'is_confirmed' => false,
         ]);
+        });
 
         $order->refresh();
         $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
@@ -133,14 +155,20 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
-        if ($orderItem->is_confirmed) {
-            return response()->json(['message' => 'Không thể chỉnh sửa dịch vụ đã được xác nhận hoàn thành'], 400);
+        if ($orderItem->is_confirmed || $orderItem->stock_deducted) {
+            return response()->json(['message' => 'Không thể chỉnh sửa dịch vụ đã được xác nhận hoặc đã trừ kho'], 400);
         }
 
+        $qty = (int) $request->qty;
+
+        DB::transaction(function () use ($orderItem, $qty) {
+            $this->ensureInventoryAvailable($orderItem->service, $qty, $orderItem);
+
         $orderItem->update([
-            'qty' => $request->qty,
-            'total_price' => $orderItem->unit_price * $request->qty,
+                'qty' => $qty,
+                'total_price' => $orderItem->unit_price * $qty,
         ]);
+        });
 
         $order->refresh();
         $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
@@ -161,8 +189,8 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
-        if ($orderItem->is_confirmed) {
-            return response()->json(['message' => 'Không thể xóa dịch vụ đã được xác nhận hoàn thành'], 400);
+        if ($orderItem->is_confirmed || $orderItem->stock_deducted) {
+            return response()->json(['message' => 'Không thể xóa dịch vụ đã được xác nhận hoặc đã trừ kho'], 400);
         }
 
         $orderItem->delete();
@@ -186,7 +214,15 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
-        $orderItem->update(['is_confirmed' => true]);
+        DB::transaction(function () use ($orderItem) {
+            if (!$orderItem->stock_deducted) {
+                $this->deductInventoryForItem($orderItem);
+            }
+
+            if (!$orderItem->is_confirmed) {
+                $orderItem->update(['is_confirmed' => true]);
+            }
+        });
 
         $order->refresh();
         $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
@@ -263,6 +299,84 @@ class OrderController extends Controller
         return new OrderResource($order);
     }
 
+    public function applyDiscount(Request $request, $id)
+    {
+        $request->validate([
+            'code' => 'required|string',
+        ]);
+
+        $query = Order::where('id', $id)->whereIn('status', ['pending_end', 'completed']);
+        if (!$this->isStaff($request)) {
+            $query->where('user_id', $request->user()->id);
+        }
+
+        $order = $query->firstOrFail();
+        $totalBefore = (float) $order->total_before_discount;
+        if ($totalBefore <= 0) {
+            return response()->json(['message' => 'Đơn hàng chưa có tổng tiền để áp dụng mã giảm giá'], 422);
+        }
+
+        $code = Str::upper(trim($request->input('code')));
+        $discountCode = DiscountCode::whereRaw('LOWER(code) = ?', [Str::lower($code)])->first();
+        if (!$discountCode) {
+            return response()->json(['message' => 'Mã giảm giá không tồn tại'], 404);
+        }
+
+        if (!$discountCode->active) {
+            return response()->json(['message' => 'Mã giảm giá đã bị vô hiệu hóa'], 422);
+        }
+
+        $now = Carbon::now('Asia/Ho_Chi_Minh');
+        if ($discountCode->start_at && $now->lt($discountCode->start_at)) {
+            return response()->json(['message' => 'Mã giảm giá chưa bắt đầu'], 422);
+        }
+        if ($discountCode->end_at && $now->gt($discountCode->end_at)) {
+            return response()->json(['message' => 'Mã giảm giá đã hết hạn'], 422);
+        }
+        if ($discountCode->usage_limit && $discountCode->used_count >= $discountCode->usage_limit) {
+            return response()->json(['message' => 'Mã giảm giá đã đạt giới hạn sử dụng'], 422);
+        }
+
+        if ($discountCode->min_spend && $totalBefore < (float) $discountCode->min_spend) {
+            return response()->json(['message' => 'Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã'], 422);
+        }
+
+        $discountAmount = 0.0;
+        if ($discountCode->discount_type === 'percent') {
+            $discountAmount = $totalBefore * ($discountCode->discount_value / 100);
+        } elseif ($discountCode->discount_type === 'fixed') {
+            $discountAmount = (float) $discountCode->discount_value;
+        }
+
+        $discountAmount = min($discountAmount, $totalBefore);
+        $roundedDiscount = round($discountAmount);
+        $roundedTotalPaid = round(max(0, $totalBefore - $discountAmount));
+
+        DB::transaction(function () use ($order, $discountCode, $roundedDiscount, $roundedTotalPaid) {
+            if ($order->applied_discount_id && $order->applied_discount_id !== $discountCode->id) {
+                $previous = DiscountCode::find($order->applied_discount_id);
+                if ($previous && $previous->used_count > 0) {
+                    $previous->decrement('used_count');
+                }
+            }
+
+            if ($order->applied_discount_id !== $discountCode->id) {
+                $discountCode->increment('used_count');
+            }
+
+            $order->update([
+                'applied_discount_id' => $discountCode->id,
+                'total_discount' => $roundedDiscount,
+                'total_paid' => $roundedTotalPaid,
+            ]);
+        });
+
+        $order->refresh();
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount', 'user']);
+
+        return new OrderResource($order);
+    }
+
     public function rejectEnd(Request $request, $id)
     {
         $order = Order::where('id', $id)
@@ -325,21 +439,35 @@ class OrderController extends Controller
         }
         $order = $query->firstOrFail();
 
+        $method = $request->input('method');
+        $amount = (float) $request->input('amount');
+
         // Nếu khách tạo yêu cầu thanh toán tiền mặt/thẻ -> tạo giao dịch PENDING để nhân viên xác nhận.
-        $shouldPending = !$this->isStaff($request) && in_array($request->method, ['cash', 'card']);
+        $shouldPending = !$this->isStaff($request) && in_array($method, ['cash', 'card'], true);
+
+        if (OrderItem::where('order_id', $order->id)->where('is_confirmed', false)->exists()) {
+            return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
+        }
+
+        $transaction = DB::transaction(function () use ($request, $order, $shouldPending, $method, $amount) {
+            $this->deductInventoryForOrder($order);
 
         $transaction = Transaction::create([
             'order_id' => $order->id,
             'user_id' => $request->user()->id,
-            'amount' => $request->amount,
-            'method' => $request->method,
+                'amount' => $amount,
+                'method' => $method,
             'status' => $shouldPending ? 'pending' : 'success',
             'reference' => 'TXN-' . Str::upper(Str::random(10)),
         ]);
 
         if (!$shouldPending) {
-            $order->update(['total_paid' => $request->amount]);
+                $order->update(['total_paid' => $amount]);
+                $this->deductInventoryForOrder($order);
         }
+
+            return $transaction;
+        });
 
         $transaction->load(['order.table', 'order.user']);
         event(new TransactionCreated($transaction));
@@ -363,12 +491,19 @@ class OrderController extends Controller
             ->where('status', 'pending')
             ->firstOrFail();
 
+        if (OrderItem::where('order_id', $order->id)->where('is_confirmed', false)->exists()) {
+            return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
+        }
+
+        DB::transaction(function () use ($transaction, $order) {
+            $this->deductInventoryForOrder($order);
+
         $transaction->update(['status' => 'success']);
 
-        // Cập nhật tổng đã thanh toán nếu chưa có
         if ((float) $order->total_paid === 0.0) {
             $order->update(['total_paid' => $transaction->amount]);
         }
+        });
 
         $transaction->load(['order.user']);
         event(new TransactionConfirmed($transaction));
@@ -408,5 +543,61 @@ class OrderController extends Controller
         }
         
         return false;
+    }
+
+    private function ensureInventoryAvailable(Service $service, int $qty, ?OrderItem $existingItem = null): void
+    {
+        if ($qty <= 0) {
+            throw ValidationException::withMessages([
+                'qty' => 'Số lượng phải lớn hơn 0',
+            ]);
+        }
+
+        $inventory = ServiceInventory::firstOrCreate(
+            ['service_id' => $service->id],
+            ['quantity' => 0]
+        );
+
+        $available = $inventory->quantity + ($existingItem?->qty ?? 0);
+
+        if ($qty > $available) {
+            throw ValidationException::withMessages([
+                'qty' => "Kho của {$service->name} không đủ, hiện có {$inventory->quantity}",
+            ]);
+        }
+    }
+
+    private function deductInventoryForOrder(Order $order): void
+    {
+        $items = OrderItem::where('order_id', $order->id)
+            ->where('is_confirmed', true)
+            ->where('stock_deducted', false)
+            ->with('service')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($items as $item) {
+            $this->deductInventoryForItem($item);
+        }
+    }
+
+    private function deductInventoryForItem(OrderItem $item): void
+    {
+        $inventory = ServiceInventory::firstOrCreate(
+            ['service_id' => $item->service_id],
+            ['quantity' => 0]
+        );
+
+        if ($inventory->quantity < $item->qty) {
+            throw ValidationException::withMessages([
+                'inventory' => "Kho của {$item->service->name} không đủ để trừ",
+            ]);
+        }
+
+        $inventory->decrement('quantity', $item->qty);
+        $item->update([
+            'stock_deducted' => true,
+            'is_confirmed' => true,
+        ]);
     }
 }

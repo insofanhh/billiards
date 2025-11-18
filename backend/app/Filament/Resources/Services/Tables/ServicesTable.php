@@ -55,6 +55,18 @@ class ServicesTable
                         default => $state,
                     })
                     ->sortable(),
+                TextColumn::make('available_quantity')
+                    ->label('Tồn kho')
+                    ->sortable()
+                    ->alignEnd()
+                    ->badge()
+                    ->color(fn (?int $state): string => match (true) {
+                        $state === null => 'gray',
+                        $state === 0 => 'danger',
+                        $state < 5 => 'warning',
+                        default => 'success',
+                    })
+                    ->formatStateUsing(fn (?int $state): string => (string) ($state ?? 0)),
                 IconColumn::make('active')
                     ->label('Trạng thái')
                     ->boolean()

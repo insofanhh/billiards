@@ -18,6 +18,7 @@ class ServiceResource extends JsonResource
             'price' => $this->price,
             'charge_type' => $this->charge_type,
             'active' => $this->active,
+            'inventory_quantity' => $this->inventory?->quantity ?? 0,
             'category_service' => $this->whenLoaded('categoryService', function () {
                 return [
                     'id' => $this->categoryService->id,

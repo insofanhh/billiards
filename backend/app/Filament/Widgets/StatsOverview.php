@@ -9,6 +9,7 @@ use App\Models\User;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Number;
+use App\Models\OrderItem;
 
 class StatsOverview extends StatsOverviewWidget
 {
@@ -20,6 +21,15 @@ class StatsOverview extends StatsOverviewWidget
         $todayRevenue = Transaction::whereBetween('created_at', [$todayStart, $todayEnd])
             ->where('status', 'success')
             ->sum('amount');
+
+        $todayServicesSold = OrderItem::whereBetween('updated_at', [$todayStart, $todayEnd])
+            ->where('stock_deducted', true)
+            ->sum('total_price');
+
+        $todayTablesRevenue = Order::whereBetween('updated_at', [$todayStart, $todayEnd])
+            ->sum('total_before_discount') - $todayServicesSold;
+
+        $todayTablesRevenue = max($todayTablesRevenue, 0);
         
         $todayOrders = Order::whereBetween('created_at', [$todayStart, $todayEnd])->count();
         
@@ -28,10 +38,22 @@ class StatsOverview extends StatsOverviewWidget
         $totalCustomers = User::role('customer')->count();
         
         return [
-            Stat::make('Doanh thu hôm nay', Number::currency($todayRevenue, 'VND', 'vi'))
-                ->description('Tổng doanh thu từ các giao dịch thành công')
+            Stat::make('Tổng doanh thu hôm nay', Number::currency($todayRevenue, 'VND', 'vi'))
+                ->description('Tổng doanh thu từ bàn và dịch vụ')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success')
+                ->chart([7, 3, 4, 5, 6, 3, 5]),
+
+            Stat::make('Doanh thu bàn hôm nay', Number::currency($todayTablesRevenue, 'VND', 'vi'))
+                ->description('Tổng doanh thu từ các bàn')
+                ->descriptionIcon('heroicon-m-table-cells')
+                ->color('warning')
+                ->chart([7, 3, 4, 5, 6, 3, 5]),
+
+            Stat::make('Doanh thu dịch vụ hôm nay', Number::currency($todayServicesSold, 'VND', 'vi'))
+                ->description('Tổng doanh thu từ các dịch vụ')
+                ->descriptionIcon('heroicon-m-shopping-bag')
+                ->color('info')
                 ->chart([7, 3, 4, 5, 6, 3, 5]),
             
             Stat::make('Đơn hàng hôm nay', $todayOrders)
