@@ -26,6 +26,7 @@ class ServiceForm
                 FileUpload::make('image')
                     ->label('Ảnh')
                     ->image()
+                    ->disk('public')
                     ->directory('services')
                     ->visibility('public')
                     ->columnSpanFull(),
