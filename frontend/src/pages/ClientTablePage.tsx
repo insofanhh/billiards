@@ -2,11 +2,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { tablesApi } from '../api/tables';
+import { ClientNavigation } from '../components/ClientNavigation';
+import { getTemporaryUserName } from '../utils/temporaryUser';
 
 export function ClientTablePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [name, setName] = useState(localStorage.getItem('guest_name') || '');
+  const [guestName, setGuestName] = useState(getTemporaryUserName);
 
   const { data: table, isLoading, refetch } = useQuery({
     queryKey: ['client-table', code],
@@ -20,7 +23,9 @@ export function ClientTablePage() {
       // store token + user for Sanctum
       localStorage.setItem('auth_token', res.token);
       localStorage.setItem('user', JSON.stringify(res.user));
-      localStorage.setItem('guest_name', name.trim());
+      const trimmedName = name.trim();
+      localStorage.setItem('guest_name', trimmedName);
+      setGuestName(getTemporaryUserName);
       // Return order from response (pending order already created)
       return { id: res.order.id };
     },
@@ -47,7 +52,15 @@ export function ClientTablePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto py-8 px-4">
+      <ClientNavigation
+        userName={guestName}
+        onHomeClick={() => {
+          if (code) {
+            navigate(`/client/table/${code}`);
+          }
+        }}
+      />
+      <div className="max-w-4xl mx-auto py-12 px-4">
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="flex justify-between items-start mb-6">
             <div>

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ordersApi } from '../api/orders';
@@ -6,9 +6,13 @@ import { servicesApi } from '../api/services';
 import type { Service } from '../types';
 import { echo } from '../echo';
 import { useNotification } from '../contexts/NotificationContext';
+import { ClientNavigation } from '../components/ClientNavigation';
+import { getTemporaryUserName } from '../utils/temporaryUser';
+
 
 export function ClientOrderPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
   const [showAddService, setShowAddService] = useState(false);
@@ -18,6 +22,7 @@ export function ClientOrderPage() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [discountCodeInput, setDiscountCodeInput] = useState('');
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [guestName] = useState(getTemporaryUserName);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['client-order', id],
@@ -268,9 +273,17 @@ export function ClientOrderPage() {
     applyDiscountMutation.mutate(trimmed.toUpperCase());
   };
 
+  const handleBackToTable = () => {
+    const code = order?.table?.code;
+    if (code) {
+      navigate(`/client/table/${code}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto py-8 px-4">
+      <ClientNavigation userName={guestName} onHomeClick={handleBackToTable} />
+      <div className="max-w-4xl mx-auto py-12 px-4">
         {!hasSuccessfulTransaction ? (
           <div className="bg-white rounded-lg shadow-md p-8">
             <div className="flex justify-between items-start mb-6">
