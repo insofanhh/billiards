@@ -14,12 +14,14 @@ class OrderItem extends Model
         'unit_price',
         'total_price',
         'is_confirmed',
+        'stock_deducted',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'is_confirmed' => 'boolean',
+        'stock_deducted' => 'boolean',
     ];
 
     public function order(): BelongsTo

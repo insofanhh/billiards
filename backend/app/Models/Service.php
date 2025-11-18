@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class Service extends Model
@@ -19,6 +20,8 @@ class Service extends Model
         'category_service_id',
     ];
 
+    protected $with = ['inventory'];
+
     protected $casts = [
         'price' => 'decimal:2',
         'active' => 'boolean',
@@ -26,7 +29,10 @@ class Service extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        return $this->image ? Storage::disk('public')->url($this->image) : null;
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+
+        return $this->image ? $disk->url($this->image) : null;
     }
 
     public function orderItems(): HasMany
@@ -37,5 +43,24 @@ class Service extends Model
     public function categoryService(): BelongsTo
     {
         return $this->belongsTo(CategoryService::class);
+    }
+
+    public function inventory(): HasOne
+    {
+        return $this->hasOne(ServiceInventory::class);
+    }
+
+    public function getAvailableQuantityAttribute(): int
+    {
+        return $this->inventory?->quantity ?? 0;
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (Service $service) {
+            if (!$service->inventory()->exists()) {
+                $service->inventory()->create(['quantity' => 0]);
+            }
+        });
     }
 }

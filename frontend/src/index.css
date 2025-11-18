@@ -1,3 +1,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #staff-bill,
+  #staff-bill * {
+    visibility: visible;
+  }
+  
+  #staff-bill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 1rem;
+    box-shadow: none;
+    border: none;
+  }
+  
+  #staff-bill button {
+    display: none;
+  }
+  
+  #client-bill,
+  #client-bill * {
+    visibility: visible;
+  }
+  
+  #client-bill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 1rem;
+    box-shadow: none;
+    border: none;
+  }
+}

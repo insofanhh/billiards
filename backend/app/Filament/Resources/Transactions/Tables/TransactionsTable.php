@@ -9,6 +9,8 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class TransactionsTable
 {
@@ -96,10 +98,15 @@ class TransactionsTable
                 ViewAction::make(),
                 EditAction::make(),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+            ->bulkActions([
+                ExportBulkAction::make()
+                    ->exports([
+                        ExcelExport::make('transactions')
+                            ->fromTable()
+                            ->askForFilename()
+                            ->withFilename(fn ($filename) => 'transactions-' . $filename),
+                    ]),
+                DeleteBulkAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }

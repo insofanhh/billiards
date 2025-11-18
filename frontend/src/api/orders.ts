@@ -76,5 +76,10 @@ export const ordersApi = {
   confirmTransaction: async (id: number, txnId: number): Promise<void> => {
     await apiClient.patch(`/orders/${id}/transactions/${txnId}/confirm`);
   },
+
+  applyDiscount: async (id: number, code: string): Promise<Order> => {
+    const response = await apiClient.post(`/orders/${id}/apply-discount`, { code });
+    return response.data.data || response.data;
+  },
 };
 

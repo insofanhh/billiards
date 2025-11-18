@@ -52,6 +52,7 @@ export interface Service {
   price: number;
   charge_type: 'per_unit' | 'one_time';
   active: boolean;
+  inventory_quantity?: number;
   category_service?: {
     id: number;
     name: string;
@@ -63,6 +64,11 @@ export interface Order {
   id: number;
   order_code: string;
   user_id?: number;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
   table: {
     id: number;
     code: string;
