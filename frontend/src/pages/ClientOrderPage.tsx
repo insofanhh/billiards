@@ -279,13 +279,6 @@ export function ClientOrderPage() {
     applyDiscountMutation.mutate(trimmed.toUpperCase());
   };
 
-  const handleBackToTable = () => {
-    const code = order?.table?.code;
-    if (code) {
-      navigate(`/client/table/${code}`);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <ClientNavigation
