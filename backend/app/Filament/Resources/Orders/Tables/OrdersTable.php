@@ -5,10 +5,12 @@ namespace App\Filament\Resources\Orders\Tables;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Table;
 
 class OrdersTable
@@ -75,14 +77,25 @@ class OrdersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status')
-                    ->label('Trạng thái')
-                    ->options([
-                        'pending' => 'Chờ xử lý',
-                        'active' => 'Đang sử dụng',
-                        'completed' => 'Hoàn thành',
-                        'cancelled' => 'Đã hủy',
-                    ]),
+                Filter::make('created_at')
+                    ->label('Ngày tạo')
+                    ->form([
+                        DatePicker::make('created_from')
+                            ->label('Từ ngày'),
+                        DatePicker::make('created_until')
+                            ->label('Đến ngày'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn ($query, $date) => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn ($query, $date) => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
                 SelectFilter::make('table_id')
                     ->label('Bàn')
                     ->relationship('table', 'name'),
@@ -92,7 +105,6 @@ class OrdersTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
                 Action::make('end_order')
                     ->label('Kết thúc')
                     ->icon('heroicon-o-stop')
@@ -147,6 +159,7 @@ class OrdersTable
                             ->success()
                             ->send();
                     }),
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
