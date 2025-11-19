@@ -4,9 +4,11 @@ namespace App\Filament\Resources\Transactions\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -78,14 +80,25 @@ class TransactionsTable
                     ->sortable(),
             ])
             ->filters([
-                SelectFilter::make('status')
-                    ->label('Trạng thái')
-                    ->options([
-                        'pending' => 'Chờ xử lý',
-                        'success' => 'Thành công',
-                        'failed' => 'Thất bại',
-                        'refunded' => 'Đã hoàn tiền',
-                    ]),
+                Filter::make('created_at')
+                    ->label('Ngày tạo')
+                    ->form([
+                        DatePicker::make('created_from')
+                            ->label('Từ ngày'),
+                        DatePicker::make('created_until')
+                            ->label('Đến ngày'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn ($query, $date) => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn ($query, $date) => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
                 SelectFilter::make('method')
                     ->label('Phương thức')
                     ->options([
@@ -96,7 +109,7 @@ class TransactionsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
                 ExportBulkAction::make()

@@ -16,10 +16,7 @@ export function ClientNavigation({
   const iconClasses = 'h-5 w-5';
   const icons = {
     home: (
-      <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.955-8.955a.75.75 0 0 1 1.06 0L21.22 12" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 9.75V21h5.25v-6h4.5v6H19.5V9.75" />
-      </svg>
+      <img src="/favicon.svg" alt="Home" className="h-5 w-5" />
     ),
     user: (
       <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -64,7 +61,7 @@ export function ClientNavigation({
               {icons.home}
             </div>
             <div>
-              <p className="text-lg font-semibold">Laravel</p>
+              <p className="text-lg font-semibold">CMS</p>
               <p className="text-xs text-gray-400">Billiards Client</p>
             </div>
           </button>

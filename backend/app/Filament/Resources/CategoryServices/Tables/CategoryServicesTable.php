@@ -4,7 +4,8 @@ namespace App\Filament\Resources\CategoryServices\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
@@ -64,7 +65,8 @@ class CategoryServicesTable
                     ->falseLabel('Đã tắt'),
             ])
             ->recordActions([
-                EditAction::make(),
+                ViewAction::make(),
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
