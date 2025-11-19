@@ -27,6 +27,11 @@ export interface Table {
       price_per_hour: number;
       active: boolean;
     }>;
+    current_price_rate?: {
+      id: number;
+      price_per_hour: number;
+      active: boolean;
+    } | null;
   };
   pending_order?: {
     id: number;

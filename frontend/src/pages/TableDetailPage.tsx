@@ -101,7 +101,7 @@ export function TableDetailPage() {
   }
 
   const isAvailable = table.status.name === 'Trống';
-  const activePriceRate = table.table_type.price_rates?.find(rate => rate.active);
+  const activePriceRate = table.table_type.current_price_rate || table.table_type.price_rates?.find(rate => rate.active);
   const hasActiveOrder = !!table.active_order;
   const hasPendingEndOrder = !!table.pending_end_order;
   const hasPendingOpenOrder = !!table.pending_order;

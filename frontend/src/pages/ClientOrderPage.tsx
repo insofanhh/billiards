@@ -30,6 +30,12 @@ export function ClientOrderPage() {
     enabled: !!id,
   });
 
+  useEffect(() => {
+    if (order?.table?.code) {
+      localStorage.setItem('last_client_table_code', order.table.code);
+    }
+  }, [order?.table?.code]);
+
   const { data: services } = useQuery({
     queryKey: ['services'],
     queryFn: servicesApi.getAll,
@@ -282,26 +288,42 @@ export function ClientOrderPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ClientNavigation userName={guestName} onHomeClick={handleBackToTable} />
+      <ClientNavigation
+        userName={guestName}
+        onHomeClick={() => navigate('/client')}
+        onHistoryClick={() => navigate('/client/history')}
+      />
       <div className="max-w-4xl mx-auto py-12 px-4">
         {!hasSuccessfulTransaction ? (
           <div className="bg-white rounded-lg shadow-md p-8">
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Đơn hàng {order.order_code}</h1>
                 <p className="text-gray-600 mt-2">Bàn: {order.table.name}</p>
               </div>
-              <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                order.status === 'active' ? 'bg-green-100 text-green-800' : 
-                order.status === 'completed' ? 'bg-gray-100 text-gray-800' : 
-                order.status === 'pending_end' ? 'bg-orange-100 text-orange-800' :
-                'bg-yellow-100 text-yellow-800'
-              }`}>
-                {order.status === 'active' ? 'Đang sử dụng' : 
-                 order.status === 'completed' ? 'Hoàn thành' : 
-                 order.status === 'pending_end' ? 'Chờ duyệt kết thúc' :
-                 'Chờ duyệt'}
-              </span>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  order.status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : order.status === 'completed'
+                    ? 'bg-gray-100 text-gray-800'
+                    : order.status === 'pending_end'
+                    ? 'bg-orange-100 text-orange-800'
+                    : order.status === 'cancelled'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {order.status === 'active'
+                    ? 'Đang sử dụng'
+                    : order.status === 'completed'
+                    ? 'Hoàn thành'
+                    : order.status === 'pending_end'
+                    ? 'Chờ duyệt kết thúc'
+                    : order.status === 'cancelled'
+                    ? 'Đã hủy'
+                    : 'Chờ duyệt'}
+                </span>
+              </div>
             </div>
 
             {order.status === 'active' && (
@@ -319,6 +341,12 @@ export function ClientOrderPage() {
             {order.status === 'pending_end' && (
               <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                 <p className="text-orange-800 font-medium">Yêu cầu kết thúc giờ chơi đã được gửi. Vui lòng đợi nhân viên xác nhận.</p>
+              </div>
+            )}
+
+            {order.status === 'cancelled' && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 font-medium">Yêu cầu mở bàn đã bị hủy. Vui lòng tạo yêu cầu mới nếu bạn vẫn muốn chơi.</p>
               </div>
             )}
 

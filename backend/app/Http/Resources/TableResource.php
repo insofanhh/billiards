@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Models\PriceRate;
 
 class TableResource extends JsonResource
 {
@@ -25,6 +26,10 @@ class TableResource extends JsonResource
             ->where('status', 'active')
             ->latest()
             ->first();
+
+        $currentPriceRate = $this->table_type_id 
+            ? PriceRate::forTableTypeAtTime($this->table_type_id) 
+            : null;
 
         return [
             'id' => $this->id,
@@ -48,6 +53,11 @@ class TableResource extends JsonResource
                         'active' => $rate->active,
                     ];
                 }),
+                'current_price_rate' => $currentPriceRate ? [
+                    'id' => $currentPriceRate->id,
+                    'price_per_hour' => $currentPriceRate->price_per_hour,
+                    'active' => $currentPriceRate->active,
+                ] : null,
             ],
             'pending_order' => $pending ? [
                 'id' => $pending->id,

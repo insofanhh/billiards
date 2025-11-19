@@ -73,8 +73,9 @@ class TableController extends Controller
 
         $token = $user->createToken('guest')->plainTextToken;
 
-        // Create a pending order for this table
-        $priceRate = $table->tableType?->priceRates()->where('active', true)->first();
+        $startTime = Carbon::now('Asia/Ho_Chi_Minh');
+        $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
+        
         $order = Order::create([
             'order_code' => 'ORD-' . Str::upper(Str::random(8)),
             'user_id' => $user->id,
