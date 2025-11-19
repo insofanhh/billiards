@@ -31,23 +31,9 @@ export function ClientHomePage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [isHandlingScan, setIsHandlingScan] = useState(false);
-  const [manualCode, setManualCode] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('last_client_table_code') || '';
-  });
 
   const [placeholderAnnouncements] = useState(() => ([] as Array<{ title: string; description: string }>));
   const [placeholderPromotions] = useState(() => ([] as Array<{ title: string; description: string; label?: string }>));
-
-  const handleManualNavigate = () => {
-    const trimmed = manualCode.trim().toUpperCase();
-    if (!trimmed) {
-      setScanError('Vui lòng nhập mã bàn hợp lệ.');
-      return;
-    }
-    localStorage.setItem('last_client_table_code', trimmed);
-    navigate(`/client/table/${trimmed}`);
-  };
 
   const parseTableCode = (rawValue: string) => {
     if (!rawValue) return null;

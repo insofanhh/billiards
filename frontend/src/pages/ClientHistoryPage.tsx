@@ -12,7 +12,6 @@ const formatCurrency = (value: number) =>
 export function ClientHistoryPage() {
   const navigate = useNavigate();
   const [guestName] = useState(getTemporaryUserName);
-  const lastTableCode = typeof window !== 'undefined' ? localStorage.getItem('last_client_table_code') : null;
   const { data: orders, isLoading } = useQuery({
     queryKey: ['client-orders-history'],
     queryFn: ordersApi.getAll,
