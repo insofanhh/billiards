@@ -32,5 +32,19 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*')) {
+                $message = $e->getMessage();
+                if ($e instanceof \Illuminate\Database\QueryException || 
+                    $e instanceof \PDOException ||
+                    str_contains($message, 'Connection refused') || 
+                    str_contains($message, 'SQLSTATE[HY000]') ||
+                    str_contains($message, 'No connection could be made')) {
+                    return response()->json([
+                        'message' => 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.',
+                        'error' => 'Database connection failed'
+                    ], 503);
+                }
+            }
+        });
     })->create();
