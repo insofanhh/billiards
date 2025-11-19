@@ -8,6 +8,8 @@ import { OrdersHistoryPage } from './pages/OrdersHistoryPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ClientTablePage } from './pages/ClientTablePage';
 import { ClientOrderPage } from './pages/ClientOrderPage';
+import { ClientHistoryPage } from './pages/ClientHistoryPage';
+import { ClientHomePage } from './pages/ClientHomePage';
 
 export const router = createBrowserRouter([
   {
@@ -36,12 +38,20 @@ export const router = createBrowserRouter([
   },
   // Public client routes
   {
+    path: '/client',
+    element: <ClientHomePage />,
+  },
+  {
     path: '/client/table/:code',
     element: <ClientTablePage />,
   },
   {
     path: '/client/order/:id',
     element: <ClientOrderPage />,
+  },
+  {
+    path: '/client/history',
+    element: <ClientHistoryPage />,
   },
 ]);
 

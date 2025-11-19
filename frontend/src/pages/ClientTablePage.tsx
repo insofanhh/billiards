@@ -1,6 +1,6 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { tablesApi } from '../api/tables';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
@@ -10,6 +10,17 @@ export function ClientTablePage() {
   const navigate = useNavigate();
   const [name, setName] = useState(localStorage.getItem('guest_name') || '');
   const [guestName, setGuestName] = useState(getTemporaryUserName);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('auth_token'));
+  useEffect(() => {
+    if (code) {
+      localStorage.setItem('last_client_table_code', code);
+    }
+  }, [code]);
+
+
+  useEffect(() => {
+    setName(guestName || '');
+  }, [guestName]);
 
   const { data: table, isLoading, refetch } = useQuery({
     queryKey: ['client-table', code],
@@ -26,6 +37,7 @@ export function ClientTablePage() {
       const trimmedName = name.trim();
       localStorage.setItem('guest_name', trimmedName);
       setGuestName(getTemporaryUserName);
+      setIsLoggedIn(true);
       // Return order from response (pending order already created)
       return { id: res.order.id };
     },
@@ -48,17 +60,14 @@ export function ClientTablePage() {
   }
 
   const isAvailable = table.status.name === 'Trống';
-  const rate = table.table_type.price_rates?.find((r: any) => r.active);
+  const rate = table.table_type.current_price_rate || table.table_type.price_rates?.find((r: any) => r.active);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => {
-          if (code) {
-            navigate(`/client/table/${code}`);
-          }
-        }}
+        onHomeClick={() => navigate('/client')}
+        onHistoryClick={() => navigate('/client/history')}
       />
       <div className="max-w-4xl mx-auto py-12 px-4">
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -104,6 +113,17 @@ export function ClientTablePage() {
             >
               {requestOpenMutation.isPending ? 'Đang gửi yêu cầu...' : 'Yêu cầu mở bàn'}
             </button>
+            {!isLoggedIn && (
+              <p className="text-center text-sm text-gray-600">
+                Bạn đã có tài khoản?{' '}
+                <Link
+                  to={`/login?redirect=${encodeURIComponent(`/client/table/${code}`)}`}
+                  className="text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Đăng nhập
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       </div>

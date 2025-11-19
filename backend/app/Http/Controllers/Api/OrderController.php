@@ -65,9 +65,10 @@ class OrderController extends Controller
             return response()->json(['message' => 'Bàn đã được sử dụng'], 400);
         }
 
-        $priceRate = $table->tableType?->priceRates()->where('active', true)->first();
+        $startTime = Carbon::now();
+        $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
         if (!$priceRate) {
-            return response()->json(['message' => 'Không tìm thấy giá giờ cho loại bàn này'], 400);
+            return response()->json(['message' => 'Không tìm thấy bảng giá cho loại bàn này'], 400);
         }
 
         $order = Order::create([
@@ -75,7 +76,7 @@ class OrderController extends Controller
             'user_id' => $request->user()->id,
             'table_id' => $table->id,
             'price_rate_id' => $priceRate->id,
-            'start_at' => Carbon::now(),
+            'start_at' => $startTime,
             'status' => 'active',
         ]);
 
@@ -397,8 +398,15 @@ class OrderController extends Controller
             ->where('status', 'pending')
             ->firstOrFail();
 
+        $startTime = Carbon::now('Asia/Ho_Chi_Minh');
+        $priceRate = \App\Models\PriceRate::forTableTypeAtTime($order->table->table_type_id, $startTime);
+        if (!$priceRate) {
+            return response()->json(['message' => 'Không tìm thấy bảng giá cho loại bàn này'], 400);
+        }
+
         $order->update([
-            'start_at' => Carbon::now('Asia/Ho_Chi_Minh'),
+            'start_at' => $startTime,
+            'price_rate_id' => $priceRate->id,
             'status' => 'active',
         ]);
 

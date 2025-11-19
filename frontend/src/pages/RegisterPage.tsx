@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,8 +22,13 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+  const redirectParam = searchParams.get('redirect');
+  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : '/';
+  const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/';
+  const loginLink = redirectParam ? `/login?redirect=${redirectParam}` : '/login';
   
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -41,7 +46,10 @@ export function RegisterPage() {
       };
       const response = await authApi.register(registerData);
       setAuth(response.user, response.token);
-      navigate('/');
+      if (response.user?.name) {
+        localStorage.setItem('guest_name', response.user.name);
+      }
+      navigate(safeRedirect);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng ký thất bại');
     }
@@ -146,7 +154,7 @@ export function RegisterPage() {
           </div>
           
           <div className="text-center">
-            <Link to="/login" className="text-sm text-blue-600 hover:text-blue-500">
+            <Link to={loginLink} className="text-sm text-blue-600 hover:text-blue-500">
               Đã có tài khoản? Đăng nhập ngay
             </Link>
           </div>

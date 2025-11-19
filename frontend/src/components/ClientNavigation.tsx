@@ -1,17 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type ClientNavigationProps = {
   userName?: string;
   subtitle?: string;
   onHomeClick?: () => void;
+  onHistoryClick?: () => void;
+  historyActive?: boolean;
 };
 
 export function ClientNavigation({
   userName,
   subtitle = 'Khách hàng',
   onHomeClick,
+  onHistoryClick,
+  historyActive = false,
 }: ClientNavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
+  const [canLogout, setCanLogout] = useState(() => !!localStorage.getItem('auth_token'));
+  const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHideTimeout = () => {
+    if (hideDropdownTimeout.current) {
+      clearTimeout(hideDropdownTimeout.current);
+      hideDropdownTimeout.current = null;
+    }
+  };
+
+  const scheduleHide = () => {
+    clearHideTimeout();
+    hideDropdownTimeout.current = setTimeout(() => {
+      setShowLogoutDesktop(false);
+      hideDropdownTimeout.current = null;
+    }, 200);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearHideTimeout();
+    };
+  }, []);
 
   const iconClasses = 'h-5 w-5';
   const icons = {
@@ -39,6 +67,12 @@ export function ClientNavigation({
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5 15.75 12l-7.5 7.5" />
       </svg>
     ),
+    history: (
+      <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
   };
 
   const displayName = userName?.trim() || 'Khách tạm thời';
@@ -46,6 +80,21 @@ export function ClientNavigation({
   const handleHome = () => {
     onHomeClick?.();
     setMobileMenuOpen(false);
+  };
+
+  const handleHistory = () => {
+    onHistoryClick?.();
+    setMobileMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('guest_name');
+    setMobileMenuOpen(false);
+    setCanLogout(false);
+    setShowLogoutDesktop(false);
+    window.location.reload();
   };
 
   return (
@@ -66,10 +115,59 @@ export function ClientNavigation({
             </div>
           </button>
           <div className="hidden items-center gap-3 md:flex">
-            <div className="rounded-2xl bg-white/5 px-4 py-2 text-left">
-              <p className="text-xs uppercase tracking-wide text-gray-400">{subtitle}</p>
-              <p className="text-sm font-semibold text-white">{displayName}</p>
-            </div>
+            {onHistoryClick && (
+              <button
+                type="button"
+                onClick={handleHistory}
+                className={`rounded-full border border-white/10 px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  historyActive ? 'bg-white/20 text-yellow-300' : 'text-white hover:bg-white/10'
+                }`}
+              >
+                Lịch sử chơi
+              </button>
+            )}
+            {canLogout ? (
+              <div
+                className="relative"
+                onMouseEnter={() => {
+                  clearHideTimeout();
+                  setShowLogoutDesktop(true);
+                }}
+                onMouseLeave={scheduleHide}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearHideTimeout();
+                    setShowLogoutDesktop((prev) => !prev);
+                  }}
+                  className="rounded-2xl bg-white/5 px-4 py-2 text-left text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+                >
+                  <p className="text-xs uppercase tracking-wide text-gray-400">{subtitle}</p>
+                  <p className="text-sm font-semibold">{displayName}</p>
+                </button>
+                {showLogoutDesktop && (
+                  <div
+                    className="absolute right-0 mt-2 w-30 rounded-2xl border border-white/10 bg-gray-800/95  shadow-xl"
+                    onMouseEnter={clearHideTimeout}
+                    onMouseLeave={scheduleHide}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full rounded-2xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-white/5 px-4 py-2 text-left">
+                <p className="text-xs uppercase tracking-wide text-gray-400">{subtitle}</p>
+                <p className="text-sm font-semibold text-white">{displayName}</p>
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -124,6 +222,27 @@ export function ClientNavigation({
               >
                 <span>Quay về bàn</span>
                 <span className="text-yellow-400">{icons.arrowRight}</span>
+              </button>
+            )}
+            {onHistoryClick && (
+              <button
+                type="button"
+                onClick={handleHistory}
+                className={`flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-left text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  historyActive ? 'text-yellow-300' : 'text-white hover:bg-white/10'
+                }`}
+              >
+                <span>Lịch sử chơi</span>
+                <span className="text-yellow-400">{icons.history}</span>
+              </button>
+            )}
+            {canLogout && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-2xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+              >
+                Đăng xuất
               </button>
             )}
           </div>

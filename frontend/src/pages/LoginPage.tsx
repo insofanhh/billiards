@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+import { useNotification } from '../contexts/NotificationContext';
 
 const loginSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -15,8 +16,14 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth } = useAuthStore();
+  const { showNotification } = useNotification();
   const [error, setError] = useState<string | null>(null);
+  const redirectParam = searchParams.get('redirect');
+  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : '/';
+  const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/';
+  const registerLink = redirectParam ? `/register?redirect=${redirectParam}` : '/register';
   
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -27,7 +34,30 @@ export function LoginPage() {
       setError(null);
       const response = await authApi.login(data);
       setAuth(response.user, response.token);
-      navigate('/');
+      const normalizedRoles = Array.isArray(response.user?.roles)
+        ? response.user.roles
+            .map((role) => role?.toLowerCase?.() ?? '')
+            .filter(Boolean)
+        : [];
+      const hasRole = (...roles: string[]) => normalizedRoles.some((role) => roles.includes(role));
+
+      if (hasRole('staff', 'admin', 'super_admin')) {
+        showNotification('Đăng nhập thành công. Chuyển tới trang quản lý bàn.');
+        navigate('/');
+        return;
+      }
+
+      if (hasRole('customer')) {
+        if (response.user?.name) {
+          localStorage.setItem('guest_name', response.user.name);
+        }
+        showNotification('Đăng nhập thành công. Chuyển tới khu vực khách hàng.');
+        navigate('/client');
+        return;
+      }
+
+      showNotification('Đăng nhập thành công.');
+      navigate(safeRedirect);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại');
     }
@@ -95,7 +125,7 @@ export function LoginPage() {
           </div>
           
           <div className="text-center">
-            <Link to="/register" className="text-sm text-blue-600 hover:text-blue-500">
+            <Link to={registerLink} className="text-sm text-blue-600 hover:text-blue-500">
               Chưa có tài khoản? Đăng ký ngay
             </Link>
           </div>

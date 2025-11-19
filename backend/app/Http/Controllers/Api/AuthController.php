@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
@@ -58,6 +59,11 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
         ]);
+
+        $customerRole = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
+        if (!$user->hasRole($customerRole)) {
+            $user->assignRole($customerRole);
+        }
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
