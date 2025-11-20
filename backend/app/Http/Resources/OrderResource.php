@@ -10,6 +10,16 @@ class OrderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $this->resource->loadMissing(['transactions.user']);
+
+        $successfulTransaction = $this->transactions->firstWhere('status', 'success');
+        $pendingTransaction = $this->transactions
+            ->where('status', 'pending')
+            ->sortByDesc('created_at')
+            ->first();
+        $cashierName = optional($successfulTransaction ?? $pendingTransaction)->user?->name;
+        $customerName = $successfulTransaction?->customer_name ?? $pendingTransaction?->customer_name;
+
         return [
             'id' => $this->id,
             'order_code' => $this->order_code,
@@ -56,6 +66,8 @@ class OrderResource extends JsonResource
                 'discount_type' => $this->appliedDiscount->discount_type,
                 'discount_value' => $this->appliedDiscount->discount_value,
             ] : null,
+            'cashier' => $cashierName,
+            'customer_name' => $customerName,
             'transactions' => $this->transactions->map(function ($transaction) {
                 return [
                     'id' => $transaction->id,
@@ -63,6 +75,12 @@ class OrderResource extends JsonResource
                     'method' => $transaction->method,
                     'status' => $transaction->status,
                     'created_at' => $transaction->created_at->toIso8601String(),
+                    'customer_name' => $transaction->customer_name,
+                    'user' => $transaction->user ? [
+                        'id' => $transaction->user->id,
+                        'name' => $transaction->user->name,
+                        'email' => $transaction->user->email,
+                    ] : null,
                 ];
             }),
         ];

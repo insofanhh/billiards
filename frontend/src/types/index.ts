@@ -46,6 +46,7 @@ export interface Table {
     id: number;
     order_code: string;
     start_at?: string;
+    status?: string;
   } | null;
 }
 
@@ -74,6 +75,7 @@ export interface Order {
     name: string;
     email: string;
   } | null;
+  customer_name?: string | null;
   table: {
     id: number;
     code: string;
@@ -90,6 +92,7 @@ export interface Order {
   total_before_discount: number;
   total_discount: number;
   total_paid: number;
+  cashier?: string | null;
   items: Array<{
     id: number;
     service: {
@@ -114,6 +117,12 @@ export interface Order {
     method: string;
     status: string;
     created_at: string;
+    customer_name?: string | null;
+    user?: {
+      id: number;
+      name: string;
+      email?: string;
+    } | null;
   }>;
 }
 

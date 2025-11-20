@@ -179,6 +179,9 @@ export function OrderPage() {
   });
 
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
+  const orderCustomerName = order?.customer_name || null;
+  const pendingTransaction = order?.transactions?.find((t: any) => t.status === 'pending') ?? null;
+  const pendingTransactionHasMethod = !!pendingTransaction?.method;
 
   const handlePrintBill = () => {
     window.print();
@@ -790,19 +793,32 @@ export function OrderPage() {
                 </div>
               )}
 
-              {order.transactions?.some(t => t.status === 'pending') && !hasSuccessfulTransaction && (
+              {pendingTransaction && !hasSuccessfulTransaction && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="mb-2 text-yellow-800">Khách đã yêu cầu thanh toán (tiền mặt/thẻ).</p>
-                  <button
-                    onClick={() => {
-                      const txn = order.transactions.find(t => t.status === 'pending');
-                      if (txn) confirmPaymentMutation.mutate(txn.id);
-                    }}
-                    disabled={confirmPaymentMutation.isPending}
-                    className="w-full py-2 px-4 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đã thanh toán'}
-                  </button>
+                  {pendingTransactionHasMethod ? (
+                    <>
+                      <p className="mb-2 text-yellow-800">
+                        Khách đã yêu cầu thanh toán ({pendingTransaction.method === 'cash' ? 'tiền mặt' : pendingTransaction.method === 'card' ? 'thẻ' : 'chuyển khoản'}).
+                      </p>
+                      <button
+                        onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
+                        disabled={confirmPaymentMutation.isPending}
+                        className="w-full py-2 px-4 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đã thanh toán'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mb-2 text-yellow-800">
+                        Khách chưa chọn phương thức thanh toán. Vui lòng chờ khách gửi yêu cầu hoặc chọn phương thức tại mục
+                        <span className="font-semibold"> Thanh toán </span> để xử lý thủ công.
+                      </p>
+                      <p className="text-sm text-yellow-700">
+                        Sau khi có phương thức, nút xác nhận sẽ xuất hiện tại đây.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
                 </div>
@@ -831,10 +847,16 @@ export function OrderPage() {
                   <span className="text-gray-600">Mã đơn hàng:</span>
                   <span className="font-semibold">{order.order_code}</span>
                 </div>
-                {order.user && (
+                {order.cashier && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Thu ngân:</span>
+                    <span className="font-semibold text-gray-900">{order.cashier}</span>
+                  </div>
+                )}
+                {orderCustomerName && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Khách hàng:</span>
-                    <span className="font-semibold">{order.user.name}</span>
+                    <span className="font-semibold">{orderCustomerName}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -856,7 +878,7 @@ export function OrderPage() {
                 {order.total_play_time_minutes && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Thời gian chơi:</span>
-                    <span>{Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}m</span>
+                    <span>{Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p</span>
                   </div>
                 )}
               </div>

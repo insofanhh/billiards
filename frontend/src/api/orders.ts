@@ -81,5 +81,10 @@ export const ordersApi = {
     const response = await apiClient.post(`/orders/${id}/apply-discount`, { code });
     return response.data.data || response.data;
   },
+
+  cancelRequest: async (id: number): Promise<Order> => {
+    const response = await apiClient.post(`/orders/${id}/cancel-request`);
+    return response.data.data || response.data;
+  },
 };
 
