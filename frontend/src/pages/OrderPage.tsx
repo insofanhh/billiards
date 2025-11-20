@@ -325,7 +325,7 @@ export function OrderPage() {
       <AdminNavigation userName={user?.name} onLogout={logout} />
       <div className="max-w-4xl mx-auto py-8 px-4">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/staff')}
           className="mb-6 text-blue-600 hover:text-blue-800"
         >
           ← Quay lại

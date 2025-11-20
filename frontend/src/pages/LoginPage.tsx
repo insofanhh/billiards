@@ -21,8 +21,8 @@ export function LoginPage() {
   const { showNotification } = useNotification();
   const [error, setError] = useState<string | null>(null);
   const redirectParam = searchParams.get('redirect');
-  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : '/';
-  const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/';
+  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : '/client';
+  const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/client';
   const registerLink = redirectParam ? `/register?redirect=${redirectParam}` : '/register';
   
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
@@ -43,7 +43,7 @@ export function LoginPage() {
 
       if (hasRole('staff', 'admin', 'super_admin')) {
         showNotification('Đăng nhập thành công. Chuyển tới trang quản lý bàn.');
-        navigate('/');
+        navigate('/staff');
         return;
       }
 

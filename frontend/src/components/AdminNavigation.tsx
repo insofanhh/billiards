@@ -64,7 +64,7 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
           label: 'Dashboard',
           description: 'Tổng quan hoạt động',
           icon: icons.dashboard,
-          action: () => handleNavigate('/'),
+          action: () => handleNavigate('/staff'),
         },
         {
           key: 'orders',
@@ -101,7 +101,7 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            onClick={() => handleNavigate('/')}
+            onClick={() => handleNavigate('/staff')}
             className="flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             <div className="rounded-xl bg-yellow-500/20 p-2 text-yellow-400">

@@ -90,7 +90,7 @@ export function TableDetailPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy bàn</h2>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/staff')}
             className="text-blue-600 hover:text-blue-800"
           >
             Quay lại trang chủ
@@ -117,7 +117,7 @@ export function TableDetailPage() {
       <AdminNavigation userName={user?.name} onLogout={logout} />
       <div className="max-w-4xl mx-auto py-8 px-4">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/staff')}
           className="mb-6 text-blue-600 hover:text-blue-800"
         >
           ← Quay lại
