@@ -49,7 +49,7 @@ export function ClientTablePage() {
         setGuestName(getTemporaryUserName);
       }
 
-      if (res.order?.already_pending) {
+      if (res.order && 'already_pending' in res.order && res.order.already_pending) {
         showNotification('Bạn đã có yêu cầu mở bàn đang chờ duyệt.');
       }
 
