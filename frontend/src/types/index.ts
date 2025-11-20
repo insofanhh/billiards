@@ -120,8 +120,14 @@ export interface Order {
 export interface DiscountCode {
   id: number;
   code: string;
+  description?: string;
   discount_type: 'percent' | 'fixed';
   discount_value: number;
   min_spend?: number;
+  start_at?: string;
+  end_at?: string;
+  usage_limit?: number;
+  used_count?: number;
+  is_saved?: boolean;
 }
 

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class TableController extends Controller
 {
@@ -51,27 +52,47 @@ class TableController extends Controller
 
     public function requestOpen(Request $request, string $code)
     {
-        $request->validate([
-            'name' => 'required|string|min:2|max:255',
-        ]);
-
         $table = TableBilliard::where('code', $code)->firstOrFail();
 
-        // Create temporary user valid for 1 day
-        $email = 'guest_' . time() . '_' . Str::random(4) . '@temp.billiards.local';
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $email,
-            'password' => Hash::make(Str::random(16)),
-            'is_temporary' => true,
-            'temporary_expires_at' => Carbon::now('Asia/Ho_Chi_Minh')->addDay(),
-        ]);
-
-        if (method_exists($user, 'assignRole')) {
-            try { $user->assignRole('customer'); } catch (\Throwable $e) {}
+        // Kiểm tra user đã đăng nhập qua token (nếu có)
+        $authenticatedUser = null;
+        $bearerToken = $request->bearerToken();
+        if ($bearerToken) {
+            try {
+                $token = PersonalAccessToken::findToken($bearerToken);
+                if ($token && !$token->expires_at || ($token->expires_at && $token->expires_at->isFuture())) {
+                    $authenticatedUser = $token->tokenable;
+                }
+            } catch (\Exception $e) {
+                // Token không hợp lệ, tiếp tục như guest
+            }
         }
+        
+        if ($authenticatedUser) {
+            // User đã đăng nhập, sử dụng user đó
+            $user = $authenticatedUser;
+            $token = null; // Không cần tạo token mới vì user đã có token
+        } else {
+            // User chưa đăng nhập, tạo guest user - validate name
+            $validated = $request->validate([
+                'name' => 'required|string|min:2|max:255',
+            ]);
 
-        $token = $user->createToken('guest')->plainTextToken;
+            $email = 'guest_' . time() . '_' . Str::random(4) . '@temp.billiards.local';
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $email,
+                'password' => Hash::make(Str::random(16)),
+                'is_temporary' => true,
+                'temporary_expires_at' => Carbon::now('Asia/Ho_Chi_Minh')->addDay(),
+            ]);
+
+            if (method_exists($user, 'assignRole')) {
+                try { $user->assignRole('customer'); } catch (\Throwable $e) {}
+            }
+
+            $token = $user->createToken('guest')->plainTextToken;
+        }
 
         $startTime = Carbon::now('Asia/Ho_Chi_Minh');
         $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
@@ -88,15 +109,20 @@ class TableController extends Controller
 
         event(new OrderRequested($order));
 
-        return response()->json([
+        $responseData = [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'temporary_expires_at' => $user->temporary_expires_at,
             ],
-            'token' => $token,
             'order' => [ 'id' => $order->id ],
-        ], 201);
+        ];
+
+        if ($token) {
+            $responseData['token'] = $token;
+            $responseData['user']['temporary_expires_at'] = $user->temporary_expires_at;
+        }
+
+        return response()->json($responseData, 201);
     }
 }

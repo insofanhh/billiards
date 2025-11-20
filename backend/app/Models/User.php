@@ -68,6 +68,12 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Review::class);
     }
 
+    public function savedDiscounts()
+    {
+        return $this->belongsToMany(DiscountCode::class, 'user_saved_discounts')
+            ->withTimestamps();
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->hasRole('super_admin') || $this->hasRole('staff');

@@ -353,7 +353,7 @@ class OrderController extends Controller
         $roundedDiscount = round($discountAmount);
         $roundedTotalPaid = round(max(0, $totalBefore - $discountAmount));
 
-        DB::transaction(function () use ($order, $discountCode, $roundedDiscount, $roundedTotalPaid) {
+        DB::transaction(function () use ($order, $discountCode, $roundedDiscount, $roundedTotalPaid, $request) {
             if ($order->applied_discount_id && $order->applied_discount_id !== $discountCode->id) {
                 $previous = DiscountCode::find($order->applied_discount_id);
                 if ($previous && $previous->used_count > 0) {
@@ -363,6 +363,15 @@ class OrderController extends Controller
 
             if ($order->applied_discount_id !== $discountCode->id) {
                 $discountCode->increment('used_count');
+                
+                // Xóa voucher khỏi ví của user khi đã sử dụng
+                $user = $request->user();
+                if ($user) {
+                    DB::table('user_saved_discounts')
+                        ->where('user_id', $user->id)
+                        ->where('discount_code_id', $discountCode->id)
+                        ->delete();
+                }
             }
 
             $order->update([

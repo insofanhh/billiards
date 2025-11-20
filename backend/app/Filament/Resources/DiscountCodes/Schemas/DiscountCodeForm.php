@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class DiscountCodeForm
 {
@@ -63,6 +64,14 @@ class DiscountCodeForm
                 Toggle::make('active')
                     ->label('Kích hoạt')
                     ->default(true),
+                Toggle::make('public_discount')
+                    ->label('Công khai cho khách hàng')
+                    ->onIcon(Heroicon::Bolt)
+                    ->offIcon(Heroicon::User)
+                    ->onColor('success')
+                    ->offColor('gray')
+                    ->default(false)
+                    ->helperText('Bật để hiển thị voucher này trong section khuyến mãi cho khách hàng lưu về'),
             ]);
     }
 }

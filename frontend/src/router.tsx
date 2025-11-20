@@ -10,6 +10,8 @@ import { ClientTablePage } from './pages/ClientTablePage';
 import { ClientOrderPage } from './pages/ClientOrderPage';
 import { ClientHistoryPage } from './pages/ClientHistoryPage';
 import { ClientHomePage } from './pages/ClientHomePage';
+import { VoucherWalletPage } from './pages/VoucherWalletPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +58,14 @@ export const router = createBrowserRouter([
   {
     path: '/client/history',
     element: <ClientHistoryPage />,
+  },
+  {
+    path: '/client/vouchers',
+    element: <VoucherWalletPage />,
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
   },
 ]);
 

@@ -30,14 +30,25 @@ export function ClientTablePage() {
 
   const requestOpenMutation = useMutation({
     mutationFn: async () => {
-      const res = await tablesApi.requestOpen(code!, name.trim());
-      // store token + user for Sanctum
-      localStorage.setItem('auth_token', res.token);
-      localStorage.setItem('user', JSON.stringify(res.user));
-      const trimmedName = name.trim();
-      localStorage.setItem('guest_name', trimmedName);
-      setGuestName(getTemporaryUserName);
-      setIsLoggedIn(true);
+      const isAuthenticated = !!localStorage.getItem('auth_token');
+      const res = await tablesApi.requestOpen(code!, isAuthenticated ? '' : name.trim());
+      
+      // Chỉ cập nhật token và user nếu là guest user mới được tạo
+      if (res.token) {
+        localStorage.setItem('auth_token', res.token);
+        localStorage.setItem('user', JSON.stringify(res.user));
+        const trimmedName = name.trim();
+        localStorage.setItem('guest_name', trimmedName);
+        setGuestName(getTemporaryUserName);
+        setIsLoggedIn(true);
+      } else {
+        // User đã đăng nhập, chỉ cập nhật thông tin user nếu có thay đổi
+        if (res.user) {
+          localStorage.setItem('user', JSON.stringify(res.user));
+          setGuestName(getTemporaryUserName);
+        }
+      }
+      
       // Return order from response (pending order already created)
       return { id: res.order.id };
     },
@@ -95,18 +106,26 @@ export function ClientTablePage() {
           </div>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Tên của bạn</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nhập tên để yêu cầu mở bàn"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+            {!isLoggedIn && (
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Tên của bạn</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nhập tên để yêu cầu mở bàn"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
+            {isLoggedIn && (
+              <div className="p-3 bg-blue-50 rounded-md">
+                <p className="text-sm text-gray-600">Đang sử dụng tài khoản:</p>
+                <p className="font-semibold text-gray-900">{guestName}</p>
+              </div>
+            )}
             <button
               onClick={() => requestOpenMutation.mutate()}
-              disabled={!isAvailable || requestOpenMutation.isPending || !name.trim()}
+              disabled={!isAvailable || requestOpenMutation.isPending || (!isLoggedIn && !name.trim())}
               className={`w-full py-3 px-6 rounded-md font-medium ${
                 isAvailable ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
