@@ -43,6 +43,7 @@ export function ClientOrderPage() {
   });
 
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
+  const orderCustomerName = order?.customer_name || null;
   const canApplyDiscount = order ? order.total_before_discount > 0 && !hasSuccessfulTransaction : false;
 
   const { data: savedDiscounts } = useQuery({
@@ -125,13 +126,33 @@ export function ClientOrderPage() {
     },
   });
 
-  const hasPendingTransaction = order?.transactions?.some((t: any) => t.status === 'pending') ?? false;
+  const pendingTransaction = order?.transactions?.find((t: any) => t.status === 'pending') ?? null;
+  const hasPendingTransaction = !!pendingTransaction;
+  const canSelectPaymentMethod = !hasSuccessfulTransaction && (!pendingTransaction || !pendingTransaction.method);
+
+  const cancelRequestMutation = useMutation({
+    mutationFn: () => ordersApi.cancelRequest(Number(id!)),
+    onSuccess: (updatedOrder) => {
+      queryClient.setQueryData(['client-order', id], updatedOrder);
+      showNotification('Đã hủy yêu cầu mở bàn.');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Không thể hủy yêu cầu mở bàn.';
+      showNotification(message);
+    },
+  });
 
   useEffect(() => {
     if (order?.applied_discount?.code) {
       setDiscountCodeInput(order.applied_discount.code);
     }
   }, [order?.applied_discount?.code]);
+
+  useEffect(() => {
+    if (!canSelectPaymentMethod) {
+      setShowPayment(false);
+    }
+  }, [canSelectPaymentMethod]);
 
   useEffect(() => {
     if (!id || !order) return;
@@ -366,6 +387,21 @@ export function ClientOrderPage() {
             {order.status === 'pending_end' && (
               <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                 <p className="text-orange-800 font-medium">Yêu cầu kết thúc giờ chơi đã được gửi. Vui lòng đợi nhân viên xác nhận.</p>
+              </div>
+            )}
+
+            {order.status === 'pending' && (
+              <div className="mb-6 space-y-3">
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-yellow-800 font-medium">Yêu cầu mở bàn đang chờ nhân viên duyệt.</p>
+                </div>
+                <button
+                  onClick={() => cancelRequestMutation.mutate()}
+                  disabled={cancelRequestMutation.isPending}
+                  className="w-full py-3 px-6 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancelRequestMutation.isPending ? 'Đang hủy yêu cầu...' : 'Hủy yêu cầu mở bàn'}
+                </button>
               </div>
             )}
 
@@ -719,7 +755,7 @@ export function ClientOrderPage() {
                   </div>
                 </div>
 
-                {!hasSuccessfulTransaction && !hasPendingTransaction && (
+                {canSelectPaymentMethod && (
                   <button
                     onClick={() => setShowPayment(!showPayment)}
                     className="w-full py-3 px-6 bg-green-600 text-white rounded-md hover:bg-green-700"
@@ -728,9 +764,14 @@ export function ClientOrderPage() {
                   </button>
                 )}
 
-                {showPayment && !hasSuccessfulTransaction && !hasPendingTransaction && (
+                {showPayment && canSelectPaymentMethod && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                     <div className="space-y-4">
+                      {pendingTransaction && !pendingTransaction.method && (
+                        <p className="text-sm text-gray-600">
+                          Nhân viên đã chốt giờ chơi. Vui lòng chọn phương thức để gửi yêu cầu thanh toán.
+                        </p>
+                      )}
                       <div>
                         <label className="block text-sm font-medium mb-2">Phương thức thanh toán</label>
                         <select id="payment_method" className="w-full px-3 py-2 border border-gray-300 rounded-md">
@@ -760,7 +801,7 @@ export function ClientOrderPage() {
                   </div>
                 )}
 
-                {hasPendingTransaction && !hasSuccessfulTransaction && (
+                {hasPendingTransaction && pendingTransaction?.method && !hasSuccessfulTransaction && (
                   <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                     <p className="text-orange-800 font-medium text-center">Đang chờ nhân viên xác nhận thanh toán...</p>
                   </div>
@@ -779,10 +820,16 @@ export function ClientOrderPage() {
                       <span className="text-gray-600">Mã đơn hàng:</span>
                       <span className="font-semibold">{order.order_code}</span>
                     </div>
-                    {order.user && (
+                    {order.cashier && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Thu ngân:</span>
+                        <span className="font-semibold text-gray-900">{order.cashier}</span>
+                      </div>
+                    )}
+                    {orderCustomerName && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Khách hàng:</span>
-                        <span className="font-semibold">{order.user.name}</span>
+                        <span className="font-semibold">{orderCustomerName}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
@@ -804,7 +851,7 @@ export function ClientOrderPage() {
                     {order.total_play_time_minutes && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Thời gian chơi:</span>
-                        <span>{Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}m</span>
+                        <span>{Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p</span>
                       </div>
                     )}
                   </div>

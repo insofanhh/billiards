@@ -22,7 +22,15 @@ class TableResource extends JsonResource
             ->with('user')
             ->first();
 
-        $activeOrder = $this->orders()
+        $pendingPaymentOrder = $this->orders()
+            ->where('status', 'completed')
+            ->whereHas('transactions', function ($query) {
+                $query->where('status', 'pending');
+            })
+            ->latest()
+            ->first();
+
+        $activeOrder = $pendingPaymentOrder ?: $this->orders()
             ->where('status', 'active')
             ->latest()
             ->first();
@@ -72,6 +80,7 @@ class TableResource extends JsonResource
                 'id' => $activeOrder->id,
                 'order_code' => $activeOrder->order_code,
                 'start_at' => $activeOrder->start_at?->toIso8601String(),
+                'status' => $activeOrder->status,
             ] : null,
         ];
     }

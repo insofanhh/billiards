@@ -39,6 +39,7 @@ export function ClientHomePage() {
   const [isHandlingScan, setIsHandlingScan] = useState(false);
   const isAuthenticated = !!localStorage.getItem('auth_token');
   const isGuest = isGuestUser();
+  const [savingDiscountId, setSavingDiscountId] = useState<number | null>(null);
 
   useEffect(() => {
     const handleOpenScanner = () => {
@@ -60,7 +61,10 @@ export function ClientHomePage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: discountCodesApi.saveDiscount,
+    mutationFn: (discountId: number) => discountCodesApi.saveDiscount(discountId),
+    onMutate: (discountId: number) => {
+      setSavingDiscountId(discountId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['public-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['saved-discounts'] });
@@ -73,6 +77,9 @@ export function ClientHomePage() {
       } else {
         showNotification(error?.response?.data?.message || 'Không thể lưu voucher');
       }
+    },
+    onSettled: () => {
+      setSavingDiscountId(null);
     },
   });
 
@@ -269,7 +276,7 @@ export function ClientHomePage() {
                               disabled={saveMutation.isPending}
                               className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
                             >
-                              {saveMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+                              {saveMutation.isPending && savingDiscountId === discount.id ? 'Đang lưu...' : 'Lưu'}
                             </button>
                           </div>
                         )}

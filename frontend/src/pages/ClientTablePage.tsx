@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { tablesApi } from '../api/tables';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
+import { useNotification } from '../contexts/NotificationContext';
 
 export function ClientTablePage() {
   const { code } = useParams<{ code: string }>();
@@ -22,6 +23,8 @@ export function ClientTablePage() {
     setName(guestName || '');
   }, [guestName]);
 
+  const { showNotification } = useNotification();
+
   const { data: table, isLoading, refetch } = useQuery({
     queryKey: ['client-table', code],
     queryFn: () => tablesApi.getByCode(code!),
@@ -31,9 +34,9 @@ export function ClientTablePage() {
   const requestOpenMutation = useMutation({
     mutationFn: async () => {
       const isAuthenticated = !!localStorage.getItem('auth_token');
-      const res = await tablesApi.requestOpen(code!, isAuthenticated ? '' : name.trim());
-      
-      // Chỉ cập nhật token và user nếu là guest user mới được tạo
+      return tablesApi.requestOpen(code!, isAuthenticated ? '' : name.trim());
+    },
+    onSuccess: (res) => {
       if (res.token) {
         localStorage.setItem('auth_token', res.token);
         localStorage.setItem('user', JSON.stringify(res.user));
@@ -41,20 +44,23 @@ export function ClientTablePage() {
         localStorage.setItem('guest_name', trimmedName);
         setGuestName(getTemporaryUserName);
         setIsLoggedIn(true);
-      } else {
-        // User đã đăng nhập, chỉ cập nhật thông tin user nếu có thay đổi
-        if (res.user) {
-          localStorage.setItem('user', JSON.stringify(res.user));
-          setGuestName(getTemporaryUserName);
-        }
+      } else if (res.user) {
+        localStorage.setItem('user', JSON.stringify(res.user));
+        setGuestName(getTemporaryUserName);
       }
-      
-      // Return order from response (pending order already created)
-      return { id: res.order.id };
+
+      if (res.order?.already_pending) {
+        showNotification('Bạn đã có yêu cầu mở bàn đang chờ duyệt.');
+      }
+
+      if (res.order?.id) {
+        refetch();
+        navigate(`/client/order/${res.order.id}`);
+      }
     },
-    onSuccess: (order) => {
-      refetch();
-      navigate(`/client/order/${order.id}`);
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Không thể gửi yêu cầu mở bàn. Vui lòng thử lại.';
+      showNotification(message);
     },
   });
 

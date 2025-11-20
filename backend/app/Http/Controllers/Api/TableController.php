@@ -60,12 +60,51 @@ class TableController extends Controller
         if ($bearerToken) {
             try {
                 $token = PersonalAccessToken::findToken($bearerToken);
-                if ($token && !$token->expires_at || ($token->expires_at && $token->expires_at->isFuture())) {
+                if ($token && (!$token->expires_at || ($token->expires_at && $token->expires_at->isFuture()))) {
                     $authenticatedUser = $token->tokenable;
                 }
             } catch (\Exception $e) {
                 // Token không hợp lệ, tiếp tục như guest
             }
+        }
+
+        $blockingOrder = Order::where('table_id', $table->id)
+            ->whereIn('status', ['pending', 'active', 'pending_end'])
+            ->latest('id')
+            ->first();
+
+        if ($blockingOrder) {
+            if (
+                $blockingOrder->status === 'pending' &&
+                $authenticatedUser &&
+                $blockingOrder->user_id === $authenticatedUser->id
+            ) {
+                return response()->json([
+                    'user' => [
+                        'id' => $authenticatedUser->id,
+                        'name' => $authenticatedUser->name,
+                        'email' => $authenticatedUser->email,
+                    ],
+                    'order' => [
+                        'id' => $blockingOrder->id,
+                        'status' => $blockingOrder->status,
+                        'already_pending' => true,
+                    ],
+                ]);
+            }
+
+            $message = 'Bàn hiện không khả dụng.';
+            if ($blockingOrder->status === 'pending') {
+                $message = 'Bàn đang có yêu cầu mở, vui lòng chờ nhân viên xác nhận.';
+            } elseif ($blockingOrder->status === 'pending_end') {
+                $message = 'Bàn đang chờ xác nhận kết thúc, vui lòng thử lại sau.';
+            } elseif ($blockingOrder->status === 'active') {
+                $message = 'Bàn đang được sử dụng.';
+            }
+
+            return response()->json([
+                'message' => $message,
+            ], 409);
         }
         
         if ($authenticatedUser) {
@@ -115,7 +154,10 @@ class TableController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
             ],
-            'order' => [ 'id' => $order->id ],
+            'order' => [
+                'id' => $order->id,
+                'status' => $order->status,
+            ],
         ];
 
         if ($token) {

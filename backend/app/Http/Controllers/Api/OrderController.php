@@ -254,47 +254,78 @@ class OrderController extends Controller
         if (!$this->isStaff($request)) {
             $query->where('user_id', $request->user()->id);
         }
-        $order = $query->firstOrFail();
+        $order = $query->with(['transactions', 'table', 'priceRate', 'items.service', 'appliedDiscount', 'user'])->firstOrFail();
 
-        $order->update([
-            'end_at' => Carbon::now('Asia/Ho_Chi_Minh'),
-            'status' => 'completed',
-        ]);
+        $transaction = null;
+        $customerName = $this->resolveCustomerName($order, $request);
 
-        $startTime = $order->start_at instanceof Carbon ? $order->start_at : Carbon::parse($order->start_at);
-        $endTime = $order->end_at instanceof Carbon ? $order->end_at : Carbon::parse($order->end_at);
-        
-        $playTimeMinutes = $startTime->diffInMinutes($endTime);
-        
-        $hourlyPrice = (float) $order->priceRate->price_per_hour;
-        $perMinutePrice = $hourlyPrice / 60.0;
-        $tableCost = $playTimeMinutes * $perMinutePrice;
-        
-        $servicesCost = $order->items->sum('total_price');
-        $totalBeforeDiscount = $tableCost + $servicesCost;
+        DB::transaction(function () use (&$order, &$transaction, $request, $customerName) {
+            $order->update([
+                'end_at' => Carbon::now('Asia/Ho_Chi_Minh'),
+                'status' => 'completed',
+            ]);
 
-        $discount = 0;
-        if ($order->applied_discount_id) {
-            $discountCode = $order->appliedDiscount;
-            if ($discountCode && $discountCode->discount_type === 'percent') {
-                $discount = $totalBeforeDiscount * ($discountCode->discount_value / 100);
-            } elseif ($discountCode && $discountCode->discount_type === 'fixed') {
-                $discount = $discountCode->discount_value;
+            $startTime = $order->start_at instanceof Carbon ? $order->start_at : Carbon::parse($order->start_at);
+            $endTime = $order->end_at instanceof Carbon ? $order->end_at : Carbon::parse($order->end_at);
+            
+            $playTimeMinutes = $startTime->diffInMinutes($endTime);
+            
+            $hourlyPrice = (float) $order->priceRate->price_per_hour;
+            $perMinutePrice = $hourlyPrice / 60.0;
+            $tableCost = $playTimeMinutes * $perMinutePrice;
+            
+            $servicesCost = $order->items->sum('total_price');
+            $totalBeforeDiscount = $tableCost + $servicesCost;
+
+            $discount = 0;
+            if ($order->applied_discount_id) {
+                $discountCode = $order->appliedDiscount;
+                if ($discountCode && $discountCode->discount_type === 'percent') {
+                    $discount = $totalBeforeDiscount * ($discountCode->discount_value / 100);
+                } elseif ($discountCode && $discountCode->discount_type === 'fixed') {
+                    $discount = $discountCode->discount_value;
+                }
             }
+
+            $totalPaid = $totalBeforeDiscount - $discount;
+
+            $order->update([
+                'total_play_time_minutes' => $playTimeMinutes,
+                'total_before_discount' => round($totalBeforeDiscount),
+                'total_discount' => round($discount),
+                'total_paid' => round($totalPaid),
+            ]);
+
+            $existingPending = Transaction::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$existingPending) {
+                $transaction = Transaction::create([
+                    'order_id' => $order->id,
+                    'user_id' => $request->user()->id,
+                    'customer_name' => $customerName,
+                    'amount' => $order->total_paid,
+                    'method' => null,
+                    'status' => 'pending',
+                    'reference' => 'TXN-' . Str::upper(Str::random(10)),
+                ]);
+            } else {
+                if ($customerName && !$existingPending->customer_name) {
+                    $existingPending->update(['customer_name' => $customerName]);
+                }
+                $transaction = $existingPending;
+            }
+        });
+
+        $order->load(['table', 'priceRate', 'items.service', 'appliedDiscount', 'user', 'transactions']);
+
+        if ($transaction) {
+            $transaction->load(['order.table', 'order.user']);
+            event(new TransactionCreated($transaction));
         }
 
-        $totalPaid = $totalBeforeDiscount - $discount;
-
-        $order->update([
-            'total_play_time_minutes' => $playTimeMinutes,
-            'total_before_discount' => round($totalBeforeDiscount),
-            'total_discount' => round($discount),
-            'total_paid' => round($totalPaid),
-        ]);
-
-        $order->table->update(['status_id' => 1]);
-
-        $order->load(['table', 'priceRate', 'items.service', 'appliedDiscount', 'user']);
         event(new OrderEndApproved($order));
 
         return new OrderResource($order);
@@ -443,6 +474,21 @@ class OrderController extends Controller
         return response()->json(['message' => 'Đã hủy yêu cầu'], 200);
     }
 
+    public function cancelRequest(Request $request, $id)
+    {
+        $order = Order::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        $order->update(['status' => 'cancelled']);
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount', 'user']);
+
+        event(new OrderRejected($order));
+
+        return new OrderResource($order);
+    }
+
     public function createTransaction(Request $request, $id)
     {
         $request->validate([
@@ -450,7 +496,7 @@ class OrderController extends Controller
             'amount' => 'required|numeric|min:0',
         ]);
 
-        $query = Order::where('id', $id)->whereIn('status', ['completed', 'pending_end']);
+        $query = Order::where('id', $id)->whereIn('status', ['completed', 'pending_end'])->with(['user']);
         if (!$this->isStaff($request)) {
             $query->where('user_id', $request->user()->id);
         }
@@ -458,30 +504,85 @@ class OrderController extends Controller
 
         $method = $request->input('method');
         $amount = (float) $request->input('amount');
+        $customerName = $this->resolveCustomerName($order, $request);
 
         // Nếu khách tạo yêu cầu thanh toán tiền mặt/thẻ -> tạo giao dịch PENDING để nhân viên xác nhận.
         $shouldPending = !$this->isStaff($request) && in_array($method, ['cash', 'card'], true);
 
-        if (OrderItem::where('order_id', $order->id)->where('is_confirmed', false)->exists()) {
+        $hasPendingTransaction = Transaction::where('order_id', $order->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        $hasUnconfirmedItems = OrderItem::where('order_id', $order->id)
+            ->where('is_confirmed', false)
+            ->exists();
+
+        if (!$hasPendingTransaction && $hasUnconfirmedItems) {
             return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
         }
 
-        $transaction = DB::transaction(function () use ($request, $order, $shouldPending, $method, $amount) {
+        if ($hasPendingTransaction && !$shouldPending && $hasUnconfirmedItems) {
+            return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
+        }
+
+        $transaction = DB::transaction(function () use ($request, $order, $shouldPending, $method, $amount, $customerName) {
             $this->deductInventoryForOrder($order);
 
-        $transaction = Transaction::create([
-            'order_id' => $order->id,
-            'user_id' => $request->user()->id,
+            $pendingTransaction = Transaction::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            $reference = 'TXN-' . Str::upper(Str::random(10));
+
+            if ($pendingTransaction) {
+                $updates = [
+                    'method' => $method,
+                    'amount' => $amount,
+                    'user_id' => $request->user()->id,
+                ];
+
+                if (!$pendingTransaction->reference) {
+                    $updates['reference'] = $reference;
+                }
+
+                if ($customerName && !$pendingTransaction->customer_name) {
+                    $updates['customer_name'] = $customerName;
+                }
+
+                if ($shouldPending) {
+                    $pendingTransaction->update($updates);
+                } else {
+                    $pendingTransaction->update(array_merge($updates, ['status' => 'success']));
+                    if ((float) $order->total_paid === 0.0) {
+                        $order->update(['total_paid' => $amount]);
+                    }
+                    if ($order->table) {
+                        $order->table->update(['status_id' => 1]);
+                    }
+                }
+
+                return $pendingTransaction->fresh();
+            }
+
+            $transaction = Transaction::create([
+                'order_id' => $order->id,
+                'user_id' => $request->user()->id,
+                'customer_name' => $customerName,
                 'amount' => $amount,
                 'method' => $method,
-            'status' => $shouldPending ? 'pending' : 'success',
-            'reference' => 'TXN-' . Str::upper(Str::random(10)),
-        ]);
+                'status' => $shouldPending ? 'pending' : 'success',
+                'reference' => $reference,
+            ]);
 
-        if (!$shouldPending) {
-                $order->update(['total_paid' => $amount]);
-                $this->deductInventoryForOrder($order);
-        }
+            if (!$shouldPending) {
+                if ((float) $order->total_paid === 0.0) {
+                    $order->update(['total_paid' => $amount]);
+                }
+                if ($order->table) {
+                    $order->table->update(['status_id' => 1]);
+                }
+            }
 
             return $transaction;
         });
@@ -508,24 +609,43 @@ class OrderController extends Controller
             ->where('status', 'pending')
             ->firstOrFail();
 
-        if (OrderItem::where('order_id', $order->id)->where('is_confirmed', false)->exists()) {
-            return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
+        if (!$transaction->method) {
+            return response()->json(['message' => 'Khách hàng chưa chọn phương thức thanh toán.'], 422);
         }
 
-        DB::transaction(function () use ($transaction, $order) {
+        DB::transaction(function () use ($transaction, $order, $request) {
+            $pendingItems = OrderItem::where('order_id', $order->id)
+                ->where('is_confirmed', false)
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($pendingItems as $item) {
+                $item->update(['is_confirmed' => true]);
+            }
+
             $this->deductInventoryForOrder($order);
 
-        $transaction->update(['status' => 'success']);
+            $transaction->update([
+                'status' => 'success',
+                'user_id' => $request->user()->id,
+            ]);
 
-        if ((float) $order->total_paid === 0.0) {
-            $order->update(['total_paid' => $transaction->amount]);
-        }
+            if ((float) $order->total_paid === 0.0) {
+                $order->update(['total_paid' => $transaction->amount]);
+            }
+
+            if ($order->table) {
+                $order->table->update(['status_id' => 1]);
+            }
         });
 
-        $transaction->load(['order.user']);
+        $transaction->load(['order.user', 'user']);
         event(new TransactionConfirmed($transaction));
 
-        return response()->json(['message' => 'Đã xác nhận thanh toán', 'transaction' => $transaction->fresh()], 200);
+        return response()->json([
+            'message' => 'Đã xác nhận thanh toán',
+            'transaction' => $transaction->fresh(['user']),
+        ], 200);
     }
 
     private function isStaff(Request $request): bool
@@ -560,6 +680,22 @@ class OrderController extends Controller
         }
         
         return false;
+    }
+
+    private function resolveCustomerName(Order $order, Request $request): ?string
+    {
+        $order->loadMissing('user');
+        $orderUser = $order->user;
+        if (!$orderUser) {
+            return null;
+        }
+
+        $requestUser = $request->user();
+        if ($requestUser && $this->isStaff($request) && $orderUser->id === $requestUser->id) {
+            return null;
+        }
+
+        return $orderUser->name;
     }
 
     private function ensureInventoryAvailable(Service $service, int $qty, ?OrderItem $existingItem = null): void

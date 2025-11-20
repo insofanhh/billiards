@@ -25,7 +25,7 @@ class TransactionsTable
                     ->searchable()
                     ->sortable()
                     ->copyable(),
-                TextColumn::make('user.name')
+                TextColumn::make('customer_name')
                     ->label('Khách hàng')
                     ->searchable()
                     ->sortable(),
@@ -105,6 +105,14 @@ class TransactionsTable
                         'cash' => 'Tiền mặt',
                         'card' => 'Thẻ',
                         'mobile' => 'Mobile banking',
+                    ]),
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options([
+                        'pending' => 'Chờ xử lý',
+                        'success' => 'Thành công',
+                        'failed' => 'Thất bại',
+                        'refunded' => 'Đã hoàn tiền',
                     ]),
             ])
             ->recordActions([

@@ -84,9 +84,20 @@ class DiscountCodeController extends Controller
                 ->where('user_id', $userId)
                 ->pluck('discount_code_id')
                 ->toArray();
+
+            $usedDiscountIds = DB::table('orders')
+                ->where('user_id', $userId)
+                ->whereNotNull('applied_discount_id')
+                ->pluck('applied_discount_id')
+                ->unique()
+                ->toArray();
             
             if (!empty($savedDiscountIds)) {
-                $query->whereNotIn('id', $savedDiscountIds);
+                $query->whereNotIn('discount_codes.id', $savedDiscountIds);
+            }
+
+            if (!empty($usedDiscountIds)) {
+                $query->whereNotIn('discount_codes.id', $usedDiscountIds);
             }
         }
 
@@ -118,14 +129,6 @@ class DiscountCodeController extends Controller
         }
 
         $now = Carbon::now('Asia/Ho_Chi_Minh');
-        
-        // Lấy danh sách discount_id đã được user sử dụng (có trong orders)
-        $usedDiscountIds = DB::table('orders')
-            ->where('user_id', $user->id)
-            ->whereNotNull('applied_discount_id')
-            ->pluck('applied_discount_id')
-            ->unique()
-            ->toArray();
 
         $query = $user->savedDiscounts()
             ->where('active', true)
@@ -136,16 +139,7 @@ class DiscountCodeController extends Controller
             ->where(function ($query) use ($now) {
                 $query->whereNull('end_at')
                     ->orWhere('end_at', '>=', $now);
-            })
-            ->where(function ($query) {
-                $query->whereNull('usage_limit')
-                    ->orWhereRaw('used_count < usage_limit');
             });
-
-        // Loại bỏ voucher đã được user sử dụng
-        if (!empty($usedDiscountIds)) {
-            $query->whereNotIn('id', $usedDiscountIds);
-        }
 
         $discounts = $query->orderBy('created_at', 'desc')
             ->get()
@@ -192,6 +186,15 @@ class DiscountCodeController extends Controller
 
         if ($user->savedDiscounts()->where('discount_code_id', $id)->exists()) {
             return response()->json(['message' => 'Voucher đã được lưu'], 400);
+        }
+
+        $hasUsedDiscount = DB::table('orders')
+            ->where('user_id', $user->id)
+            ->where('applied_discount_id', $id)
+            ->exists();
+
+        if ($hasUsedDiscount) {
+            return response()->json(['message' => 'Voucher đã được bạn sử dụng trước đó. Chờ quản trị viên xuất bản lại để dùng tiếp.'], 400);
         }
 
         $user->savedDiscounts()->attach($id);

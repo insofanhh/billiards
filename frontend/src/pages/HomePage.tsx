@@ -293,6 +293,7 @@ export function HomePage() {
                 const currentPath = location.pathname;
                 const isViewingOrderDetail = table.active_order?.id && currentPath === `/order/${table.active_order.id}`;
                 const showNotification = hasNotification && !isViewingOrderDetail && table.active_order;
+                const isPendingPayment = table.active_order?.status === 'completed';
 
                 return (
                 <div
@@ -318,6 +319,11 @@ export function HomePage() {
                         Có dịch vụ mới
                       </span>
                     </div>
+                  )}
+                  {isPendingPayment && (
+                    <p className="mt-4 px-3 py-2 text-xs font-semibold text-yellow-800 bg-yellow-50 border border-yellow-200 rounded">
+                      Đang chờ xác nhận thanh toán
+                    </p>
                   )}
                   {table.pending_order?.id && !approveMutation.isPending && !rejectMutation.isPending && (
                     <div className="mt-4 flex justify-end space-x-2">

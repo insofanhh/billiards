@@ -103,6 +103,7 @@ export function TableDetailPage() {
   const isAvailable = table.status.name === 'Trống';
   const activePriceRate = table.table_type.current_price_rate || table.table_type.price_rates?.find(rate => rate.active);
   const hasActiveOrder = !!table.active_order;
+  const hasPendingPaymentOrder = table.active_order?.status === 'completed';
   const hasPendingEndOrder = !!table.pending_end_order;
   const hasPendingOpenOrder = !!table.pending_order;
 
@@ -166,15 +167,22 @@ export function TableDetailPage() {
           )}
 
           {hasActiveOrder && !hasPendingEndOrder && table.active_order && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className={`mb-6 p-4 rounded-lg border ${hasPendingPaymentOrder ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-blue-600 font-medium">Đơn hàng đang diễn ra</p>
-                  <p className="text-sm text-blue-800 mt-1">{table.active_order.order_code}</p>
+                  <p className={`text-sm font-medium ${hasPendingPaymentOrder ? 'text-yellow-700' : 'text-blue-600'}`}>
+                    {hasPendingPaymentOrder ? 'Đơn hàng chờ thanh toán' : 'Đơn hàng đang diễn ra'}
+                  </p>
+                  <p className={`text-sm mt-1 ${hasPendingPaymentOrder ? 'text-yellow-900' : 'text-blue-800'}`}>
+                    {table.active_order.order_code}
+                  </p>
                   {table.active_order.start_at && (
                     <p className="text-xs text-blue-600 mt-1">
                       Bắt đầu: {new Date(table.active_order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                     </p>
+                  )}
+                  {hasPendingPaymentOrder && (
+                    <p className="text-xs text-yellow-700 mt-1">Bàn sẽ mở lại sau khi xác nhận thanh toán.</p>
                   )}
                 </div>
               </div>
@@ -272,9 +280,9 @@ export function TableDetailPage() {
             {hasActiveOrder ? (
               <button
                 onClick={handleViewOrder}
-                className="flex-1 py-3 px-6 rounded-md font-medium bg-blue-600 text-white hover:bg-blue-700"
+                className={`flex-1 py-3 px-6 rounded-md font-medium ${hasPendingPaymentOrder ? 'bg-yellow-500 text-white hover:bg-yellow-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
-                Tiếp tục đơn hàng
+                {hasPendingPaymentOrder ? 'Xử lý thanh toán' : 'Tiếp tục đơn hàng'}
               </button>
             ) : (
               <button
