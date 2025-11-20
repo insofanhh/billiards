@@ -33,7 +33,16 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 
-    # Send Requests To Front Controller...
+    # Frontend SPA routes - serve index.html if it exists
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{DOCUMENT_ROOT}/index.html -f
+    RewriteCond %{REQUEST_URI} !^/api [NC]
+    RewriteCond %{REQUEST_URI} !^/admin [NC]
+    RewriteCond %{REQUEST_URI} !^/broadcasting [NC]
+    RewriteRule ^ index.html [L]
+
+    # Send Requests To Front Controller (Laravel)...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]

@@ -26,8 +26,8 @@ export function RegisterPage() {
   const { setAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const redirectParam = searchParams.get('redirect');
-  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : '/';
-  const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/';
+  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : '/client';
+  const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/client';
   const loginLink = redirectParam ? `/login?redirect=${redirectParam}` : '/login';
   
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
