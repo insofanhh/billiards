@@ -1,9 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { ClientNavigation } from '../components/ClientNavigation';
-import { getTemporaryUserName } from '../utils/temporaryUser';
+import { getTemporaryUserName, isGuestUser } from '../utils/temporaryUser';
+import { discountCodesApi } from '../api/discountCodes';
+import type { DiscountCode } from '../types';
+import { useNotification } from '../contexts/NotificationContext';
 
 type Highlight = {
   title: string;
@@ -27,13 +31,50 @@ const highlightCards: Highlight[] = [
 
 export function ClientHomePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { showNotification } = useNotification();
   const [guestName] = useState(getTemporaryUserName);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [isHandlingScan, setIsHandlingScan] = useState(false);
+  const isAuthenticated = !!localStorage.getItem('auth_token');
+  const isGuest = isGuestUser();
+
+  useEffect(() => {
+    const handleOpenScanner = () => {
+      setScanError(null);
+      setIsScannerOpen(true);
+    };
+
+    window.addEventListener('openScanner', handleOpenScanner);
+    return () => {
+      window.removeEventListener('openScanner', handleOpenScanner);
+    };
+  }, []);
 
   const [placeholderAnnouncements] = useState(() => ([] as Array<{ title: string; description: string }>));
-  const [placeholderPromotions] = useState(() => ([] as Array<{ title: string; description: string; label?: string }>));
+  
+  const { data: publicDiscounts } = useQuery({
+    queryKey: ['public-discounts'],
+    queryFn: discountCodesApi.getPublicDiscounts,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: discountCodesApi.saveDiscount,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['public-discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['saved-discounts'] });
+      showNotification('Đã lưu voucher vào ví');
+    },
+    onError: (error: any) => {
+      if (error?.response?.data?.requires_registration) {
+        showNotification('Vui lòng đăng ký thành viên để lưu voucher vào ví');
+        navigate('/register');
+      } else {
+        showNotification(error?.response?.data?.message || 'Không thể lưu voucher');
+      }
+    },
+  });
 
   const parseTableCode = (rawValue: string) => {
     if (!rawValue) return null;
@@ -94,6 +135,7 @@ export function ClientHomePage() {
         userName={guestName}
         onHomeClick={() => navigate('/client')}
         onHistoryClick={() => navigate('/client/history')}
+        onVouchersClick={() => navigate('/client/vouchers')}
       />
 
       <main className="mx-auto max-w-6xl px-4 py-10 space-y-10">
@@ -153,7 +195,7 @@ export function ClientHomePage() {
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 py-2">Thông báo</p>
               <h2 className="text-2xl font-semibold text-gray-900">Tin tức mới nhất</h2>
-              <p className="text-sm text-gray-500">Tự động đồng bộ từ CMS ngay khi quản trị viên tạo thông báo.</p>
+              {/* <p className="text-sm text-gray-500">Tự động đồng bộ từ CMS ngay khi quản trị viên tạo thông báo.</p> */}
             </div>
             {/* <span className="rounded-full bg-gray-100 px-4 py-1 text-xs font-semibold text-gray-600">Thử nghiệm</span> */}
           </div>
@@ -177,25 +219,74 @@ export function ClientHomePage() {
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 py-2">Khuyến mãi</p>
               <h2 className="text-2xl font-semibold text-gray-900">Ưu đãi dành cho bạn</h2>
-              <p className="text-sm text-gray-500">Nơi quản trị viên đăng tải các chương trình giảm giá, mã voucher.</p>
+              {/* <p className="text-sm text-gray-500">Nơi quản trị viên đăng tải các chương trình giảm giá, mã voucher.</p> */}
             </div>
             {/* <span className="rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold text-blue-600">Đang chờ dữ liệu</span> */}
           </div>
-          {placeholderPromotions.length === 0
-            ? emptyStateCard('Chưa có ưu đãi nào được bật.')
+          {!publicDiscounts || publicDiscounts.length === 0
+            ? emptyStateCard('Chưa có ưu đãi nào được thêm.')
             : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {placeholderPromotions.map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-blue-100 bg-white p-6 shadow">
-                    <p className="text-xs font-semibold text-blue-500">{item.label || 'Ưu đãi'}</p>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-900">{item.title}</h3>
-                    <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                  </div>
-                ))}
+                {publicDiscounts.map((discount: DiscountCode) => {
+                  const formatDiscountValue = () => {
+                    if (discount.discount_type === 'percent') {
+                      return `${discount.discount_value}%`;
+                    }
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.discount_value);
+                  };
+                  const isSaved = discount.is_saved || false;
+                  return (
+                    <div key={discount.id} className="rounded-2xl border border-blue-100 bg-white p-6 shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-blue-500">VOUCHER</p>
+                          <h3 className="mt-2 text-lg font-semibold text-gray-900">{discount.code}</h3>
+                          {discount.description && <p className="mt-2 text-sm text-gray-600">{discount.description}</p>}
+                          <div className="mt-3">
+                            <p className="text-sm text-gray-500">Giảm giá</p>
+                            <p className="text-xl font-bold text-blue-600">{formatDiscountValue()}</p>
+                            {discount.min_spend && (
+                              <p className="mt-1 text-xs text-gray-500">
+                                Đơn tối thiểu: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {!isSaved && (
+                          <div className="ml-4">
+                            <button
+                              onClick={() => {
+                                if (!isAuthenticated) {
+                                  showNotification('Vui lòng đăng nhập để lưu voucher');
+                                  navigate('/login');
+                                } else if (isGuest) {
+                                  showNotification('Vui lòng đăng ký thành viên để lưu voucher');
+                                  navigate('/register');
+                                } else {
+                                  saveMutation.mutate(discount.id);
+                                }
+                              }}
+                              disabled={saveMutation.isPending}
+                              className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
+                            >
+                              {saveMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+                            </button>
+                          </div>
+                        )}
+                        {isSaved && (
+                          <div className="ml-4">
+                            <span className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-600">
+                              Đã lưu
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )
           }
-          <p className="text-xs text-gray-400">* Nội dung hiển thị tạm thời để chờ quản trị viên cập nhật.</p>
         </section>
 
         <section className="rounded-3xl border border-gray-100 bg-white p-8 shadow-sm">

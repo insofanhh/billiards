@@ -1,29 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type ClientNavigationProps = {
   userName?: string;
   subtitle?: string;
   onHomeClick?: () => void;
   onHistoryClick?: () => void;
+  onVouchersClick?: () => void;
   historyActive?: boolean;
+  vouchersActive?: boolean;
 };
 
 export function ClientNavigation({
   userName,
-  subtitle = 'Khách hàng',
+  subtitle = '',
   onHomeClick,
   onHistoryClick,
+  onVouchersClick,
   historyActive = false,
+  vouchersActive = false,
 }: ClientNavigationProps) {
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
+  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [canLogout, setCanLogout] = useState(() => !!localStorage.getItem('auth_token'));
   const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideGuestDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearHideTimeout = () => {
     if (hideDropdownTimeout.current) {
       clearTimeout(hideDropdownTimeout.current);
       hideDropdownTimeout.current = null;
+    }
+  };
+
+  const clearGuestDropdownTimeout = () => {
+    if (hideGuestDropdownTimeout.current) {
+      clearTimeout(hideGuestDropdownTimeout.current);
+      hideGuestDropdownTimeout.current = null;
     }
   };
 
@@ -35,9 +50,18 @@ export function ClientNavigation({
     }, 200);
   };
 
+  const scheduleHideGuest = () => {
+    clearGuestDropdownTimeout();
+    hideGuestDropdownTimeout.current = setTimeout(() => {
+      setShowGuestDropdown(false);
+      hideGuestDropdownTimeout.current = null;
+    }, 200);
+  };
+
   useEffect(() => {
     return () => {
       clearHideTimeout();
+      clearGuestDropdownTimeout();
     };
   }, []);
 
@@ -73,6 +97,11 @@ export function ClientNavigation({
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
       </svg>
     ),
+    voucher: (
+      <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z" />
+      </svg>
+    ),
   };
 
   const displayName = userName?.trim() || 'Khách tạm thời';
@@ -87,6 +116,11 @@ export function ClientNavigation({
     setMobileMenuOpen(false);
   };
 
+  const handleVouchers = () => {
+    onVouchersClick?.();
+    setMobileMenuOpen(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
@@ -95,6 +129,16 @@ export function ClientNavigation({
     setCanLogout(false);
     setShowLogoutDesktop(false);
     window.location.reload();
+  };
+
+  const handleLogin = () => {
+    setShowGuestDropdown(false);
+    navigate('/login');
+  };
+
+  const handleRegister = () => {
+    setShowGuestDropdown(false);
+    navigate('/register');
   };
 
   return (
@@ -126,6 +170,17 @@ export function ClientNavigation({
                 Lịch sử chơi
               </button>
             )}
+            {onVouchersClick && (
+              <button
+                type="button"
+                onClick={handleVouchers}
+                className={`rounded-full border border-white/10 px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  vouchersActive ? 'bg-white/20 text-yellow-300' : 'text-white hover:bg-white/10'
+                }`}
+              >
+                Ví voucher
+              </button>
+            )}
             {canLogout ? (
               <div
                 className="relative"
@@ -148,7 +203,7 @@ export function ClientNavigation({
                 </button>
                 {showLogoutDesktop && (
                   <div
-                    className="absolute right-0 mt-2 w-30 rounded-2xl border border-white/10 bg-gray-800/95  shadow-xl"
+                    className="absolute right-0 mt-2 w-32 rounded-2xl border border-white/10 bg-gray-800/95  shadow-xl"
                     onMouseEnter={clearHideTimeout}
                     onMouseLeave={scheduleHide}
                   >
@@ -163,9 +218,47 @@ export function ClientNavigation({
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl bg-white/5 px-4 py-2 text-left">
-                <p className="text-xs uppercase tracking-wide text-gray-400">{subtitle}</p>
-                <p className="text-sm font-semibold text-white">{displayName}</p>
+              <div
+                className="relative"
+                onMouseEnter={() => {
+                  clearGuestDropdownTimeout();
+                  setShowGuestDropdown(true);
+                }}
+                onMouseLeave={scheduleHideGuest}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearGuestDropdownTimeout();
+                    setShowGuestDropdown((prev) => !prev);
+                  }}
+                  className="rounded-2xl bg-white/5 px-4 py-2 text-left text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+                >
+                  <p className="text-xs uppercase tracking-wide text-gray-400">{subtitle}</p>
+                  <p className="text-sm font-semibold">{displayName}</p>
+                </button>
+                {showGuestDropdown && (
+                  <div
+                    className="absolute right-0 mt-2 w-40 rounded-2xl border border-white/10 bg-gray-800/95 shadow-xl"
+                    onMouseEnter={clearGuestDropdownTimeout}
+                    onMouseLeave={scheduleHideGuest}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleLogin}
+                      className="w-full rounded-t-2xl border-b border-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    >
+                      Đăng nhập
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRegister}
+                      className="w-full rounded-b-2xl px-4 py-3 text-left text-sm font-semibold text-blue-300 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                    >
+                      Đăng ký
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -236,7 +329,19 @@ export function ClientNavigation({
                 <span className="text-yellow-400">{icons.history}</span>
               </button>
             )}
-            {canLogout && (
+            {onVouchersClick && (
+              <button
+                type="button"
+                onClick={handleVouchers}
+                className={`flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-left text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  vouchersActive ? 'text-yellow-300' : 'text-white hover:bg-white/10'
+                }`}
+              >
+                <span>Ví voucher</span>
+                <span className="text-yellow-400">{icons.voucher}</span>
+              </button>
+            )}
+            {canLogout ? (
               <button
                 type="button"
                 onClick={handleLogout}
@@ -244,6 +349,29 @@ export function ClientNavigation({
               >
                 Đăng xuất
               </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleLogin();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  Đăng nhập
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRegister();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full rounded-2xl border border-blue-300/20 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                >
+                  Đăng ký
+                </button>
+              </>
             )}
           </div>
           <div className="border-t border-white/5 px-6 py-4 text-xs text-gray-500">

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
+import { discountCodesApi } from '../api/discountCodes';
 import type { Service } from '../types';
 import { echo } from '../echo';
 import { useNotification } from '../contexts/NotificationContext';
@@ -39,6 +40,15 @@ export function ClientOrderPage() {
   const { data: services } = useQuery({
     queryKey: ['services'],
     queryFn: servicesApi.getAll,
+  });
+
+  const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
+  const canApplyDiscount = order ? order.total_before_discount > 0 && !hasSuccessfulTransaction : false;
+
+  const { data: savedDiscounts } = useQuery({
+    queryKey: ['saved-discounts'],
+    queryFn: discountCodesApi.getSavedDiscounts,
+    enabled: !!localStorage.getItem('auth_token') && !!order,
   });
 
   const requestEndMutation = useMutation({
@@ -115,7 +125,6 @@ export function ClientOrderPage() {
     },
   });
 
-  const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
   const hasPendingTransaction = order?.transactions?.some((t: any) => t.status === 'pending') ?? false;
 
   useEffect(() => {
@@ -263,8 +272,6 @@ export function ClientOrderPage() {
   if (!order) {
     return <div className="min-h-screen flex items-center justify-center">Không tìm thấy đơn hàng</div>;
   }
-
-  const canApplyDiscount = order.total_before_discount > 0 && !hasSuccessfulTransaction;
   const appliedDiscountLabel = order.applied_discount
     ? order.applied_discount.discount_type === 'percent'
       ? `${order.applied_discount.discount_value}%`
@@ -279,12 +286,37 @@ export function ClientOrderPage() {
     applyDiscountMutation.mutate(trimmed.toUpperCase());
   };
 
+  const handleApplySavedDiscount = (code: string) => {
+    if (!canApplyDiscount) return;
+    setDiscountCodeInput(code);
+    setDiscountFeedback(null);
+    applyDiscountMutation.mutate(code.toUpperCase());
+  };
+
+  const formatDiscountValue = (discount: any) => {
+    if (discount.discount_type === 'percent') {
+      return `${discount.discount_value}%`;
+    }
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.discount_value);
+  };
+
+  const isDiscountAvailable = (discount: any) => {
+    if (!order || !canApplyDiscount) return false;
+    const now = new Date();
+    if (discount.end_at && new Date(discount.end_at) < now) return false;
+    if (discount.start_at && new Date(discount.start_at) > now) return false;
+    if (discount.usage_limit && discount.used_count && discount.used_count >= discount.usage_limit) return false;
+    if (discount.min_spend && order.total_before_discount < discount.min_spend) return false;
+    return true;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <ClientNavigation
         userName={guestName}
         onHomeClick={() => navigate('/client')}
         onHistoryClick={() => navigate('/client/history')}
+        onVouchersClick={() => navigate('/client/vouchers')}
       />
       <div className="max-w-4xl mx-auto py-12 px-4">
         {!hasSuccessfulTransaction ? (
@@ -568,8 +600,60 @@ export function ClientOrderPage() {
               <div>
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   {order.total_before_discount > 0 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium mb-2">Mã giảm giá</label>
+                    <>
+                      {savedDiscounts && savedDiscounts.length > 0 && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium mb-2">Voucher đã lưu trong ví</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                            {savedDiscounts.map((discount) => {
+                              const available = isDiscountAvailable(discount);
+                              const isApplied = order.applied_discount?.code === discount.code;
+                              return (
+                                <button
+                                  key={discount.id}
+                                  onClick={() => {
+                                    if (available && !isApplied) {
+                                      handleApplySavedDiscount(discount.code);
+                                    }
+                                  }}
+                                  disabled={!available || applyDiscountMutation.isPending || isApplied}
+                                  className={`p-3 rounded-lg border text-left transition ${
+                                    isApplied
+                                      ? 'border-green-300 bg-green-50 cursor-default'
+                                      : available
+                                      ? 'border-blue-300 bg-blue-50 hover:bg-blue-100 cursor-pointer'
+                                      : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-sm">{discount.code}</p>
+                                        {isApplied && (
+                                          <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded">Đang áp dụng</span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        Giảm {formatDiscountValue(discount)}
+                                        {discount.min_spend && ` • Đơn tối thiểu ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}`}
+                                      </p>
+                                      {!available && !isApplied && (
+                                        <p className="text-xs text-red-600 mt-1">
+                                          {discount.min_spend && order.total_before_discount < discount.min_spend
+                                            ? `Cần đơn tối thiểu ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}`
+                                            : 'Voucher không khả dụng'}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium mb-2">Hoặc nhập mã giảm giá</label>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <input
                           type="text"
@@ -608,7 +692,8 @@ export function ClientOrderPage() {
                           {discountFeedback.message}
                         </p>
                       )}
-                    </div>
+                      </div>
+                    </>
                   )}
                   {order.total_before_discount > 0 && (
                     <div className="flex justify-between mb-2">

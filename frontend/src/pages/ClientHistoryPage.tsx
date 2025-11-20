@@ -49,6 +49,7 @@ export function ClientHistoryPage() {
         userName={guestName}
         onHomeClick={() => navigate('/client')}
         onHistoryClick={() => navigate('/client/history')}
+        onVouchersClick={() => navigate('/client/vouchers')}
         historyActive
       />
       <div className="max-w-4xl mx-auto py-10 px-4 space-y-6">
