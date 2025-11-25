@@ -9,6 +9,7 @@ import { echo } from '../echo';
 import { useNotification } from '../contexts/NotificationContext';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
+import { clearClientActiveOrder, isClientOrderContinuable, persistClientActiveOrderFromOrder } from '../utils/clientActiveOrder';
 
 
 export function ClientOrderPage() {
@@ -17,12 +18,12 @@ export function ClientOrderPage() {
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
   const [showAddService, setShowAddService] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [selected, setSelected] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [discountCodeInput, setDiscountCodeInput] = useState('');
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
   const [guestName] = useState(getTemporaryUserName);
 
   const { data: order, isLoading } = useQuery({
@@ -36,6 +37,15 @@ export function ClientOrderPage() {
       localStorage.setItem('last_client_table_code', order.table.code);
     }
   }, [order?.table?.code]);
+
+  useEffect(() => {
+    if (!order) return;
+    if (isClientOrderContinuable(order.status)) {
+      persistClientActiveOrderFromOrder(order);
+    } else {
+      clearClientActiveOrder();
+    }
+  }, [order]);
 
   const { data: services } = useQuery({
     queryKey: ['services'],
@@ -108,7 +118,6 @@ export function ClientOrderPage() {
       ordersApi.createTransaction(Number(id!), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-order', id] });
-      setShowPayment(false);
       showNotification('Đã gửi yêu cầu thanh toán. Vui lòng đợi nhân viên xác nhận.');
     },
   });
@@ -147,12 +156,6 @@ export function ClientOrderPage() {
       setDiscountCodeInput(order.applied_discount.code);
     }
   }, [order?.applied_discount?.code]);
-
-  useEffect(() => {
-    if (!canSelectPaymentMethod) {
-      setShowPayment(false);
-    }
-  }, [canSelectPaymentMethod]);
 
   useEffect(() => {
     if (!id || !order) return;
@@ -201,7 +204,6 @@ export function ClientOrderPage() {
 
     const handleTransactionConfirmed = (data: any) => {
       if (data.transaction?.order_id === Number(id)) {
-        setShowPayment(false);
         queryClient.invalidateQueries({ queryKey: ['client-order', id] });
         queryClient.refetchQueries({ queryKey: ['client-order', id] });
         setTimeout(() => {
@@ -274,7 +276,6 @@ export function ClientOrderPage() {
 
   useEffect(() => {
     if (hasSuccessfulTransaction) {
-      setShowPayment(false);
       setTimeout(() => {
         const bill = document.getElementById('client-bill');
         if (bill) bill.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -554,23 +555,27 @@ export function ClientOrderPage() {
                             </div>
                             <div className="flex items-center justify-between mt-auto">
                               <div className="flex items-center space-x-2">
-                                {qty > 0 && (
-                                  <>
-                                    <button
-                                      onClick={() => setSelected((s) => {
-                                        const current = s[service.id] || 0;
-                                        const next = Math.max(0, current - 1);
-                                        const copy = { ...s };
-                                        if (next === 0) delete copy[service.id]; else copy[service.id] = next;
-                                        return copy;
-                                      })}
-                                      className="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-sm"
-                                    >
-                                      −
-                                    </button>
-                                    <span className="w-6 text-center text-sm font-medium">{qty}</span>
-                                  </>
-                                )}
+                                <button
+                                  onClick={() => {
+                                    if (qty <= 0) return;
+                                    setSelected((s) => {
+                                      const current = s[service.id] || 0;
+                                      const next = Math.max(0, current - 1);
+                                      const copy = { ...s };
+                                      if (next === 0) delete copy[service.id]; else copy[service.id] = next;
+                                      return copy;
+                                    });
+                                  }}
+                                  disabled={qty <= 0}
+                                  className={`w-7 h-7 flex items-center justify-center rounded text-sm ${
+                                    qty <= 0
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                                  }`}
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-sm font-medium">{qty}</span>
                                 <button
                                   onClick={handleIncrease}
                                   className={`w-7 h-7 flex items-center justify-center rounded text-lg font-bold ${
@@ -756,48 +761,56 @@ export function ClientOrderPage() {
                 </div>
 
                 {canSelectPaymentMethod && (
-                  <button
-                    onClick={() => setShowPayment(!showPayment)}
-                    className="w-full py-3 px-6 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    {showPayment ? 'Ẩn thanh toán' : 'Thanh toán'}
-                  </button>
-                )}
-
-                {showPayment && canSelectPaymentMethod && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="space-y-4">
-                      {pendingTransaction && !pendingTransaction.method && (
-                        <p className="text-sm text-gray-600">
-                          Nhân viên đã chốt giờ chơi. Vui lòng chọn phương thức để gửi yêu cầu thanh toán.
-                        </p>
-                      )}
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Phương thức thanh toán</label>
-                        <select id="payment_method" className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                          <option value="cash">Tiền mặt (xác nhận tại quầy)</option>
-                          <option value="card">Quẹt thẻ (xác nhận tại quầy)</option>
-                          <option value="mobile">Chuyển khoản (hiển thị QR)</option>
-                        </select>
-                      </div>
-
-                      {/* Placeholder QR cho chuyển khoản - tích hợp sepay sau */}
-                      <div id="qr_preview" className="hidden"></div>
-
-                      <button
-                        onClick={() => {
-                          const method = (document.getElementById('payment_method') as HTMLSelectElement).value as 'cash' | 'card' | 'mobile';
-                          if (method === 'mobile') {
-                            showNotification('Hiển thị QR chuyển khoản (tích hợp sau). Vui lòng liên hệ quầy để xác nhận.');
-                          }
-                          paymentMutation.mutate({ method, amount: order.total_paid });
-                        }}
-                        disabled={paymentMutation.isPending}
-                        className="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {paymentMutation.isPending ? 'Đang gửi yêu cầu...' : 'Xác nhận thanh toán'}
-                      </button>
+                  <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">Chọn phương thức thanh toán</p>
+                    <div className="grid gap-3">
+                      {(['cash', 'card', 'mobile'] as Array<'cash' | 'card' | 'mobile'>).map((method) => (
+                        <label
+                          key={method}
+                          className={`flex flex-1 items-center gap-3 rounded-xl border px-3 py-2 cursor-pointer transition ${
+                            selectedPaymentMethod === method
+                              ? 'border-green-500 bg-white shadow'
+                              : 'border-gray-200 bg-white hover:border-green-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="client-payment-method"
+                            value={method}
+                            checked={selectedPaymentMethod === method}
+                            onChange={() => setSelectedPaymentMethod(method)}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500"
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {method === 'cash'
+                                ? 'Tiền mặt'
+                                : method === 'card'
+                                ? 'Quẹt thẻ'
+                                : 'Chuyển khoản (Mobile)'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {method === 'mobile'
+                                ? 'Nhân viên sẽ hiển thị QR cho bạn'
+                                : 'Xác nhận tại quầy với nhân viên'}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
                     </div>
+                    <button
+                      onClick={() => {
+                        const method = selectedPaymentMethod;
+                        if (method === 'mobile') {
+                          showNotification('Nhân viên sẽ hỗ trợ bạn chuyển khoản ngay tại quầy.');
+                        }
+                        paymentMutation.mutate({ method, amount: order.total_paid });
+                      }}
+                      disabled={paymentMutation.isPending}
+                      className="w-full py-3 px-6 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {paymentMutation.isPending ? 'Đang gửi yêu cầu...' : 'Xác nhận thanh toán'}
+                    </button>
                   </div>
                 )}
 
@@ -812,7 +825,16 @@ export function ClientOrderPage() {
         ) : null}
 
         {hasSuccessfulTransaction && (
-          <div id="client-bill" className="bg-white rounded-lg shadow-md p-8 border-2 border-green-200">
+          <>
+            <button
+              type="button"
+              onClick={() => navigate('/client')}
+              className="mb-4 inline-flex items-center text-blue-600 transition hover:text-blue-800"
+            >
+              <span className="mr-2 text-lg">←</span>
+              Quay lại
+            </button>
+            <div id="client-bill" className="bg-white rounded-lg shadow-md p-8 border-2 border-green-200">
                   <h3 className="text-xl font-bold text-center mb-4 text-gray-900">HÓA ĐƠN</h3>
                   
                   <div className="space-y-3 mb-4">
@@ -941,7 +963,8 @@ export function ClientOrderPage() {
                   <div className="mt-6 text-center text-sm text-gray-500">
                     <p>Cảm ơn bạn đã sử dụng dịch vụ!</p>
                   </div>
-                </div>
+            </div>
+          </>
         )}
       </div>
     </div>

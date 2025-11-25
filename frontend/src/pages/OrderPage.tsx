@@ -16,9 +16,9 @@ export function OrderPage() {
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
   const [showAddService, setShowAddService] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [selected, setSelected] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [discountCodeInput, setDiscountCodeInput] = useState('');
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -124,7 +124,6 @@ export function OrderPage() {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
       queryClient.refetchQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
-      setShowPayment(false);
       showNotification('Thanh toán thành công!');
       setTimeout(() => {
         const bill = document.getElementById('staff-bill');
@@ -337,10 +336,10 @@ export function OrderPage() {
         {!hasSuccessfulTransaction && (
           <>
             <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-              <div className="flex justify-between items-start mb-6">
+              <div className="items-start mb-6">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Đơn hàng {order.order_code}</h1>
-                  <p className="text-gray-600 mt-2">Bàn: {order.table.name}</p>
+                  <p className="text-gray-600 mt-2 mb-2">Bàn: {order.table.name}</p>
                 </div>
                 <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                   order.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -606,23 +605,27 @@ export function OrderPage() {
                           </div>
                           <div className="flex items-center justify-between mt-auto">
                             <div className="flex items-center space-x-2">
-                              {qty > 0 && (
-                                <>
-                                  <button
-                                    onClick={() => setSelected((s) => {
-                                      const current = s[service.id] || 0;
-                                      const next = Math.max(0, current - 1);
-                                      const copy = { ...s };
-                                      if (next === 0) delete copy[service.id]; else copy[service.id] = next;
-                                      return copy;
-                                    })}
-                                    className="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-sm"
-                                  >
-                                    −
-                                  </button>
-                                  <span className="w-6 text-center text-sm font-medium">{qty}</span>
-                                </>
-                              )}
+                              <button
+                                onClick={() => {
+                                  if (qty <= 0) return;
+                                  setSelected((s) => {
+                                    const current = s[service.id] || 0;
+                                    const next = Math.max(0, current - 1);
+                                    const copy = { ...s };
+                                    if (next === 0) delete copy[service.id]; else copy[service.id] = next;
+                                    return copy;
+                                  });
+                                }}
+                                disabled={qty <= 0}
+                                className={`w-7 h-7 flex items-center justify-center rounded text-sm ${
+                                  qty <= 0
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                                }`}
+                              >
+                                −
+                              </button>
+                              <span className="w-6 text-center text-sm font-medium">{qty}</span>
                               <button
                                 onClick={handleIncrease}
                                 className={`w-7 h-7 flex items-center justify-center rounded text-lg font-bold ${
@@ -754,73 +757,86 @@ export function OrderPage() {
           )}
 
               {isCompleted && !hasSuccessfulTransaction && (
-                <div>
-              <button
-                onClick={() => setShowPayment(!showPayment)}
-                className="w-full py-3 px-6 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                {showPayment ? 'Ẩn thanh toán' : 'Thanh toán'}
-              </button>
-
-              {showPayment && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Phương thức thanh toán</label>
-                      <select
-                        id="payment_method"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="cash">Tiền mặt</option>
-                        <option value="card">Thẻ</option>
-                        <option value="mobile">Mobile banking</option>
-                      </select>
+                <div className="mt-6 space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Chọn phương thức thanh toán</p>
+                    <div className="grid gap-3">
+                      {(['cash', 'card', 'mobile'] as Array<'cash' | 'card' | 'mobile'>).map((method) => (
+                        <label
+                          key={method}
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-2 cursor-pointer transition ${
+                            selectedPaymentMethod === method
+                              ? 'border-green-500 bg-white shadow'
+                              : 'border-gray-200 bg-white hover:border-green-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="staff-payment-method"
+                            value={method}
+                            checked={selectedPaymentMethod === method}
+                            onChange={() => setSelectedPaymentMethod(method)}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500"
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {method === 'cash'
+                                ? 'Tiền mặt'
+                                : method === 'card'
+                                ? 'Quẹt thẻ'
+                                : 'Chuyển khoản (Mobile)'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {method === 'mobile'
+                                ? 'Hỗ trợ khách chuyển khoản ngay tại quầy'
+                                : 'Xác nhận trực tiếp với khách hàng'}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
                     </div>
                     <button
                       onClick={() => {
-                        const method = (document.getElementById('payment_method') as HTMLSelectElement).value;
                         paymentMutation.mutate({
-                          method: method as 'cash' | 'card' | 'mobile',
+                          method: selectedPaymentMethod,
                           amount: order.total_paid,
                         });
                       }}
                       disabled={paymentMutation.isPending}
-                      className="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                      className="w-full mt-4 py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                     >
                       {paymentMutation.isPending ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
                     </button>
                   </div>
-                </div>
-              )}
 
-              {pendingTransaction && !hasSuccessfulTransaction && (
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-                  {pendingTransactionHasMethod ? (
-                    <>
-                      <p className="mb-2 text-yellow-800">
-                        Khách đã yêu cầu thanh toán ({pendingTransaction.method === 'cash' ? 'tiền mặt' : pendingTransaction.method === 'card' ? 'thẻ' : 'chuyển khoản'}).
-                      </p>
-                      <button
-                        onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
-                        disabled={confirmPaymentMutation.isPending}
-                        className="w-full py-2 px-4 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đã thanh toán'}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-2 text-yellow-800">
-                        Khách chưa chọn phương thức thanh toán. Vui lòng chờ khách gửi yêu cầu hoặc chọn phương thức tại mục
-                        <span className="font-semibold"> Thanh toán </span> để xử lý thủ công.
-                      </p>
-                      <p className="text-sm text-yellow-700">
-                        Sau khi có phương thức, nút xác nhận sẽ xuất hiện tại đây.
-                      </p>
-                    </>
+                  {pendingTransaction && !hasSuccessfulTransaction && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                      {pendingTransactionHasMethod ? (
+                        <>
+                          <p className="mb-2 text-yellow-800">
+                            Khách đã yêu cầu thanh toán ({pendingTransaction.method === 'cash' ? 'tiền mặt' : pendingTransaction.method === 'card' ? 'thẻ' : 'chuyển khoản'}).
+                          </p>
+                          <button
+                            onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
+                            disabled={confirmPaymentMutation.isPending}
+                            className="w-full py-2 px-4 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đã thanh toán'}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mb-2 text-yellow-800">
+                            Khách chưa chọn phương thức thanh toán. Vui lòng chờ khách gửi yêu cầu hoặc chọn phương thức tại mục{' '}
+                            <span className="font-semibold">Thanh toán</span> để xử lý thủ công.
+                          </p>
+                          <p className="text-sm text-yellow-700">
+                            Sau khi có phương thức, nút xác nhận sẽ xuất hiện tại đây.
+                          </p>
+                        </>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
                 </div>
               )}
             </div>

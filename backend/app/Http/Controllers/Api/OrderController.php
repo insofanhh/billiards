@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\ServiceInventory;
 use App\Models\TableBilliard;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Events\OrderApproved;
 use App\Events\OrderRejected;
 use App\Events\OrderEndRequested;
@@ -496,18 +497,28 @@ class OrderController extends Controller
             'amount' => 'required|numeric|min:0',
         ]);
 
-        $query = Order::where('id', $id)->whereIn('status', ['completed', 'pending_end'])->with(['user']);
-        if (!$this->isStaff($request)) {
+        $isStaff = $this->isStaff($request);
+        $query = Order::where('id', $id)
+            ->whereIn('status', ['completed', 'pending_end'])
+            ->with(['user']);
+        if (!$isStaff) {
             $query->where('user_id', $request->user()->id);
         }
         $order = $query->firstOrFail();
+
+        $hasSuccessfulTransaction = Transaction::where('order_id', $order->id)
+            ->where('status', 'success')
+            ->exists();
+        if ($hasSuccessfulTransaction && !$isStaff) {
+            return response()->json(['message' => 'Đơn hàng đã được thanh toán. Vui lòng tải lại hóa đơn.'], 422);
+        }
 
         $method = $request->input('method');
         $amount = (float) $request->input('amount');
         $customerName = $this->resolveCustomerName($order, $request);
 
         // Nếu khách tạo yêu cầu thanh toán tiền mặt/thẻ -> tạo giao dịch PENDING để nhân viên xác nhận.
-        $shouldPending = !$this->isStaff($request) && in_array($method, ['cash', 'card'], true);
+        $shouldPending = !$isStaff && in_array($method, ['cash', 'card'], true);
 
         $hasPendingTransaction = Transaction::where('order_id', $order->id)
             ->where('status', 'pending')
@@ -517,15 +528,21 @@ class OrderController extends Controller
             ->where('is_confirmed', false)
             ->exists();
 
-        if (!$hasPendingTransaction && $hasUnconfirmedItems) {
+        $shouldForceConfirmItems = $isStaff && $hasUnconfirmedItems;
+
+        if (!$hasPendingTransaction && $hasUnconfirmedItems && !$shouldForceConfirmItems) {
             return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
         }
 
-        if ($hasPendingTransaction && !$shouldPending && $hasUnconfirmedItems) {
+        if ($hasPendingTransaction && !$shouldPending && $hasUnconfirmedItems && !$shouldForceConfirmItems) {
             return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);
         }
 
-        $transaction = DB::transaction(function () use ($request, $order, $shouldPending, $method, $amount, $customerName) {
+        $transaction = DB::transaction(function () use ($request, $order, $shouldPending, $method, $amount, $customerName, $shouldForceConfirmItems) {
+            if ($shouldForceConfirmItems) {
+                $this->forceConfirmAllItems($order);
+            }
+
             $this->deductInventoryForOrder($order);
 
             $pendingTransaction = Transaction::where('order_id', $order->id)
@@ -554,9 +571,10 @@ class OrderController extends Controller
                     $pendingTransaction->update($updates);
                 } else {
                     $pendingTransaction->update(array_merge($updates, ['status' => 'success']));
-                    if ((float) $order->total_paid === 0.0) {
-                        $order->update(['total_paid' => $amount]);
-                    }
+                    $order->update([
+                        'total_paid' => max((float) $order->total_paid, $amount),
+                        'status' => 'completed',
+                    ]);
                     if ($order->table) {
                         $order->table->update(['status_id' => 1]);
                     }
@@ -576,9 +594,10 @@ class OrderController extends Controller
             ]);
 
             if (!$shouldPending) {
-                if ((float) $order->total_paid === 0.0) {
-                    $order->update(['total_paid' => $amount]);
-                }
+                $order->update([
+                    'total_paid' => max((float) $order->total_paid, $amount),
+                    'status' => 'completed',
+                ]);
                 if ($order->table) {
                     $order->table->update(['status_id' => 1]);
                 }
@@ -587,8 +606,11 @@ class OrderController extends Controller
             return $transaction;
         });
 
-        $transaction->load(['order.table', 'order.user']);
+        $transaction->load(['order.table', 'order.user', 'user']);
         event(new TransactionCreated($transaction));
+        if (!$shouldPending) {
+            event(new TransactionConfirmed($transaction));
+        }
 
         return response()->json([
             'message' => $shouldPending ? 'Yêu cầu thanh toán đã được gửi, vui lòng chờ nhân viên xác nhận' : 'Thanh toán thành công',
@@ -630,9 +652,10 @@ class OrderController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
-            if ((float) $order->total_paid === 0.0) {
-                $order->update(['total_paid' => $transaction->amount]);
-            }
+            $order->update([
+                'total_paid' => max((float) $order->total_paid, $transaction->amount),
+                'status' => 'completed',
+            ]);
 
             if ($order->table) {
                 $order->table->update(['status_id' => 1]);
@@ -684,15 +707,15 @@ class OrderController extends Controller
 
     private function resolveCustomerName(Order $order, Request $request): ?string
     {
-        $order->loadMissing('user');
+        $order->loadMissing('user.roles');
         $orderUser = $order->user;
+
         if (!$orderUser) {
-            return null;
+            return 'Khách lẻ';
         }
 
-        $requestUser = $request->user();
-        if ($requestUser && $this->isStaff($request) && $orderUser->id === $requestUser->id) {
-            return null;
+        if ($this->userHasStaffRole($orderUser)) {
+            return 'Khách lẻ';
         }
 
         return $orderUser->name;
@@ -732,6 +755,30 @@ class OrderController extends Controller
         foreach ($items as $item) {
             $this->deductInventoryForItem($item);
         }
+    }
+
+    private function forceConfirmAllItems(Order $order): void
+    {
+        OrderItem::where('order_id', $order->id)
+            ->where('is_confirmed', false)
+            ->update(['is_confirmed' => true]);
+    }
+
+    private function userHasStaffRole(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if (!$user->relationLoaded('roles')) {
+            $user->load('roles');
+        }
+
+        $roles = $user->roles?->pluck('name')->map(fn ($role) => strtolower($role))->toArray() ?? [];
+
+        return in_array('staff', $roles, true)
+            || in_array('admin', $roles, true)
+            || in_array('super_admin', $roles, true);
     }
 
     private function deductInventoryForItem(OrderItem $item): void
