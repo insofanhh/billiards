@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 type AdminNavigationProps = {
@@ -9,6 +9,31 @@ type AdminNavigationProps = {
 export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
+  const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hideDropdownTimeout.current) {
+        clearTimeout(hideDropdownTimeout.current);
+      }
+    };
+  }, []);
+
+  const clearHideTimeout = () => {
+    if (hideDropdownTimeout.current) {
+      clearTimeout(hideDropdownTimeout.current);
+      hideDropdownTimeout.current = null;
+    }
+  };
+
+  const scheduleHide = () => {
+    clearHideTimeout();
+    hideDropdownTimeout.current = setTimeout(() => {
+      setShowLogoutDesktop(false);
+      hideDropdownTimeout.current = null;
+    }, 150);
+  };
 
   const iconClasses = 'h-5 w-5';
   const icons = {
@@ -52,6 +77,7 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
 
   const handleLogout = () => {
     setMobileMenuOpen(false);
+    setShowLogoutDesktop(false);
     onLogout();
   };
 
@@ -112,20 +138,50 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
               <p className="text-xs text-gray-400">Billiards Manager</p>
             </div>
           </button>
-          <div className="hidden items-center space-x-6 text-sm font-medium md:flex">
+          <div className="hidden items-center gap-4 text-sm font-medium md:flex">
             <button
               onClick={() => handleNavigate('/orders')}
               className="rounded-full bg-white/10 px-4 py-2 text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
               Lịch sử giao dịch
             </button>
-            <span className="text-gray-300">Xin chào, {userName}</span>
-            <button
-              onClick={handleLogout}
-              className="rounded-full bg-red-500/20 px-4 py-2 text-red-200 transition hover:bg-red-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            <div
+              className="relative"
+              onMouseEnter={() => {
+                clearHideTimeout();
+                setShowLogoutDesktop(true);
+              }}
+              onMouseLeave={scheduleHide}
             >
-              Đăng xuất
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearHideTimeout();
+                  setShowLogoutDesktop((prev) => !prev);
+                }}
+                className="flex items-center gap-3 rounded-2xl bg-white/5 text-left text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+              >
+                <span className="rounded-xl bg-white/10 p-2 text-yellow-400">
+                  {icons.user} 
+                </span>
+                <span className="mt-0.5 block pr-4 text-sm font-semibold">{userName ?? 'Chưa xác định'}</span>
+              </button>
+              {showLogoutDesktop && (
+                <div
+                  className="absolute right-0 mt-2 w-36 rounded-2xl border border-white/10 bg-gray-800/95 shadow-xl"
+                  onMouseEnter={clearHideTimeout}
+                  onMouseLeave={scheduleHide}
+                >
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full rounded-2xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <button
             type="button"

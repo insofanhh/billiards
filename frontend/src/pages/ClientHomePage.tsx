@@ -8,6 +8,14 @@ import { getTemporaryUserName, isGuestUser } from '../utils/temporaryUser';
 import { discountCodesApi } from '../api/discountCodes';
 import type { DiscountCode } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
+import { ordersApi } from '../api/orders';
+import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
+import {
+  clearClientActiveOrder,
+  getClientOrderStatusLabel,
+  isClientOrderContinuable,
+  persistClientActiveOrderFromOrder,
+} from '../utils/clientActiveOrder';
 
 type Highlight = {
   title: string;
@@ -40,6 +48,7 @@ export function ClientHomePage() {
   const isAuthenticated = !!localStorage.getItem('auth_token');
   const isGuest = isGuestUser();
   const [savingDiscountId, setSavingDiscountId] = useState<number | null>(null);
+  const activeOrderSnapshot = useClientActiveOrder();
 
   useEffect(() => {
     const handleOpenScanner = () => {
@@ -115,6 +124,32 @@ export function ClientHomePage() {
     setTimeout(() => setIsHandlingScan(false), 1200);
   };
 
+  const {
+    data: activeOrderDetails,
+    isFetching: isCheckingActiveOrder,
+  } = useQuery({
+    queryKey: ['client-active-order-banner', activeOrderSnapshot?.orderId],
+    queryFn: () => ordersApi.getById(activeOrderSnapshot!.orderId),
+    enabled: !!activeOrderSnapshot?.orderId,
+    staleTime: 30_000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (!activeOrderSnapshot?.orderId) return;
+    if (!activeOrderDetails) return;
+    if (isClientOrderContinuable(activeOrderDetails.status)) {
+      persistClientActiveOrderFromOrder(activeOrderDetails);
+    } else {
+      clearClientActiveOrder();
+    }
+  }, [activeOrderDetails, activeOrderSnapshot?.orderId]);
+
+  const handleResumeOrder = () => {
+    if (!activeOrderSnapshot) return;
+    navigate(`/client/order/${activeOrderSnapshot.orderId}`);
+  };
+
   const handleScanError = (error: unknown) => {
     console.error(error);
     setScanError('Không thể truy cập camera. Vui lòng kiểm tra quyền hoặc thử lại.');
@@ -180,6 +215,28 @@ export function ClientHomePage() {
             
           </div>
         </section>
+
+        {activeOrderSnapshot && (
+          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-6 py-4 text-sm text-yellow-900 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-semibold text-yellow-900">
+                Bạn có đơn {activeOrderSnapshot.orderCode ? `#${activeOrderSnapshot.orderCode}` : 'đang mở'} tại{' '}
+                {activeOrderSnapshot.tableName || activeOrderSnapshot.tableCode || 'bàn chưa xác định'}.
+              </p>
+              <p className="text-xs text-yellow-800">
+                Trạng thái: {getClientOrderStatusLabel(activeOrderSnapshot.status)}
+                {isCheckingActiveOrder ? ' · Đang cập nhật...' : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleResumeOrder}
+              className="w-full rounded-2xl bg-yellow-400 px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-yellow-300 sm:w-auto"
+            >
+              Quay lại bàn
+            </button>
+          </div>
+        )}
 
         {scanError && (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

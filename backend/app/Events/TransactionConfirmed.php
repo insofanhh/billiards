@@ -22,10 +22,17 @@ class TransactionConfirmed implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $order = $this->transaction->order;
-        return [
-            new PrivateChannel('user.' . $order->user_id),
-            new Channel('orders'),
-        ];
+        $channels = [new Channel('orders')];
+
+        if ($order->user_id) {
+            $channels[] = new PrivateChannel('user.' . $order->user_id);
+        }
+
+        if ($this->transaction->user_id && $order->user_id !== $this->transaction->user_id) {
+            $channels[] = new PrivateChannel('user.' . $this->transaction->user_id);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string
@@ -36,13 +43,17 @@ class TransactionConfirmed implements ShouldBroadcast
     public function broadcastWith(): array
     {
         $order = $this->transaction->order;
+        $transaction = $this->transaction->fresh(['user']);
+
         return [
             'transaction' => [
-                'id' => $this->transaction->id,
-                'order_id' => $this->transaction->order_id,
-                'status' => $this->transaction->status,
-                'method' => $this->transaction->method,
-                'amount' => $this->transaction->amount,
+                'id' => $transaction->id,
+                'order_id' => $transaction->order_id,
+                'status' => $transaction->status,
+                'method' => $transaction->method,
+                'amount' => $transaction->amount,
+                'customer_name' => $transaction->customer_name,
+                'staff_name' => $transaction->user?->name,
             ],
             'order' => [
                 'id' => $order->id,

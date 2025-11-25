@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
+import { getClientOrderStatusLabel } from '../utils/clientActiveOrder';
 
 type ClientNavigationProps = {
   userName?: string;
@@ -21,6 +24,8 @@ export function ClientNavigation({
   vouchersActive = false,
 }: ClientNavigationProps) {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const activeOrder = useClientActiveOrder();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
@@ -107,7 +112,11 @@ export function ClientNavigation({
   const displayName = userName?.trim() || 'Khách tạm thời';
 
   const handleHome = () => {
-    onHomeClick?.();
+    if (activeOrder) {
+      navigate(`/client/order/${activeOrder.orderId}`);
+    } else {
+      onHomeClick?.();
+    }
     setMobileMenuOpen(false);
   };
 
@@ -139,6 +148,33 @@ export function ClientNavigation({
   const handleRegister = () => {
     setShowGuestDropdown(false);
     navigate('/register');
+  };
+
+  const resolveRoleRedirect = () => {
+    if (!Array.isArray(user?.roles) || user.roles.length === 0) {
+      return null;
+    }
+    const normalizedRoles = user.roles
+      .map((role) => role?.toLowerCase?.() ?? '')
+      .filter(Boolean);
+    if (normalizedRoles.some((role) => role === 'staff' || role === 'admin' || role === 'super_admin')) {
+      return '/staff';
+    }
+    if (normalizedRoles.includes('customer')) {
+      return '/';
+    }
+    return null;
+  };
+
+  const handleProfileClick = () => {
+    const target = resolveRoleRedirect();
+    if (!target) {
+      return false;
+    }
+    navigate(target);
+    setMobileMenuOpen(false);
+    setShowLogoutDesktop(false);
+    return true;
   };
 
   return (
@@ -194,7 +230,10 @@ export function ClientNavigation({
                   type="button"
                   onClick={() => {
                     clearHideTimeout();
-                    setShowLogoutDesktop((prev) => !prev);
+                    const redirected = handleProfileClick();
+                    if (!redirected) {
+                      setShowLogoutDesktop((prev) => !prev);
+                    }
                   }}
                   className="rounded-2xl bg-white/5 px-4 py-2 text-left text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
                 >
@@ -311,10 +350,27 @@ export function ClientNavigation({
               <button
                 type="button"
                 onClick={handleHome}
-                className="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition focus:outline-none focus-visible:ring-2 ${
+                  activeOrder
+                    ? 'border-yellow-400 bg-yellow-300/90 text-gray-900 hover:bg-yellow-200 focus-visible:ring-yellow-200'
+                    : 'border-white/5 bg-white/5 text-white hover:bg-white/10 focus-visible:ring-white'
+                }`}
               >
-                <span>Quay về bàn</span>
-                <span className="text-yellow-400">{icons.arrowRight}</span>
+                <span className="flex flex-col">
+                  <span>
+                    {activeOrder
+                      ? `Tiếp tục bàn ${activeOrder.tableName || activeOrder.tableCode || ''}`.trim()
+                      : 'Quay về bàn'}
+                  </span>
+                  {activeOrder && (
+                    <span className="text-xs font-medium text-gray-700">
+                      {getClientOrderStatusLabel(activeOrder.status)}
+                    </span>
+                  )}
+                </span>
+                <span className={activeOrder ? 'text-gray-900' : 'text-yellow-400'}>
+                  {icons.arrowRight}
+                </span>
               </button>
             )}
             {onHistoryClick && (
