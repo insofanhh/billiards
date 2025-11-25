@@ -50,6 +50,7 @@ export function HomePage() {
     },
   });
 
+  // Logic khởi tạo notification ban đầu (Giữ nguyên)
   useEffect(() => {
     if (!user || !tables || tables.length === 0 || hasInitialized) return;
 
@@ -91,175 +92,102 @@ export function HomePage() {
     initializeNotifications();
   }, [user, tables, location.pathname]);
 
+  // --- LOGIC REALTIME MỚI (ĐÃ FIX) ---
   useEffect(() => {
+    // 1. Debug xem User đã load chưa
+    console.log('Realtime Init: User status:', user ? 'Loaded' : 'Not Loaded');
+    
     if (!user) return;
 
+    // 2. Tạm thời CHỈ DÙNG Public Channel 'orders' để test
+    console.log('Realtime: Đang đăng ký kênh "orders"...');
     const ordersChannel = echo.channel('orders');
-    const staffChannel = echo.private('staff');
 
-    const handleOrderRequested = () => {
-      console.log('Order requested event received');
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.refetchQueries({ queryKey: ['tables'] });
-    };
+    // 3. Callback debug kết nối thành công
+    ordersChannel.on('pusher:subscription_succeeded', () => {
+        console.log('✅ Realtime: Đã đăng ký thành công kênh "orders"!');
+    });
 
-    const handleOrderApproved = () => {
-      console.log('Order approved event received');
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.refetchQueries({ queryKey: ['tables'] });
-    };
+    ordersChannel.on('pusher:subscription_error', (status: any) => {
+        console.error('❌ Realtime: Lỗi đăng ký kênh "orders":', status);
+    });
 
-    const handleOrderRejected = () => {
-      console.log('Order rejected event received');
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.refetchQueries({ queryKey: ['tables'] });
-    };
+    // 4. Lắng nghe TOÀN BỘ sự kiện để debug tên sự kiện
+    ordersChannel.listenToAll((eventName: string, data: any) => {
+        console.log(`🔥 FIRE EVENT: [${eventName}]`, data);
+    });
 
-    const handleOrderEndRequested = () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.refetchQueries({ queryKey: ['tables'] });
-    };
-
-    const handleOrderEndApproved = () => {
-      console.log('Order end approved event received');
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.refetchQueries({ queryKey: ['tables'] });
-    };
-
-    const handleTransactionCreated = () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.invalidateQueries({ queryKey: ['order'] });
-      queryClient.refetchQueries({ queryKey: ['tables'] });
-    };
-
+    // Hàm check notification dùng chung
     const checkOrderHasUnconfirmedItems = async (orderId: number, tableId: number) => {
-      try {
-        const order = await ordersApi.getById(orderId);
-        const hasUnconfirmed = order.items?.some((item: any) => !item.is_confirmed);
-        setTablesWithNotifications(prev => {
-          const newSet = new Set(prev);
-          if (hasUnconfirmed) {
-            newSet.add(tableId);
-          } else {
-            newSet.delete(tableId);
-          }
-          return newSet;
+        try {
+          const order = await ordersApi.getById(orderId);
+          const hasUnconfirmed = order.items?.some((item: any) => !item.is_confirmed);
+          setTablesWithNotifications(prev => {
+            const newSet = new Set(prev);
+            if (hasUnconfirmed) {
+              newSet.add(tableId);
+            } else {
+              newSet.delete(tableId);
+            }
+            return newSet;
+          });
+        } catch (error) {
+          console.error('Error checking order:', error);
+        }
+    };
+
+    // 5. Định nghĩa hàm xử lý chung
+    const handleRefetch = (eventName: string) => {
+        console.log(`⚡ Xử lý sự kiện: ${eventName}`);
+        queryClient.invalidateQueries({ queryKey: ['tables'] });
+        queryClient.refetchQueries({ queryKey: ['tables'] });
+    };
+
+    // 6. Danh sách các sự kiện cần bắt (Có dấu chấm phía trước)
+    const events = [
+        '.order.requested',
+        '.order.approved',
+        '.order.rejected',
+        '.order.end.requested',
+        '.order.end.approved',
+        '.transaction.created',
+        '.order.service.added',
+        '.order.service.updated',
+        '.order.service.removed',
+        '.order.service.confirmed'
+    ];
+
+    events.forEach(event => {
+        ordersChannel.listen(event, (data: any) => {
+            handleRefetch(event);
+            
+            // Logic cập nhật notification chấm đỏ
+            if (event.includes('service')) {
+                 const orderId = data.order?.id;
+                 if (orderId) {
+                    const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+                    const table = currentTables?.find((t: Table) => t.active_order?.id === orderId);
+                    if (table) {
+                        if (event.includes('added')) {
+                             setTablesWithNotifications(prev => new Set(prev).add(table.id));
+                        } else {
+                             checkOrderHasUnconfirmedItems(orderId, table.id);
+                        }
+                    }
+                 }
+            }
         });
-      } catch (error) {
-        console.error('Error checking order:', error);
-      }
-    };
+    });
 
-    const handleOrderServiceAdded = (data: any) => {
-      const orderId = data.order?.id;
-      if (!orderId) return;
-
-      const currentPath = location.pathname;
-      const isViewingOrderDetail = currentPath === `/order/${orderId}`;
-      
-      if (isViewingOrderDetail) return;
-
-      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
-      if (currentTables) {
-        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
-        if (table) {
-          setTablesWithNotifications(prev => new Set(prev).add(table.id));
-        }
-      }
-    };
-
-    const handleOrderServiceUpdated = (data: any) => {
-      const orderId = data.order?.id;
-      if (!orderId) return;
-
-      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
-      if (currentTables) {
-        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
-        if (table) {
-          checkOrderHasUnconfirmedItems(orderId, table.id);
-        }
-      }
-    };
-
-    const handleOrderServiceRemoved = (data: any) => {
-      const orderId = data.order?.id;
-      if (!orderId) return;
-
-      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
-      if (currentTables) {
-        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
-        if (table) {
-          checkOrderHasUnconfirmedItems(orderId, table.id);
-        }
-      }
-    };
-
-    const handleOrderServiceConfirmed = (data: any) => {
-      const orderId = data.order?.id;
-      if (!orderId) return;
-
-      const currentTables = queryClient.getQueryData<Table[]>(['tables']);
-      if (currentTables) {
-        const table = currentTables.find((t: Table) => t.active_order?.id === orderId);
-        if (table) {
-          checkOrderHasUnconfirmedItems(orderId, table.id);
-        }
-      }
-    };
-
-    ordersChannel.listen('.order.requested', handleOrderRequested);
-    staffChannel.listen('.order.requested', handleOrderRequested);
-
-    ordersChannel.listen('.order.approved', handleOrderApproved);
-    staffChannel.listen('.order.approved', handleOrderApproved);
-
-    ordersChannel.listen('.order.rejected', handleOrderRejected);
-    staffChannel.listen('.order.rejected', handleOrderRejected);
-
-    ordersChannel.listen('.order.end.requested', handleOrderEndRequested);
-    staffChannel.listen('.order.end.requested', handleOrderEndRequested);
-
-    ordersChannel.listen('.order.end.approved', handleOrderEndApproved);
-    staffChannel.listen('.order.end.approved', handleOrderEndApproved);
-
-    ordersChannel.listen('.transaction.created', handleTransactionCreated);
-    staffChannel.listen('.transaction.created', handleTransactionCreated);
-
-    ordersChannel.listen('.order.service.added', handleOrderServiceAdded);
-    staffChannel.listen('.order.service.added', handleOrderServiceAdded);
-    ordersChannel.listen('.order.service.updated', handleOrderServiceUpdated);
-    staffChannel.listen('.order.service.updated', handleOrderServiceUpdated);
-    ordersChannel.listen('.order.service.removed', handleOrderServiceRemoved);
-    staffChannel.listen('.order.service.removed', handleOrderServiceRemoved);
-    ordersChannel.listen('.order.service.confirmed', handleOrderServiceConfirmed);
-    staffChannel.listen('.order.service.confirmed', handleOrderServiceConfirmed);
-
+    // Cleanup khi component unmount
     return () => {
-      ordersChannel.stopListening('.order.requested');
-      ordersChannel.stopListening('.order.approved');
-      ordersChannel.stopListening('.order.rejected');
-      ordersChannel.stopListening('.order.end.requested');
-      ordersChannel.stopListening('.order.end.approved');
-      ordersChannel.stopListening('.transaction.created');
-      ordersChannel.stopListening('.order.service.added');
-      ordersChannel.stopListening('.order.service.updated');
-      ordersChannel.stopListening('.order.service.removed');
-      ordersChannel.stopListening('.order.service.confirmed');
-      staffChannel.stopListening('.order.requested');
-      staffChannel.stopListening('.order.approved');
-      staffChannel.stopListening('.order.rejected');
-      staffChannel.stopListening('.order.end.requested');
-      staffChannel.stopListening('.order.end.approved');
-      staffChannel.stopListening('.transaction.created');
-      staffChannel.stopListening('.order.service.added');
-      staffChannel.stopListening('.order.service.updated');
-      staffChannel.stopListening('.order.service.removed');
-      staffChannel.stopListening('.order.service.confirmed');
+      console.log('Realtime: Unsubscribing...');
+      ordersChannel.stopListeningToAll();
       echo.leave('orders');
-      echo.leave('staff');
     };
-  }, [user, queryClient, location.pathname]);
+  }, [user, queryClient]); // Hết useEffect
 
+  // --- CÁC HÀM XỬ LÝ CLICK ---
   const handleTableClick = (code: string) => {
     navigate(`/table/${code}`);
   };
@@ -371,4 +299,3 @@ export function HomePage() {
     </div>
   );
 }
-
