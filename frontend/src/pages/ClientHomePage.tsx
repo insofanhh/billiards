@@ -65,6 +65,8 @@ export function ClientHomePage() {
 
   const [placeholderAnnouncements] = useState(() => ([] as Array<{ title: string; description: string }>));
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const { data: publicDiscounts } = useQuery({
     queryKey: ['public-discounts'],
@@ -82,16 +84,47 @@ export function ClientHomePage() {
       setCurrentBannerIndex(0);
       return;
     }
-    if (currentBannerIndex > bannerImages.length - 1) {
-      setCurrentBannerIndex(0);
-      return;
-    }
     const timer = setInterval(() => {
       setCurrentBannerIndex((prev) => (prev + 1) % bannerImages.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [bannerImages, currentBannerIndex]);
+  }, [bannerImages.length]);
+
+  const showNextBanner = () => {
+    if (!bannerImages.length) return;
+    setCurrentBannerIndex((prev) => (prev + 1) % bannerImages.length);
+  };
+
+  const showPrevBanner = () => {
+    if (!bannerImages.length) return;
+    setCurrentBannerIndex((prev) => (prev - 1 + bannerImages.length) % bannerImages.length);
+  };
+
+  const goToBanner = (index: number) => {
+    if (!bannerImages.length) return;
+    setCurrentBannerIndex((index + bannerImages.length) % bannerImages.length);
+  };
+
+  const handleDragStart = (clientX: number) => {
+    setDragStartX(clientX);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = (clientX: number | null) => {
+    if (dragStartX === null) {
+      setIsDragging(false);
+      return;
+    }
+    if (clientX !== null) {
+      const delta = clientX - dragStartX;
+      if (Math.abs(delta) > 40) {
+        delta > 0 ? showPrevBanner() : showNextBanner();
+      }
+    }
+    setDragStartX(null);
+    setIsDragging(false);
+  };
 
   const saveMutation = useMutation({
     mutationFn: (discountId: number) => discountCodesApi.saveDiscount(discountId),
@@ -238,19 +271,35 @@ export function ClientHomePage() {
             </div>
             <div className="space-y-4">
               {bannerImages.length > 0 ? (
-                <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-lg shadow-black/30 backdrop-blur">
-                  <img
-                    src={bannerImages[currentBannerIndex]}
-                    alt={`Banner ${currentBannerIndex + 1}`}
-                    loading="eager"
-                    className="h-56 w-full object-cover sm:h-64"
-                  />
+                <div
+                  className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-lg shadow-black/30 backdrop-blur select-none"
+                  onTouchStart={(event) => handleDragStart(event.touches[0].clientX)}
+                  onTouchEnd={(event) => handleDragEnd(event.changedTouches[0]?.clientX ?? null)}
+                  onMouseDown={(event) => handleDragStart(event.clientX)}
+                  onMouseUp={(event) => handleDragEnd(event.clientX)}
+                  onMouseLeave={() => isDragging && handleDragEnd(null)}
+                >
+                  <div
+                    className={`flex transition-transform duration-500 ease-out ${isDragging ? 'transition-none' : ''}`}
+                    style={{ transform: `translateX(-${currentBannerIndex * 100}%)` }}
+                  >
+                    {bannerImages.map((src, index) => (
+                      <img
+                        key={src}
+                        src={src}
+                        alt={`Banner ${index + 1}`}
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                        className="h-56 w-full flex-shrink-0 object-cover sm:h-64"
+                        draggable={false}
+                      />
+                    ))}
+                  </div>
                   <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
                     {bannerImages.map((_, index) => (
                       <button
                         key={index}
                         type="button"
-                        onClick={() => setCurrentBannerIndex(index)}
+                        onClick={() => goToBanner(index)}
                         className={`h-2.5 w-2.5 rounded-full transition ${
                           index === currentBannerIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
                         }`}
