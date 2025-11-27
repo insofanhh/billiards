@@ -29,4 +29,11 @@ class Setting extends Model
             ->values()
             ->all();
     }
+
+    public function getImageBannerCountAttribute(): int
+    {
+        return collect($this->image_banner ?? [])
+            ->filter(fn ($path) => filled($path))
+            ->count();
+    }
 }

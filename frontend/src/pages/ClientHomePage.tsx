@@ -64,6 +64,7 @@ export function ClientHomePage() {
   }, []);
 
   const [placeholderAnnouncements] = useState(() => ([] as Array<{ title: string; description: string }>));
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   
   const { data: publicDiscounts } = useQuery({
     queryKey: ['public-discounts'],
@@ -75,6 +76,22 @@ export function ClientHomePage() {
     queryFn: settingsApi.getBanners,
     staleTime: 5 * 60_000,
   });
+
+  useEffect(() => {
+    if (!bannerImages.length) {
+      setCurrentBannerIndex(0);
+      return;
+    }
+    if (currentBannerIndex > bannerImages.length - 1) {
+      setCurrentBannerIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % bannerImages.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [bannerImages, currentBannerIndex]);
 
   const saveMutation = useMutation({
     mutationFn: (discountId: number) => discountCodesApi.saveDiscount(discountId),
@@ -221,19 +238,27 @@ export function ClientHomePage() {
             </div>
             <div className="space-y-4">
               {bannerImages.length > 0 ? (
-                bannerImages.slice(0, 3).map((src, index) => (
-                  <div
-                    key={src}
-                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg shadow-black/30 backdrop-blur"
-                  >
-                    <img
-                      src={src}
-                      alt={`Banner ${index + 1}`}
-                      loading={index === 0 ? 'eager' : 'lazy'}
-                      className="h-48 w-full object-cover sm:h-64"
-                    />
+                <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-lg shadow-black/30 backdrop-blur">
+                  <img
+                    src={bannerImages[currentBannerIndex]}
+                    alt={`Banner ${currentBannerIndex + 1}`}
+                    loading="eager"
+                    className="h-56 w-full object-cover sm:h-64"
+                  />
+                  <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
+                    {bannerImages.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setCurrentBannerIndex(index)}
+                        className={`h-2.5 w-2.5 rounded-full transition ${
+                          index === currentBannerIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
+                        }`}
+                        aria-label={`Chọn banner ${index + 1}`}
+                      />
+                    ))}
                   </div>
-                ))
+                </div>
               ) : (
                 <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/30 bg-white/5 p-6 text-center text-sm text-white/70">
                   Chưa có ảnh banner. Hãy thêm trong CMS để hiển thị tại đây.
