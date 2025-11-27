@@ -25,6 +25,7 @@ class ReviewResource extends Resource
     protected static ?string $navigationLabel = 'Đánh giá';
     protected static ?string $modelLabel = 'Đánh giá';
     protected static ?string $pluralModelLabel = 'Đánh giá';
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {

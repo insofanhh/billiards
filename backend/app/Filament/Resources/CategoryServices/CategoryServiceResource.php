@@ -25,6 +25,7 @@ class CategoryServiceResource extends Resource
     protected static ?string $navigationLabel = 'Danh mục dịch vụ';
     protected static ?string $modelLabel = 'Danh mục dịch vụ';
     protected static ?string $pluralModelLabel = 'Danh mục dịch vụ';
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {

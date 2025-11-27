@@ -25,6 +25,7 @@ class TransactionResource extends Resource
     protected static ?string $navigationLabel = 'Giao dịch';
     protected static ?string $modelLabel = 'Giao dịch';
     protected static ?string $pluralModelLabel = 'Giao dịch';
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {

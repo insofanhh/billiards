@@ -25,6 +25,7 @@ class TableStatusResource extends Resource
     protected static ?string $navigationLabel = 'Trạng thái bàn';
     protected static ?string $modelLabel = 'Trạng thái bàn';
     protected static ?string $pluralModelLabel = 'Trạng thái bàn';
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {

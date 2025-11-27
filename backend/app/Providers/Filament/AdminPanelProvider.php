@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\ManageGeneralSettings;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -18,7 +20,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -35,10 +36,20 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('Billiards CMS')
             ->favicon(asset('images/favicon.svg'))
             ->profile(\Filament\Auth\Pages\EditProfile::class)
+            ->navigationGroups([
+                'Quản lý đơn hàng',
+                'Quản lý dịch vụ',
+                'Quản lý bàn',
+                'Quản lý hệ thống',
+                'Filament Shield'
+            ])
+            ->sidebarCollapsibleOnDesktop()
+            ->breadcrumbs(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
+                ManageGeneralSettings::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

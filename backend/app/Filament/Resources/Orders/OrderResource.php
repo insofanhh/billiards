@@ -25,6 +25,7 @@ class OrderResource extends Resource
     protected static ?string $navigationLabel = 'Đơn hàng';
     protected static ?string $modelLabel = 'Đơn hàng';
     protected static ?string $pluralModelLabel = 'Đơn hàng';
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {

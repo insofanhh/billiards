@@ -25,6 +25,7 @@ class TableBilliardResource extends Resource
     protected static ?string $navigationLabel = 'Bàn Billiards';
     protected static ?string $modelLabel = 'Bàn Billiards';
     protected static ?string $pluralModelLabel = 'Bàn Billiards';
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {
