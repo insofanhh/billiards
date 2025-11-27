@@ -25,6 +25,7 @@ class PriceRateResource extends Resource
     protected static ?string $navigationLabel = 'Bảng giá';
     protected static ?string $modelLabel = 'Bảng giá';
     protected static ?string $pluralModelLabel = 'Bảng giá';
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {

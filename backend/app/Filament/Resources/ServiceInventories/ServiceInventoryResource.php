@@ -25,6 +25,7 @@ class ServiceInventoryResource extends Resource
     protected static ?string $navigationLabel = 'Kho dịch vụ';
     protected static ?string $modelLabel = 'Kho dịch vụ';
     protected static ?string $pluralModelLabel = 'Kho dịch vụ';
+    protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema
     {

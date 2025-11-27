@@ -25,6 +25,7 @@ class TableTypeResource extends Resource
     protected static ?string $navigationLabel = 'Loại bàn';
     protected static ?string $modelLabel = 'Loại bàn';
     protected static ?string $pluralModelLabel = 'Loại bàn';
+    protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema
     {
