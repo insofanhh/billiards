@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ServiceController;
+use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\DiscountCodeController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,7 @@ Route::get('/tables', [TableController::class, 'index']);
 Route::get('/tables/{code}', [TableController::class, 'show']);
 Route::post('/tables/{code}/request-open', [TableController::class, 'requestOpen']);
 Route::get('/public-discounts', [DiscountCodeController::class, 'getPublicDiscounts']);
+Route::get('/settings/banners', [SettingController::class, 'banners']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
