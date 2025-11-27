@@ -10,6 +10,7 @@ import type { DiscountCode } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
 import { ordersApi } from '../api/orders';
 import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
+import { settingsApi } from '../api/settings';
 import {
   clearClientActiveOrder,
   getClientOrderStatusLabel,
@@ -67,6 +68,12 @@ export function ClientHomePage() {
   const { data: publicDiscounts } = useQuery({
     queryKey: ['public-discounts'],
     queryFn: discountCodesApi.getPublicDiscounts,
+  });
+
+  const { data: bannerImages = [] } = useQuery<string[]>({
+    queryKey: ['client-banner-images'],
+    queryFn: settingsApi.getBanners,
+    staleTime: 5 * 60_000,
   });
 
   const saveMutation = useMutation({
@@ -212,7 +219,27 @@ export function ClientHomePage() {
                 </button>
               </div>
             </div>
-            
+            <div className="space-y-4">
+              {bannerImages.length > 0 ? (
+                bannerImages.slice(0, 3).map((src, index) => (
+                  <div
+                    key={src}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg shadow-black/30 backdrop-blur"
+                  >
+                    <img
+                      src={src}
+                      alt={`Banner ${index + 1}`}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      className="h-48 w-full object-cover sm:h-64"
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/30 bg-white/5 p-6 text-center text-sm text-white/70">
+                  Chưa có ảnh banner. Hãy thêm trong CMS để hiển thị tại đây.
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
