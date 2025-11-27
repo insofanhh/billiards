@@ -13,7 +13,8 @@ class ListServices extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+                ->label('Thêm dịch vụ'),
         ];
     }
 }
