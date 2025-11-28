@@ -5,12 +5,14 @@ namespace App\Filament\Widgets;
 use App\Models\OrderItem;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class ServicesSoldToday extends BaseWidget
 {
-    protected static ?string $heading = 'Dịch vụ bán hôm nay';
+    use InteractsWithPageFilters;
 
     protected static ?int $sort = 4;
 
@@ -19,6 +21,7 @@ class ServicesSoldToday extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading('Dịch vụ bán ' . $this->getSelectedDateLabel())
             ->query($this->getTableQuery())
             ->columns([
                 Tables\Columns\TextColumn::make('service.name')
@@ -39,13 +42,12 @@ class ServicesSoldToday extends BaseWidget
             ->defaultKeySort(false)
             ->defaultPaginationPageOption(5)
             ->paginated([5, 10, 25])
-            ->emptyStateHeading('Chưa có dịch vụ nào bán hôm nay');
+            ->emptyStateHeading('Chưa có dịch vụ nào bán ' . $this->getSelectedDateLabel());
     }
 
     protected function getTableQuery(): Builder
     {
-        $start = now('Asia/Ho_Chi_Minh')->startOfDay();
-        $end = now('Asia/Ho_Chi_Minh')->endOfDay();
+        [$start, $end] = $this->getSelectedDateRange();
 
         return OrderItem::query()
             ->select('service_id')
@@ -59,6 +61,27 @@ class ServicesSoldToday extends BaseWidget
             ->reorder()
             ->orderByDesc('total_qty')
             ->orderBy('service_id');
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    protected function getSelectedDateRange(): array
+    {
+        $date = data_get($this->pageFilters, 'date');
+        $selectedDate = $date
+            ? Carbon::parse($date, 'Asia/Ho_Chi_Minh')
+            : Carbon::now('Asia/Ho_Chi_Minh');
+
+        return [
+            $selectedDate->copy()->startOfDay(),
+            $selectedDate->copy()->endOfDay(),
+        ];
+    }
+
+    protected function getSelectedDateLabel(): string
+    {
+        return $this->getSelectedDateRange()[0]->format('d/m/Y');
     }
 }
 
