@@ -1,4 +1,4 @@
-# Hệ thống Quản lý Bida
+# Hệ thống Quản lý Billiards
 
 Dự án quản lý bida được xây dựng với Laravel 12 (Backend) và React 19 (Frontend).
 
