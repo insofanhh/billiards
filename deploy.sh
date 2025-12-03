@@ -104,7 +104,8 @@ php artisan view:cache
 
 echo "--> Build frontend..."
 cd ../frontend
-npm install
+echo "--> Installing npm dependencies (with legacy-peer-deps)..."
+npm install --legacy-peer-deps
 
 echo "--> Build frontend với production config..."
 VITE_API_URL=/api npm run build
