@@ -510,7 +510,7 @@ export function ClientHomePage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-xs font-semibold text-blue-600 dark:text-[#13ec6d]">VOUCHER</p>
-                          <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-[#13ec6d] transition-colors">{discount.code}</h3>
+                          {/* <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-[#13ec6d] transition-colors">{discount.code}</h3> */}
                           {discount.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{discount.description}</p>}
                           <div className="mt-3">
                             <p className="text-sm text-gray-500">Giảm giá</p>
