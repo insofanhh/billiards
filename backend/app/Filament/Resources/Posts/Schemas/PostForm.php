@@ -31,6 +31,8 @@ class PostForm
                     ->columnSpanFull(),
                 \Filament\Forms\Components\FileUpload::make('thumbnail')
                     ->image()
+                    ->disk('public')
+                    ->visibility('public')
                     ->directory('posts'),
                 \Filament\Forms\Components\Select::make('status')
                     ->options([
