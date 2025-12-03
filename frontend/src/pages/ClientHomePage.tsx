@@ -311,9 +311,9 @@ export function ClientHomePage() {
   );
 
   const emptyStateCard = (label: string) => (
-    <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 p-6 text-center text-sm text-gray-500">
+    <div className="rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 p-6 text-center text-sm text-gray-500 dark:text-white/50">
       <p>{label}</p>
-      <p className="mt-1 text-xs text-gray-400">Chờ quản trị viên cập nhật trên CMS.</p>
+      <p className="mt-1 text-xs text-gray-400 dark:text-white/30">Chờ quản trị viên cập nhật trên CMS.</p>
     </div>
   );
 
