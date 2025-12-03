@@ -15,7 +15,11 @@ class PostsTable
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\ImageColumn::make('thumbnail'),
+                \Filament\Tables\Columns\ImageColumn::make('thumbnail')
+                    ->label('Ảnh')
+                    ->disk('public')
+                    ->circular()
+                    ->toggleable(),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('category.name')
