@@ -17,6 +17,87 @@ import {
   isClientOrderContinuable,
   persistClientActiveOrderFromOrder,
 } from '../utils/clientActiveOrder';
+import { blogApi } from '../api/blog';
+
+function LatestPosts() {
+  const navigate = useNavigate();
+  const { data: postsData, isLoading } = useQuery({
+    queryKey: ['latest-posts'],
+    queryFn: () => blogApi.getPosts({ status: 'published', limit: 3 }),
+  });
+
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    return `http://localhost:8000/storage/${path}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-4 shadow-sm">
+            <div className="h-40 bg-gray-200 dark:bg-white/10 rounded-xl mb-4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!postsData?.data?.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 p-6 text-center text-sm text-gray-500 dark:text-white/50">
+        <p>Chưa có tin tức nào.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-3">
+      {postsData.data.slice(0, 3).map((post: any) => (
+        <div
+          key={post.id}
+          className="group cursor-pointer rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden shadow-sm dark:shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-md dark:hover:shadow-green-900/20 hover:scale-[1.02] dark:hover:bg-white/10"
+          onClick={() => navigate(`/blog/${post.id}`)}
+        >
+          <div className="aspect-[16/9] w-full overflow-hidden bg-gray-100 dark:bg-white/5">
+            {post.thumbnail ? (
+              <img
+                src={getImageUrl(post.thumbnail)}
+                alt={post.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-gray-400 dark:text-white/20">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+              </div>
+            )}
+          </div>
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-white/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-[#13ec6d]">
+                {post.category?.name || 'Tin tức'}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {new Date(post.published_at).toLocaleDateString('vi-VN')}
+              </span>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-[#13ec6d] transition-colors">
+              {post.title}
+            </h3>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+              {post.summary}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 type Highlight = {
   title: string;
@@ -63,12 +144,11 @@ export function ClientHomePage() {
     };
   }, []);
 
-  const [placeholderAnnouncements] = useState(() => ([] as Array<{ title: string; description: string }>));
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
-  const { data: publicDiscounts } = useQuery({
+
+  const { data: publicDiscounts, isLoading: isLoadingDiscounts } = useQuery({
     queryKey: ['public-discounts'],
     queryFn: discountCodesApi.getPublicDiscounts,
   });
@@ -184,13 +264,20 @@ export function ClientHomePage() {
   const {
     data: activeOrderDetails,
     isFetching: isCheckingActiveOrder,
+    isError: isOrderError,
   } = useQuery({
     queryKey: ['client-active-order-banner', activeOrderSnapshot?.orderId],
     queryFn: () => ordersApi.getById(activeOrderSnapshot!.orderId),
-    enabled: !!activeOrderSnapshot?.orderId,
+    enabled: !!activeOrderSnapshot?.orderId && isAuthenticated,
     staleTime: 30_000,
     retry: 1,
   });
+
+  useEffect(() => {
+    if (isOrderError) {
+      clearClientActiveOrder();
+    }
+  }, [isOrderError]);
 
   useEffect(() => {
     if (!activeOrderSnapshot?.orderId) return;
@@ -229,7 +316,7 @@ export function ClientHomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
         onHomeClick={() => navigate('/client')}
@@ -237,14 +324,14 @@ export function ClientHomePage() {
         onVouchersClick={() => navigate('/client/vouchers')}
       />
 
-      <main className="mx-auto max-w-6xl px-4 py-10 space-y-10">
-        <section className="rounded-3xl bg-gray-900 text-white px-8 py-10 shadow-xl">
+      <main className="mx-auto max-w-7xl px-4 py-10 lg:px-8 space-y-10">
+        <section className="rounded-3xl bg-white dark:bg-white/5 px-8 py-10 shadow-xl border border-gray-100 dark:border-white/10 backdrop-blur-sm transition-colors duration-300">
           <div className="grid gap-8 md:grid-cols-2 md:items-center">
             <div className="space-y-6">
               <div>
-                <p className="text-sm uppercase tracking-wide text-yellow-400">Trang khách hàng</p>
-                <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Quét mã QR để mở bàn và nhận thông báo mới nhất</h1>
-                <p className="mt-4 text-gray-200">
+                <p className="text-sm uppercase tracking-wide text-blue-600 dark:text-[#13ec6d]">Trang khách hàng</p>
+                <h1 className="mt-2 text-3xl font-bold sm:text-4xl text-gray-900 dark:text-white">Quét mã QR để mở bàn và nhận thông báo mới nhất</h1>
+                <p className="mt-4 text-gray-600 dark:text-gray-300">
                   Mọi thông điệp, thông báo hoặc ưu đãi từ quản trị viên sẽ xuất hiện tại đây. Bạn chỉ cần một lần quét để
                   bắt đầu trải nghiệm.
                 </p>
@@ -256,14 +343,14 @@ export function ClientHomePage() {
                     setScanError(null);
                     setIsScannerOpen(true);
                   }}
-                  className="flex-1 rounded-2xl bg-yellow-400 px-6 py-3 text-center text-base font-semibold text-gray-900 shadow-lg shadow-yellow-500/30 transition hover:bg-yellow-300"
+                  className="flex-1 rounded-2xl bg-blue-600 dark:bg-[#13ec6d] px-6 py-3 text-center text-base font-semibold text-white dark:text-zinc-900 shadow-lg shadow-blue-500/20 dark:shadow-green-500/20 transition hover:bg-blue-700 dark:hover:bg-[#10d863]"
                 >
                   Quét mã QR bàn
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/client/history')}
-                  className="flex-1 rounded-2xl border border-white/30 px-6 py-3 text-center text-base font-semibold text-white transition hover:bg-white/10"
+                  className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-6 py-3 text-center text-base font-semibold text-gray-900 dark:text-white transition hover:bg-gray-100 dark:hover:bg-white/10"
                 >
                   Lịch sử của tôi
                 </button>
@@ -272,7 +359,7 @@ export function ClientHomePage() {
             <div className="space-y-4">
               {bannerImages.length > 0 ? (
                 <div
-                  className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-lg shadow-black/30 backdrop-blur select-none"
+                  className="relative overflow-hidden rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 shadow-2xl shadow-black/5 dark:shadow-black/50 backdrop-blur select-none"
                   onTouchStart={(event) => handleDragStart(event.touches[0].clientX)}
                   onTouchEnd={(event) => handleDragEnd(event.changedTouches[0]?.clientX ?? null)}
                   onMouseDown={(event) => handleDragStart(event.clientX)}
@@ -300,16 +387,15 @@ export function ClientHomePage() {
                         key={index}
                         type="button"
                         onClick={() => goToBanner(index)}
-                        className={`h-2.5 w-2.5 rounded-full transition ${
-                          index === currentBannerIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
-                        }`}
+                        className={`h-2.5 w-2.5 rounded-full transition ${index === currentBannerIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
+                          }`}
                         aria-label={`Chọn banner ${index + 1}`}
                       />
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/30 bg-white/5 p-6 text-center text-sm text-white/70">
+                <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-gray-50 dark:bg-white/5 p-6 text-center text-sm text-gray-500 dark:text-white/50">
                   Chưa có ảnh banner. Hãy thêm trong CMS để hiển thị tại đây.
                 </div>
               )}
@@ -317,14 +403,14 @@ export function ClientHomePage() {
           </div>
         </section>
 
-        {activeOrderSnapshot && (
-          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-6 py-4 text-sm text-yellow-900 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {activeOrderSnapshot && isAuthenticated && (
+          <div className="rounded-2xl border border-yellow-200 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-500/10 px-6 py-4 text-sm text-gray-900 dark:text-white shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between backdrop-blur-sm">
             <div>
-              <p className="text-base font-semibold text-yellow-900">
+              <p className="text-base font-semibold text-yellow-800 dark:text-yellow-400">
                 Bạn có đơn {activeOrderSnapshot.orderCode ? `#${activeOrderSnapshot.orderCode}` : 'đang mở'} tại{' '}
                 {activeOrderSnapshot.tableName || activeOrderSnapshot.tableCode || 'bàn chưa xác định'}.
               </p>
-              <p className="text-xs text-yellow-800">
+              <p className="text-xs text-yellow-600 dark:text-yellow-300/80">
                 Trạng thái: {getClientOrderStatusLabel(activeOrderSnapshot.status)}
                 {isCheckingActiveOrder ? ' · Đang cập nhật...' : ''}
               </p>
@@ -332,7 +418,7 @@ export function ClientHomePage() {
             <button
               type="button"
               onClick={handleResumeOrder}
-              className="w-full rounded-2xl bg-yellow-400 px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-yellow-300 sm:w-auto"
+              className="w-full rounded-2xl bg-yellow-400 dark:bg-yellow-500 px-4 py-2 text-sm font-bold text-yellow-900 dark:text-black transition hover:bg-yellow-500 dark:hover:bg-yellow-400 sm:w-auto shadow-lg shadow-yellow-500/20"
             >
               Quay lại bàn
             </button>
@@ -340,17 +426,17 @@ export function ClientHomePage() {
         )}
 
         {scanError && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
             {scanError}
           </div>
         )}
 
         <section className="grid gap-6 md:grid-cols-3">
           {highlightCards.map((item) => (
-            <div key={item.title} className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">Thông tin</p>
-              <h2 className="mt-3 text-xl font-semibold text-gray-900">{item.title}</h2>
-              <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+            <div key={item.title} className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm backdrop-blur-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-[#13ec6d]">Thông tin</p>
+              <h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white">{item.title}</h2>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{item.description}</p>
             </div>
           ))}
         </section>
@@ -358,37 +444,54 @@ export function ClientHomePage() {
         <section className="space-y-6">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 py-2">Thông báo</p>
-              <h2 className="text-2xl font-semibold text-gray-900">Tin tức mới nhất</h2>
-              {/* <p className="text-sm text-gray-500">Tự động đồng bộ từ CMS ngay khi quản trị viên tạo thông báo.</p> */}
+              <p className="text-xs uppercase tracking-wide text-blue-600 dark:text-[#13ec6d] py-2">Thông báo</p>
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Tin tức mới nhất</h2>
             </div>
-            {/* <span className="rounded-full bg-gray-100 px-4 py-1 text-xs font-semibold text-gray-600">Thử nghiệm</span> */}
+            <a
+              href="/blog"
+              className="text-sm font-semibold text-blue-600 dark:text-[#13ec6d] hover:text-blue-700 dark:hover:text-[#10d863] flex items-center gap-1 pt-10"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/blog');
+              }}
+            >
+              Xem thêm
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </a>
           </div>
-          {placeholderAnnouncements.length === 0
-            ? emptyStateCard('Chưa có thông báo nào được thêm.')
-            : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {placeholderAnnouncements.map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                    <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            )
-          }
+
+          <LatestPosts />
         </section>
 
         <section className="space-y-6">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 py-2">Khuyến mãi</p>
-              <h2 className="text-2xl font-semibold text-gray-900">Ưu đãi dành cho bạn</h2>
-              {/* <p className="text-sm text-gray-500">Nơi quản trị viên đăng tải các chương trình giảm giá, mã voucher.</p> */}
+              <p className="text-xs uppercase tracking-wide text-blue-600 dark:text-[#13ec6d] py-2">Khuyến mãi</p>
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Ưu đãi dành cho bạn</h2>
             </div>
-            {/* <span className="rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold text-blue-600">Đang chờ dữ liệu</span> */}
           </div>
-          {!publicDiscounts || publicDiscounts.length === 0
+          {isLoadingDiscounts ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm">
+                  <div className="flex justify-between">
+                    <div className="flex-1 space-y-3">
+                      <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded"></div>
+                      <div className="h-6 w-32 bg-gray-200 dark:bg-white/10 rounded"></div>
+                      <div className="h-4 w-48 bg-gray-200 dark:bg-white/10 rounded"></div>
+                      <div className="pt-2 space-y-2">
+                        <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded"></div>
+                        <div className="h-6 w-24 bg-gray-200 dark:bg-white/10 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-white/10 rounded-lg"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !publicDiscounts || publicDiscounts.length === 0
             ? emptyStateCard('Chưa có ưu đãi nào được thêm.')
             : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -401,15 +504,15 @@ export function ClientHomePage() {
                   };
                   const isSaved = discount.is_saved || false;
                   return (
-                    <div key={discount.id} className="rounded-2xl border border-blue-100 bg-white p-6 shadow">
+                    <div key={discount.id} className="group rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-md dark:hover:shadow-green-900/20 hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-white/10">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-xs font-semibold text-blue-500">VOUCHER</p>
-                          <h3 className="mt-2 text-lg font-semibold text-gray-900">{discount.code}</h3>
-                          {discount.description && <p className="mt-2 text-sm text-gray-600">{discount.description}</p>}
+                          <p className="text-xs font-semibold text-blue-600 dark:text-[#13ec6d]">VOUCHER</p>
+                          <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-[#13ec6d] transition-colors">{discount.code}</h3>
+                          {discount.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{discount.description}</p>}
                           <div className="mt-3">
                             <p className="text-sm text-gray-500">Giảm giá</p>
-                            <p className="text-xl font-bold text-blue-600">{formatDiscountValue()}</p>
+                            <p className="text-xl font-bold text-blue-600 dark:text-[#13ec6d]">{formatDiscountValue()}</p>
                             {discount.min_spend && (
                               <p className="mt-1 text-xs text-gray-500">
                                 Đơn tối thiểu: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}
@@ -432,7 +535,7 @@ export function ClientHomePage() {
                                 }
                               }}
                               disabled={saveMutation.isPending}
-                              className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
+                              className="rounded-lg bg-blue-600 dark:bg-[#13ec6d] px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 transition hover:bg-blue-700 dark:hover:bg-[#10d863] disabled:opacity-50"
                             >
                               {saveMutation.isPending && savingDiscountId === discount.id ? 'Đang lưu...' : 'Lưu'}
                             </button>
@@ -440,7 +543,7 @@ export function ClientHomePage() {
                         )}
                         {isSaved && (
                           <div className="ml-4">
-                            <span className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-600">
+                            <span className="rounded-lg border border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-700 dark:text-[#13ec6d]">
                               Đã lưu
                             </span>
                           </div>
@@ -454,13 +557,13 @@ export function ClientHomePage() {
           }
         </section>
 
-        <section className="rounded-3xl border border-gray-100 bg-white p-8 shadow-sm">
-          <h2 className="text-2xl font-semibold text-gray-900">Hướng dẫn nhanh</h2>
+        <section className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-8 shadow-sm backdrop-blur-sm">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Hướng dẫn nhanh</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {infoSteps.map((step) => (
-              <div key={step.title} className="rounded-2xl bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{step.title}</p>
-                <p className="mt-2 text-sm text-gray-700">{step.description}</p>
+              <div key={step.title} className="rounded-2xl bg-gray-50 dark:bg-white/5 p-4 border border-gray-100 dark:border-white/5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-[#13ec6d]">{step.title}</p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{step.description}</p>
               </div>
             ))}
           </div>
@@ -468,19 +571,19 @@ export function ClientHomePage() {
       </main>
 
       {isScannerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-3xl bg-white dark:bg-[#1a2c24] p-6 shadow-2xl border border-gray-200 dark:border-white/10">
             <button
               type="button"
               onClick={() => setIsScannerOpen(false)}
-              className="absolute right-4 top-4 rounded-full bg-gray-100 p-2 text-gray-500 hover:text-gray-700"
+              className="absolute right-4 top-4 rounded-full bg-gray-100 dark:bg-white/10 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               aria-label="Đóng"
             >
               ×
             </button>
-            <h3 className="text-lg font-semibold text-gray-900">Quét mã QR bàn</h3>
-            <p className="mt-1 text-sm text-gray-500">Hãy hướng camera tới mã QR được dán trên bàn.</p>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Quét mã QR bàn</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Hãy hướng camera tới mã QR được dán trên bàn.</p>
+            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10">
               <Scanner
                 onScan={handleScan}
                 onError={handleScanError}
@@ -494,7 +597,7 @@ export function ClientHomePage() {
                 }}
               />
             </div>
-            <p className="mt-3 text-xs text-gray-400">Yêu cầu trình duyệt chạy trên HTTPS để dùng camera.</p>
+            <p className="mt-3 text-xs text-gray-500">Yêu cầu trình duyệt chạy trên HTTPS để dùng camera.</p>
           </div>
         </div>
       )}

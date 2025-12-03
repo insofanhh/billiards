@@ -40,6 +40,7 @@ class AdminPanelProvider extends PanelProvider
                 'Quản lý đơn hàng',
                 'Quản lý dịch vụ',
                 'Quản lý bàn',
+                'Quản lý bài đăng',
                 'Quản lý hệ thống',
                 'Filament Shield'
             ])

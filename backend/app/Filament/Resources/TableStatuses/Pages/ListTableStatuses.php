@@ -14,7 +14,7 @@ class ListTableStatuses extends ListRecords
     {
         return [
             CreateAction::make()
-                ->label('Thên trạng thái bàn'),
+                ->label('Thêm trạng thái bàn'),
         ];
     }
 }

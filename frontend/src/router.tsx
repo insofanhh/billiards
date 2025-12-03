@@ -12,6 +12,8 @@ import { ClientHistoryPage } from './pages/ClientHistoryPage';
 import { ClientHomePage } from './pages/ClientHomePage';
 import { VoucherWalletPage } from './pages/VoucherWalletPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { BlogListPage } from './pages/client/blog/BlogListPage';
+import { BlogPostPage } from './pages/client/blog/BlogPostPage';
 
 export const router = createBrowserRouter([
   {
@@ -62,6 +64,14 @@ export const router = createBrowserRouter([
   {
     path: '/client/vouchers',
     element: <VoucherWalletPage />,
+  },
+  {
+    path: '/blog',
+    element: <BlogListPage />,
+  },
+  {
+    path: '/blog/:id',
+    element: <BlogPostPage />,
   },
   {
     path: '*',

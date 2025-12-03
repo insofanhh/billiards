@@ -51,7 +51,7 @@ export function VoucherWalletPage() {
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     const shouldRedirect = !token || isGuest;
-    
+
     if (shouldRedirect) {
       navigate(`/login?redirect=${encodeURIComponent('/client/vouchers')}`);
     }
@@ -89,42 +89,43 @@ export function VoucherWalletPage() {
     return (
       <div
         key={discount.id}
-        className={`rounded-2xl border p-6 shadow-sm ${
-          available ? 'border-blue-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-75'
-        }`}
+        className={`rounded-2xl border p-6 shadow-sm transition-all duration-300 ${available
+          ? 'border-blue-200 dark:border-white/10 bg-white dark:bg-white/5'
+          : 'border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 opacity-75'
+          }`}
       >
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-xs font-semibold text-blue-500">VOUCHER</p>
-              {expired && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Hết hạn</span>}
-              {notStarted && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Chưa bắt đầu</span>}
+              <p className="text-xs font-semibold text-blue-600 dark:text-[#13ec6d]">VOUCHER</p>
+              {expired && <span className="rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">Hết hạn</span>}
+              {notStarted && <span className="rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs text-yellow-700 dark:text-yellow-400">Chưa bắt đầu</span>}
               {!available && !expired && !notStarted && (
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">Hết lượt</span>
+                <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300">Hết lượt</span>
               )}
             </div>
-            <h3 className="mt-2 text-lg font-semibold text-gray-900">{discount.code}</h3>
-            {discount.description && <p className="mt-1 text-sm text-gray-600">{discount.description}</p>}
+            {/* <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{discount.code}</h3> */}
+            {discount.description && <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{discount.description}</p>}
             <div className="mt-3 flex items-center gap-4">
               <div>
-                <p className="text-xs text-gray-500">Giảm giá</p>
-                <p className="text-lg font-bold text-blue-600">{formatDiscountValue(discount)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Giảm giá</p>
+                <p className="text-lg font-bold text-blue-600 dark:text-[#13ec6d]">{formatDiscountValue(discount)}</p>
               </div>
             </div>
 
             <div className="flex  justify-between">
-            {discount.min_spend && (
-                <p className="mt-1 text-xs text-gray-500">
-                    Đơn tối thiểu: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}
-                 </p>
-                )}
-                {discount.end_at && (
-              <p className="mt-1 text-xs text-gray-500">
-                HSD: {new Date(discount.end_at).toLocaleDateString('vi-VN')}
-              </p>
-            )}
+              {discount.min_spend && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Đơn tối thiểu: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}
+                </p>
+              )}
+              {discount.end_at && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  HSD: {new Date(discount.end_at).toLocaleDateString('vi-VN')}
+                </p>
+              )}
             </div>
-            
+
           </div>
           {isAuthenticated && (
             <div className="ml-4">
@@ -138,7 +139,7 @@ export function VoucherWalletPage() {
                     }, 100);
                   }}
                   disabled={!available}
-                  className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-600 transition hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-lg border border-green-300 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-600 dark:text-[#13ec6d] transition hover:bg-green-100 dark:hover:bg-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Sử dụng ngay
                 </button>
@@ -153,7 +154,7 @@ export function VoucherWalletPage() {
                     }
                   }}
                   disabled={saveMutation.isPending || !available}
-                  className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
+                  className="rounded-lg bg-blue-600 dark:bg-[#13ec6d] px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 transition hover:bg-blue-700 dark:hover:bg-[#10d863] disabled:opacity-50"
                 >
                   {saveMutation.isPending ? 'Đang lưu...' : 'Lưu'}
                 </button>
@@ -166,7 +167,7 @@ export function VoucherWalletPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
         onHomeClick={() => navigate('/client')}
@@ -176,15 +177,15 @@ export function VoucherWalletPage() {
       />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Ví voucher</h1>
-          <p className="mt-2 text-gray-600">Quản lý các voucher đã lưu và khám phá voucher mới</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Ví voucher</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Quản lý các voucher đã lưu và khám phá voucher mới</p>
         </div>
 
         {isAuthenticated && (
           <section className="mb-10">
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">Voucher đã lưu</h2>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Voucher đã lưu</h2>
             {isLoadingSaved ? (
-              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+              <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 text-center text-gray-500 dark:text-gray-400">
                 Đang tải...
               </div>
             ) : savedDiscounts && savedDiscounts.length > 0 ? (
@@ -192,7 +193,7 @@ export function VoucherWalletPage() {
                 {savedDiscounts.map((discount) => renderDiscountCard(discount, true))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 p-8 text-center text-sm text-gray-500">
+              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 p-8 text-center text-sm text-gray-500 dark:text-gray-400">
                 <p>Chưa có voucher nào được lưu.</p>
                 <p className="mt-1 text-xs text-gray-400">Lưu voucher từ danh sách bên dưới để sử dụng sau.</p>
               </div>
@@ -201,9 +202,9 @@ export function VoucherWalletPage() {
         )}
 
         <section>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Voucher khuyến mãi</h2>
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Voucher khuyến mãi</h2>
           {isLoadingPublic ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 text-center text-gray-500 dark:text-gray-400">
               Đang tải...
             </div>
           ) : publicDiscounts && publicDiscounts.length > 0 ? (
@@ -211,7 +212,7 @@ export function VoucherWalletPage() {
               {publicDiscounts.map((discount) => renderDiscountCard(discount, discount.is_saved))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 p-8 text-center text-sm text-gray-500">
+            <div className="rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 p-8 text-center text-sm text-gray-500 dark:text-gray-400">
               <p>Chưa có voucher khuyến mãi nào.</p>
               <p className="mt-1 text-xs text-gray-400">Chờ quản trị viên cập nhật trên CMS.</p>
             </div>

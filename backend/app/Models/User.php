@@ -74,6 +74,11 @@ class User extends Authenticatable implements FilamentUser
             ->withTimestamps();
     }
 
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->hasRole('super_admin') || $this->hasRole('staff') || $this->hasRole('admin');
