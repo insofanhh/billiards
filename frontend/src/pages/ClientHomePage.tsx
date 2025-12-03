@@ -29,7 +29,9 @@ function LatestPosts() {
   const getImageUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    return `http://localhost:8000/storage/${path}`;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+    return `${baseUrl}/storage/${path}`;
   };
 
   if (isLoading) {
@@ -597,7 +599,6 @@ export function ClientHomePage() {
                 }}
               />
             </div>
-            <p className="mt-3 text-xs text-gray-500">Yêu cầu trình duyệt chạy trên HTTPS để dùng camera.</p>
           </div>
         </div>
       )}
