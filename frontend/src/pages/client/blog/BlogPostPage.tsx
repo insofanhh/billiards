@@ -57,7 +57,9 @@ export function BlogPostPage() {
     const getImageUrl = (path: string) => {
         if (!path) return '';
         if (path.startsWith('http')) return path;
-        return `http://localhost:8000/storage/${path}`;
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+        return `${baseUrl}/storage/${path}`;
     };
 
     const handleCommentSubmit = () => {
