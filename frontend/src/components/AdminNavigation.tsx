@@ -162,7 +162,7 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
                 className="flex items-center gap-3 rounded-2xl bg-white/5 text-left text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
               >
                 <span className="rounded-xl bg-white/10 p-2 text-yellow-400">
-                  {icons.user} 
+                  {icons.user}
                 </span>
                 <span className="mt-0.5 block pr-4 text-sm font-semibold">{userName ?? 'Chưa xác định'}</span>
               </button>

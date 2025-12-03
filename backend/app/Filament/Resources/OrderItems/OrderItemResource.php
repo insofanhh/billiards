@@ -22,9 +22,9 @@ class OrderItemResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
     protected static string|UnitEnum|null $navigationGroup = 'Quản lý đơn hàng';
-    protected static ?string $navigationLabel = 'Chi tiết đơn hàng';
-    protected static ?string $modelLabel = 'Chi tiết đơn hàng';
-    protected static ?string $pluralModelLabel = 'Chi tiết đơn hàng';
+    protected static ?string $navigationLabel = 'Chi tiết dịch vụ';
+    protected static ?string $modelLabel = 'Chi tiết dịch vụ';
+    protected static ?string $pluralModelLabel = 'Chi tiết dịch vụ';
     protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema

@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\DiscountCodeController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\CommentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -21,6 +24,10 @@ Route::get('/tables/{code}', [TableController::class, 'show']);
 Route::post('/tables/{code}/request-open', [TableController::class, 'requestOpen']);
 Route::get('/public-discounts', [DiscountCodeController::class, 'getPublicDiscounts']);
 Route::get('/settings/banners', [SettingController::class, 'banners']);
+Route::get('/public/posts', [PostController::class, 'index']);
+Route::get('/public/posts/{id}', [PostController::class, 'show']);
+Route::get('/public/posts/{id}/comments', [CommentController::class, 'index']);
+Route::get('/public/categories', [CategoryController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
@@ -50,5 +57,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/orders/{id}/services/{itemId}', [OrderController::class, 'removeService']);
     Route::post('/orders/{id}/transactions', [OrderController::class, 'createTransaction']);
     Route::patch('/orders/{id}/transactions/{txnId}/confirm', [OrderController::class, 'confirmTransaction']);
+
+    // Blog Routes
+    Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('posts', PostController::class);
+    Route::post('posts/upload-image', [PostController::class, 'uploadImage']);
+    Route::post('posts/{id}/comments', [CommentController::class, 'store']);
 });
 
