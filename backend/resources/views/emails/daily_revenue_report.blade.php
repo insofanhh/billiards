@@ -68,7 +68,7 @@
             <tr>
                 <td>{{ $transaction->id }}</td>
                 <td>{{ $transaction->order->order_code ?? 'N/A' }}</td>
-                <td>{{ $transaction->user->name ?? 'N/A' }}</td>
+                <td>{{ $transaction->order->user->name ?? $transaction->customer_name ?? $transaction->user->name ?? 'N/A' }}</td>
                 <td>{{ number_format($transaction->amount) }} đ</td>
                 <td>{{ $transaction->method }}</td>
                 <td>{{ $transaction->status }}</td>
