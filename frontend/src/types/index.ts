@@ -63,6 +63,7 @@ export interface Service {
     id: number;
     name: string;
     slug?: string;
+    sort_order?: number;
   } | null;
 }
 

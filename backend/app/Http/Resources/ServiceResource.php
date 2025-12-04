@@ -24,6 +24,7 @@ class ServiceResource extends JsonResource
                     'id' => $this->categoryService->id,
                     'name' => $this->categoryService->name,
                     'slug' => $this->categoryService->slug,
+                    'sort_order' => $this->categoryService->sort_order,
                 ];
             }),
         ];

@@ -16,7 +16,9 @@ class CategoryServiceForm
                 TextInput::make('name')
                     ->label('Tên danh mục')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (string $operation, $state, $set) => $operation === 'create' ? $set('slug', \Illuminate\Support\Str::slug($state)) : null),
                 TextInput::make('slug')
                     ->label('Slug')
                     ->maxLength(255)
