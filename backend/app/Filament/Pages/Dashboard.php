@@ -154,11 +154,11 @@ class Dashboard extends BaseDashboard
             $csvData[] = [
                 $transaction->id,
                 $transaction->order->order_code ?? 'N/A',
-                $transaction->user->name ?? 'N/A',
+                $transaction->order->user->name ?? $transaction->customer_name ?? $transaction->user->name ?? 'N/A',
                 $transaction->amount,
                 $transaction->method,
                 $transaction->status,
-                $transaction->created_at,
+                $transaction->created_at->format('d/m/Y H:i:s'),
             ];
         }
 
