@@ -71,8 +71,8 @@ class StatsOverview extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-table-cells')
                 ->color('warning'),
             
-            Stat::make('Tổng khách hàng', $totalCustomers)
-                ->description('Tổng số khách hàng đã đăng ký')
+            Stat::make('Tổng người dùng', $totalCustomers)
+                ->description('Tổng số người dùng đã đăng ký')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('primary'),
         ];

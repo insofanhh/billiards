@@ -12,6 +12,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Table;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class OrdersTable
 {
@@ -102,6 +104,14 @@ class OrdersTable
                 SelectFilter::make('user_id')
                     ->label('Khách hàng')
                     ->relationship('user', 'name'),
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options([
+                        'pending' => 'Chờ xử lý',
+                        'active' => 'Đang sử dụng',
+                        'completed' => 'Hoàn thành',
+                        'cancelled' => 'Đã hủy',
+                    ]),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -163,6 +173,13 @@ class OrdersTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    ExportBulkAction::make()
+                    ->exports([
+                        ExcelExport::make('orders')
+                            ->fromTable()
+                            ->askForFilename()
+                            ->withFilename(fn ($filename) => 'orders-' . $filename),
+                    ]),
                     DeleteBulkAction::make(),
                 ]),
             ])

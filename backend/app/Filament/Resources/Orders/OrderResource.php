@@ -24,7 +24,7 @@ class OrderResource extends Resource
     protected static string | UnitEnum | null $navigationGroup = 'Quản lý đơn hàng';
     protected static ?string $navigationLabel = 'Đơn hàng';
     protected static ?string $modelLabel = 'Đơn hàng';
-    protected static ?string $pluralModelLabel = 'Đơn hàng';
+    protected static ?string $pluralModelLabel = 'Doanh thu bàn';
     protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema

@@ -43,7 +43,7 @@ class CategoryServicesTable
                     ->falseColor('danger')
                     ->sortable(),
                 TextColumn::make('services_count')
-                    ->label('Số dịch vụ')
+                    ->label('Số lượng dịch vụ')
                     ->counts('services')
                     ->sortable(),
                 TextColumn::make('created_at')

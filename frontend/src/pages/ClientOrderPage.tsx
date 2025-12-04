@@ -74,7 +74,7 @@ export function ClientOrderPage() {
 
   const categories = useMemo(() => {
     if (!services) return [];
-    const categoryMap = new Map<number, { id: number; name: string; slug?: string }>();
+    const categoryMap = new Map<number, { id: number; name: string; slug?: string; sort_order?: number }>();
     services.forEach((service) => {
       if (service.category_service) {
         const cat = service.category_service;
@@ -83,7 +83,7 @@ export function ClientOrderPage() {
         }
       }
     });
-    return Array.from(categoryMap.values());
+    return Array.from(categoryMap.values()).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [services]);
 
   const servicesByCategory = useMemo(() => {
@@ -342,7 +342,7 @@ export function ClientOrderPage() {
       />
       <div className="max-w-4xl mx-auto py-12 px-4">
         {!hasSuccessfulTransaction ? (
-          <div className="bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-8 backdrop-blur-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-5 backdrop-blur-sm transition-colors duration-300">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Đơn hàng {order.order_code}</h1>
@@ -494,7 +494,7 @@ export function ClientOrderPage() {
 
                 {showAddService && services && categories.length > 0 && (
                   <div className="mt-4">
-                    <div className="flex gap-2 overflow-x-auto pb-2 mb-4 border-b border-gray-200 dark:border-white/10">
+                    <div className="flex gap-2 overflow-x-auto pb-2 mb-4 border-b border-gray-200 dark:border-white/10 no-scrollbar">
                       {categories.map((category) => (
                         <button
                           key={category.id}
@@ -509,7 +509,7 @@ export function ClientOrderPage() {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto pr-2 no-scrollbar">
                       {displayedServices.map((service: Service) => {
                         const availableQuantity = service.inventory_quantity ?? 0;
                         const qty = selected[service.id] || 0;
