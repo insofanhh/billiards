@@ -11,4 +11,4 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('users:cleanup-temporary')->dailyAt('00:00');
 
-Schedule::command('report:daily-revenue')->dailyAt('00:00');
+Schedule::command('report:daily-revenue')->dailyAt('23:59');
