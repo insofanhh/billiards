@@ -48,7 +48,7 @@ class PriceRate extends Model
                 $dayQ->whereNull('day_of_week')
                     ->orWhere(function ($withDayQ) use ($dayOfWeek, $prevDayOfWeek, $time) {
                         $withDayQ->where(function ($currentDayQ) use ($dayOfWeek, $time) {
-                            $currentDayQ->whereJsonContains('day_of_week', $dayOfWeek)
+                            $currentDayQ->whereJsonContains('day_of_week', (string)$dayOfWeek)
                                 ->where(function ($timeCheckQ) use ($time) {
                                     $timeCheckQ->whereNull('start_time')
                                         ->whereNull('end_time')
@@ -63,7 +63,7 @@ class PriceRate extends Model
                                 });
                         })
                         ->orWhere(function ($prevDayQ) use ($prevDayOfWeek, $time) {
-                            $prevDayQ->whereJsonContains('day_of_week', $prevDayOfWeek)
+                            $prevDayQ->whereJsonContains('day_of_week', (string)$prevDayOfWeek)
                                 ->whereNotNull('start_time')
                                 ->whereNotNull('end_time')
                                 ->where(function ($overnightQ) use ($time) {

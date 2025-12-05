@@ -59,6 +59,10 @@ class TableResource extends JsonResource
                         'id' => $rate->id,
                         'price_per_hour' => $rate->price_per_hour,
                         'active' => $rate->active,
+                        'day_of_week' => $rate->day_of_week,
+                        'start_time' => $rate->start_time,
+                        'end_time' => $rate->end_time,
+                        'priority' => $rate->priority,
                     ];
                 }),
                 'current_price_rate' => $currentPriceRate ? [

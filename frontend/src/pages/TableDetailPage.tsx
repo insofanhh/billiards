@@ -6,6 +6,75 @@ import { tablesApi } from '../api/tables';
 import { ordersApi } from '../api/orders';
 import { useAuthStore } from '../store/authStore';
 import { AdminNavigation } from '../components/AdminNavigation';
+import type { Table } from '../types';
+
+const getCurrentPriceRate = (rates: Table['table_type']['price_rates'] | undefined) => {
+  if (!rates || rates.length === 0) return undefined;
+
+  const now = new Date();
+  const currentDay = now.getDay(); // 0 (Sun) - 6 (Sat)
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}:00`;
+
+  // Filter active rates
+  const activeRates = rates.filter(rate => rate.active);
+
+  // Filter by validity
+  const validRates = activeRates.filter(rate => {
+    const hasDayConstraint = rate.day_of_week && rate.day_of_week.length > 0;
+    const hasTimeConstraint = !!(rate.start_time && rate.end_time);
+
+    if (!hasTimeConstraint) {
+      // Only day constraint
+      if (hasDayConstraint) {
+        return rate.day_of_week!.includes(currentDay.toString());
+      }
+      return true;
+    }
+
+    const start = rate.start_time!;
+    const end = rate.end_time!;
+
+    if (start <= end) {
+      // Standard range (e.g. 08:00 - 22:00)
+      // Must be today AND within time
+      if (hasDayConstraint && !rate.day_of_week!.includes(currentDay.toString())) return false;
+      return currentTimeStr >= start && currentTimeStr <= end;
+    } else {
+      // Overnight range (e.g. 18:00 - 06:00)
+      // Valid if:
+      // 1. Today is valid AND time >= start
+      // 2. Yesterday was valid AND time <= end
+
+      const matchesStart = currentTimeStr >= start;
+      const matchesEnd = currentTimeStr <= end;
+
+      if (matchesStart) {
+        if (hasDayConstraint && !rate.day_of_week!.includes(currentDay.toString())) return false;
+        return true;
+      }
+      if (matchesEnd) {
+        if (hasDayConstraint) {
+          const prevDay = (currentDay + 6) % 7;
+          if (!rate.day_of_week!.includes(prevDay.toString())) return false;
+        }
+        return true;
+      }
+      return false;
+    }
+  });
+
+  // Sort by priority desc, then id asc
+  validRates.sort((a, b) => {
+    const priorityA = a.priority || 0;
+    const priorityB = b.priority || 0;
+    if (priorityB !== priorityA) return priorityB - priorityA;
+    return a.id - b.id;
+  });
+
+  return validRates[0];
+};
 
 export function TableDetailPage() {
   const { code } = useParams<{ code: string }>();
@@ -101,7 +170,7 @@ export function TableDetailPage() {
   }
 
   const isAvailable = table.status.name === 'Trống';
-  const activePriceRate = table.table_type.current_price_rate || table.table_type.price_rates?.find(rate => rate.active);
+  const activePriceRate = table.table_type.current_price_rate || getCurrentPriceRate(table.table_type.price_rates);
   const hasActiveOrder = !!table.active_order;
   const hasPendingPaymentOrder = table.active_order?.status === 'completed';
   const hasPendingEndOrder = !!table.pending_end_order;
@@ -130,11 +199,10 @@ export function TableDetailPage() {
               <h1 className="text-3xl font-bold text-gray-900">{table.code}</h1>
               <p className="text-xl text-gray-600 mt-2">{table.name}</p>
             </div>
-            <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-              table.status.name === 'Trống' ? 'bg-green-100 text-green-800' :
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${table.status.name === 'Trống' ? 'bg-green-100 text-green-800' :
               table.status.name === 'Đang sử dụng' ? 'bg-red-100 text-red-800' :
-              'bg-yellow-100 text-yellow-800'
-            }`}>
+                'bg-yellow-100 text-yellow-800'
+              }`}>
               {table.status.name}
             </span>
           </div>
@@ -288,11 +356,10 @@ export function TableDetailPage() {
               <button
                 onClick={handleStartOrder}
                 disabled={!isAvailable || createOrderMutation.isPending}
-                className={`flex-1 py-3 px-6 rounded-md font-medium ${
-                  isAvailable
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className={`flex-1 py-3 px-6 rounded-md font-medium ${isAvailable
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
               >
                 {createOrderMutation.isPending ? 'Đang mở bàn...' : 'Mở bàn'}
               </button>

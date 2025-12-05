@@ -271,9 +271,8 @@ class OrderController extends Controller
             
             $playTimeMinutes = $startTime->diffInMinutes($endTime);
             
-            $hourlyPrice = (float) $order->priceRate->price_per_hour;
-            $perMinutePrice = $hourlyPrice / 60.0;
-            $tableCost = $playTimeMinutes * $perMinutePrice;
+            // Calculate table cost based on time segments
+            $tableCost = $this->calculateTableCost($order, $startTime, $endTime);
             
             $servicesCost = $order->items->sum('total_price');
             $totalBeforeDiscount = $tableCost + $servicesCost;
@@ -330,6 +329,93 @@ class OrderController extends Controller
         event(new OrderEndApproved($order));
 
         return new OrderResource($order);
+    }
+
+    private function calculateTableCost(Order $order, Carbon $startTime, Carbon $endTime): float
+    {
+        $rates = \App\Models\PriceRate::where('table_type_id', $order->table->table_type_id)
+            ->active()
+            ->orderBy('priority', 'desc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $totalCost = 0.0;
+        $current = $startTime->copy();
+        
+        // Loop through each minute
+        while ($current->lt($endTime)) {
+            $matchedRate = null;
+            $dayOfWeek = $current->dayOfWeek;
+            $timeStr = $current->format('H:i:s');
+            $prevDayOfWeek = ($dayOfWeek - 1 + 7) % 7;
+
+            foreach ($rates as $rate) {
+                // Check 1: Valid for current day?
+                $isDayValid = $rate->day_of_week === null || in_array((string)$dayOfWeek, $rate->day_of_week);
+                
+                if ($isDayValid) {
+                    if ($rate->start_time === null && $rate->end_time === null) {
+                        $matchedRate = $rate;
+                        break;
+                    }
+
+                    $start = $rate->start_time;
+                    $end = $rate->end_time;
+
+                    if ($start <= $end) {
+                        // Standard range
+                        if ($timeStr >= $start && $timeStr <= $end) {
+                            $matchedRate = $rate;
+                            break;
+                        }
+                    } else {
+                        // Overnight range (e.g. 18:00 - 06:00)
+                        // On current day, valid if time >= start OR time <= end
+                        // BUT if time <= end, it effectively belongs to "yesterday's" shift logically, 
+                        // but physically it's today.
+                        // If we are strictly checking "started today", then time >= start.
+                        // If we are checking "started yesterday", that's the next check.
+                        // However, if the rate is configured for "Monday", it usually means "Monday 18:00 to Tuesday 06:00".
+                        // So on Monday 05:00, it should match Monday's rate? No, Monday 05:00 is Monday morning.
+                        // Monday 18:00-06:00 means:
+                        // - Monday 18:00 to 23:59
+                        // - Tuesday 00:00 to 06:00 (which is covered by "Previous Day Match")
+                        
+                        // So here (Current Day Match), we only care if time >= start
+                        if ($timeStr >= $start) {
+                            $matchedRate = $rate;
+                            break;
+                        }
+                    }
+                }
+
+                // Check 2: Valid as extension of previous day? (Overnight)
+                $isPrevDayValid = $rate->day_of_week === null || in_array((string)$prevDayOfWeek, $rate->day_of_week);
+                
+                if ($isPrevDayValid && $rate->start_time !== null && $rate->end_time !== null) {
+                    $start = $rate->start_time;
+                    $end = $rate->end_time;
+
+                    if ($start > $end) {
+                        // It is an overnight rate
+                        // If it started yesterday, it is valid today if time <= end
+                        if ($timeStr <= $end) {
+                            $matchedRate = $rate;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // If no rate found, fallback to the order's initial rate or 0
+            $rateToUse = $matchedRate ? $matchedRate->price_per_hour : ($order->priceRate ? $order->priceRate->price_per_hour : 0);
+            
+            $totalCost += $rateToUse / 60.0;
+            
+            $current->addMinute();
+        }
+
+        return $totalCost;
     }
 
     public function applyDiscount(Request $request, $id)

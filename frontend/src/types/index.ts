@@ -26,6 +26,10 @@ export interface Table {
       id: number;
       price_per_hour: number;
       active: boolean;
+      day_of_week?: string[] | null;
+      start_time?: string | null;
+      end_time?: string | null;
+      priority?: number;
     }>;
     current_price_rate?: {
       id: number;
