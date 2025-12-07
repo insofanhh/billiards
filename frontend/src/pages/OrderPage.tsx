@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useMemo } from 'react';
 import { ordersApi } from '../api/orders';
@@ -11,11 +11,10 @@ import { AdminNavigation } from '../components/AdminNavigation';
 
 export function OrderPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+
   const { user, logout } = useAuthStore();
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
-  const [showAddService, setShowAddService] = useState(false);
   const [selected, setSelected] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
@@ -93,13 +92,7 @@ export function OrderPage() {
     }
   }, [categories, selectedCategory]);
 
-  const updateServiceMutation = useMutation({
-    mutationFn: ({ itemId, qty }: { itemId: number; qty: number }) =>
-      ordersApi.updateService(Number(id!), itemId, qty),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
-    },
-  });
+
 
   const removeServiceMutation = useMutation({
     mutationFn: (itemId: number) =>
@@ -109,13 +102,54 @@ export function OrderPage() {
     },
   });
 
-  const confirmServiceItemMutation = useMutation({
-    mutationFn: (itemId: number) =>
-      ordersApi.confirmServiceItem(Number(id!), itemId),
+
+
+  const confirmBatchMutation = useMutation({
+    mutationFn: async (itemIds: number[]) => {
+      await Promise.all(itemIds.map((itemId) => ordersApi.confirmServiceItem(Number(id!), itemId)));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
+      showNotification('Đã xác nhận toàn bộ order!');
     },
   });
+
+  const groupedItems = useMemo(() => {
+    if (!order?.items) return [];
+
+    // 1. Sort by time
+    const sorted = [...order.items].sort((a: any, b: any) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeA - timeB;
+    });
+
+    const groups: { time: string; items: any[] }[] = [];
+    if (sorted.length === 0) return groups;
+
+    // 2. Cluster
+    let currentGroup = { time: sorted[0].created_at || 'Mới thêm', items: [sorted[0]] };
+
+    for (let i = 1; i < sorted.length; i++) {
+      const item = sorted[i];
+      const lastItem = currentGroup.items[currentGroup.items.length - 1];
+      const prevTime = lastItem.created_at ? new Date(lastItem.created_at).getTime() : 0;
+      const currTime = item.created_at ? new Date(item.created_at).getTime() : 0;
+
+      // Threshold: 60 seconds (60000 ms)
+      if (currTime - prevTime < 60000) {
+        currentGroup.items.push(item);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = { time: item.created_at || 'Mới thêm', items: [item] };
+      }
+    }
+    groups.push(currentGroup);
+
+    return groups;
+  }, [order?.items]);
+
+
 
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
@@ -125,19 +159,6 @@ export function OrderPage() {
       queryClient.refetchQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       showNotification('Thanh toán thành công!');
-      setTimeout(() => {
-        const bill = document.getElementById('staff-bill');
-        if (bill) {
-          bill.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          setTimeout(() => {
-            const billRetry = document.getElementById('staff-bill');
-            if (billRetry) {
-              billRetry.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }, 500);
-        }
-      }, 500);
     },
   });
 
@@ -148,21 +169,10 @@ export function OrderPage() {
       queryClient.refetchQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       showNotification('Xác nhận thanh toán thành công!');
-      setTimeout(() => {
-        const bill = document.getElementById('staff-bill');
-        if (bill) {
-          bill.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          setTimeout(() => {
-            const billRetry = document.getElementById('staff-bill');
-            if (billRetry) {
-              billRetry.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }, 500);
-        }
-      }, 500);
     },
   });
+
+
 
   const applyDiscountMutation = useMutation({
     mutationFn: (code: string) => ordersApi.applyDiscount(Number(id!), code),
@@ -180,10 +190,43 @@ export function OrderPage() {
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
   const orderCustomerName = order?.customer_name || null;
   const pendingTransaction = order?.transactions?.find((t: any) => t.status === 'pending') ?? null;
-  const pendingTransactionHasMethod = !!pendingTransaction?.method;
+
+
 
   const handlePrintBill = () => {
     window.print();
+  };
+
+  const submitSelectedItems = async () => {
+    if (!hasSelected || isSubmitting) return;
+    const entries = Object.entries(selected).map(([serviceId, qty]) => ({
+      serviceId: Number(serviceId),
+      qty,
+    }));
+    const exceededEntry = entries.find((entry) => {
+      const matched = services?.find((svc) => svc.id === entry.serviceId);
+      const available = matched?.inventory_quantity ?? 0;
+      return available <= 0 || entry.qty > available;
+    });
+    if (exceededEntry) {
+      showNotification('Số lượng dịch vụ trong kho đã đến giới hạn.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await Promise.all(
+        entries.map((e) =>
+          ordersApi.addService(Number(id!), { service_id: e.serviceId, qty: e.qty }),
+        ),
+      );
+      setSelected({});
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      showNotification('Đã đặt dịch vụ thành công!');
+    } catch (error) {
+      showNotification('Có lỗi xảy ra khi đặt dịch vụ. Vui lòng thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -209,21 +252,6 @@ export function OrderPage() {
       if (data.transaction?.order_id === Number(id)) {
         queryClient.invalidateQueries({ queryKey: ['order', id] });
         queryClient.refetchQueries({ queryKey: ['order', id] });
-        if (data.transaction?.status === 'success') {
-          setTimeout(() => {
-            const bill = document.getElementById('staff-bill');
-            if (bill) {
-              bill.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-              setTimeout(() => {
-                const billRetry = document.getElementById('staff-bill');
-                if (billRetry) {
-                  billRetry.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }, 500);
-            }
-          }, 500);
-        }
       }
     };
 
@@ -231,12 +259,6 @@ export function OrderPage() {
       if (data.transaction?.order_id === Number(id)) {
         queryClient.invalidateQueries({ queryKey: ['order', id] });
         queryClient.refetchQueries({ queryKey: ['order', id] });
-        setTimeout(() => {
-          const bill = document.getElementById('staff-bill');
-          if (bill) {
-            bill.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 300);
       }
     };
 
@@ -308,11 +330,10 @@ export function OrderPage() {
   const isPendingEnd = order.status === 'pending_end';
   const isCompleted = order.status === 'completed';
   const canApplyDiscount = order.total_before_discount > 0 && !hasSuccessfulTransaction;
-  const appliedDiscountLabel = order.applied_discount
-    ? order.applied_discount.discount_type === 'percent'
-      ? `${order.applied_discount.discount_value}%`
-      : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.applied_discount.discount_value)
-    : '';
+
+
+  const servicesTotal = order.items?.reduce((sum: number, item: any) => sum + Number(item.total_price), 0) || 0;
+  const currentTotalBeforeDiscount = order.total_before_discount > 0 ? order.total_before_discount : servicesTotal;
 
   const handleApplyDiscount = () => {
     if (!canApplyDiscount) return;
@@ -323,204 +344,236 @@ export function OrderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
       <AdminNavigation userName={user?.name} onLogout={logout} />
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        <button
-          onClick={() => navigate('/staff')}
-          className="mb-6 text-blue-600 hover:text-blue-800"
-        >
-          ← Quay lại
-        </button>
-
-        {!hasSuccessfulTransaction && (
-          <>
-            <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-              <div className="items-start mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Đơn hàng {order.order_code}</h1>
-                  <p className="text-gray-600 mt-2 mb-2">Bàn: {order.table.name}</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className="py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {isActive ? (
+            <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
+              <div className="mb-6">
+                <div className="flex items-center space-x-4 mb-4 overflow-x-auto pb-2">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`px-4 py-2 font-semibold rounded-lg whitespace-nowrap transition-colors ${selectedCategory === cat.id
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
                 </div>
-                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  order.status === 'active' ? 'bg-green-100 text-green-800' :
-                  order.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                  order.status === 'pending_end' ? 'bg-orange-100 text-orange-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {order.status === 'active' ? 'Đang sử dụng' : 
-                   order.status === 'completed' ? 'Hoàn thành' : 
-                   order.status === 'pending_end' ? 'Chờ duyệt kết thúc' :
-                   'Chờ xử lý'}
-                </span>
               </div>
 
-              {isActive && (
-                <div className="mb-6">
-              <button
-                onClick={() => approveEndMutation.mutate()}
-                disabled={approveEndMutation.isPending}
-                className="w-full py-3 px-6 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                  {approveEndMutation.isPending ? 'Đang tính toán...' : 'Kết thúc bàn'}
-                </button>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedServices.map((service) => {
+                  const availableQuantity = service.inventory_quantity ?? 0;
+                  const qty = selected[service.id] || 0;
+                  const isOutOfStock = availableQuantity <= 0;
 
-          {isPendingEnd && (
-            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <p className="text-orange-800 font-medium mb-4">Khách hàng đã yêu cầu kết thúc giờ chơi.</p>
-              <div className="flex space-x-4">
+                  return (
+                    <div key={service.id} className="border border-slate-200 rounded-lg p-4 flex flex-col items-center text-center">
+                      {service.image && (
+                        <img src={service.image} alt={service.name} className="w-32 h-32 object-cover mb-4 rounded-md" />
+                      )}
+                      <h3 className="font-bold text-slate-900">{service.name}</h3>
+                      <p className="text-sm text-slate-500 mb-2">{service.description}</p>
+                      <p className="text-blue-600 font-bold mb-4">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.price)}
+                      </p>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => {
+                            if (qty <= 0) return;
+                            setSelected((s) => {
+                              const next = s[service.id] - 1;
+                              const copy = { ...s };
+                              if (next <= 0) delete copy[service.id];
+                              else copy[service.id] = next;
+                              return copy;
+                            });
+                          }}
+                          className="w-8 h-8 rounded-full bg-slate-200 text-slate-900 flex items-center justify-center font-bold text-xl hover:bg-slate-300"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-lg">{qty}</span>
+                        <button
+                          onClick={() => {
+                            if (isOutOfStock || qty >= availableQuantity) {
+                              showNotification('Hết hàng hoặc đủ số lượng');
+                              return;
+                            }
+                            setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }));
+                          }}
+                          className={`w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl hover:opacity-90 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="hidden lg:block lg:col-span-2"></div>
+          )}
+
+          <div className={isActive ? 'lg:col-span-1' : 'lg:col-span-3 max-w-3xl mx-auto w-full'}>
+            <div id="staff-bill" className="sticky top-8 bg-white p-6 rounded-lg shadow-sm">
+              <h2 className="text-2xl font-bold mb-1 text-slate-900">Đơn hàng {order.order_code}</h2>
+              <p className="text-slate-600 mb-2">
+                Bàn: <span className="font-semibold">{order.table.name}</span>
+              </p>
+              <span
+                className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium mb-4 ${order.status === 'active'
+                  ? 'bg-green-100 text-green-800'
+                  : order.status === 'completed'
+                    ? 'bg-gray-100 text-gray-800'
+                    : 'bg-orange-100 text-orange-800'
+                  }`}
+              >
+                {order.status === 'active'
+                  ? 'Đang sử dụng'
+                  : order.status === 'completed'
+                    ? 'Hoàn thành'
+                    : 'Chờ xử lý'}
+              </span>
+
+              {isActive && (
                 <button
                   onClick={() => approveEndMutation.mutate()}
                   disabled={approveEndMutation.isPending}
-                  className="flex-1 py-2 px-4 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+                  className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-colors mb-4 disabled:opacity-50"
                 >
-                  {approveEndMutation.isPending ? 'Đang tính toán...' : 'Duyệt kết thúc'}
+                  {approveEndMutation.isPending ? 'Đang xử lý...' : 'Kết thúc bàn'}
                 </button>
-                <button
-                  onClick={() => rejectEndMutation.mutate()}
-                  disabled={rejectEndMutation.isPending}
-                  className="flex-1 py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
-                >
-                  {rejectEndMutation.isPending ? 'Đang xử lý...' : 'Từ chối'}
-                </button>
-              </div>
-            </div>
-          )}
+              )}
 
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <div>
-              <p className="text-sm text-gray-500">Bắt đầu</p>
-              <p className="text-lg font-semibold">
-                {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
-              </p>
-            </div>
-            {order.end_at && (
-              <div>
-                <p className="text-sm text-gray-500">Kết thúc</p>
-                <p className="text-lg font-semibold">
-                  {new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                </p>
-              </div>
-            )}
-            {order.total_play_time_minutes && (
-              <div>
-                <p className="text-sm text-gray-500">Thời gian chơi</p>
-                <p className="text-lg font-semibold">
-                  {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}m
-                </p>
-              </div>
-            )}
-          </div>
+              {isPendingEnd && (
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => approveEndMutation.mutate()}
+                    className="flex-1 bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700"
+                  >
+                    Duyệt kết thúc
+                  </button>
+                  <button
+                    onClick={() => rejectEndMutation.mutate()}
+                    className="flex-1 bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700"
+                  >
+                    Từ chối
+                  </button>
+                </div>
+              )}
 
-          {order.items && order.items.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4">Dịch vụ đã gọi</h3>
-              <div className="space-y-4">
-                {(() => {
-                  const sortedItems = [...order.items].sort((a, b) => {
-                    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-                    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-                    return timeA - timeB;
-                  });
-                  
-                  const batches: typeof order.items[] = [];
-                  let currentBatch: typeof order.items = [];
-                  let lastTime = 0;
-                  const BATCH_TIME_THRESHOLD = 10000;
-                  
-                  sortedItems.forEach((item) => {
-                    const itemTime = item.created_at ? new Date(item.created_at).getTime() : 0;
-                    
-                    if (currentBatch.length === 0 || (itemTime - lastTime) < BATCH_TIME_THRESHOLD) {
-                      currentBatch.push(item);
-                    } else {
-                      batches.push(currentBatch);
-                      currentBatch = [item];
-                    }
-                    lastTime = itemTime;
-                  });
-                  
-                  if (currentBatch.length > 0) {
-                    batches.push(currentBatch);
-                  }
-                  
-                  return batches.map((batch, batchIndex) => {
-                    const orderNumber = batchIndex + 1;
-                    const allConfirmed = batch.every(item => item.is_confirmed);
-                    
-                    const handleConfirmBatch = () => {
-                      const unconfirmedItems = batch.filter(item => !item.is_confirmed);
-                      unconfirmedItems.forEach(item => {
-                        confirmServiceItemMutation.mutate(item.id);
-                      });
-                    };
-                    
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-sm text-slate-500">Bắt đầu</p>
+                  <p className="font-semibold text-slate-800">
+                    {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
+                  </p>
+                </div>
+                {order.end_at && (
+                  <div>
+                    <p className="text-sm text-slate-500">Kết thúc</p>
+                    <p className="font-semibold text-slate-800">
+                      {new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                    </p>
+                  </div>
+                )}
+                {order.total_play_time_minutes && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-slate-500">Thời gian chơi</p>
+                    <p className="font-semibold text-slate-800">
+                      {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {(orderCustomerName || order.cashier) && (
+                <div className="mb-4 text-sm border-t border-slate-200 pt-4">
+                  {orderCustomerName && (
+                    <p className="text-slate-600">
+                      Khách hàng: <span className="font-semibold text-slate-900">{orderCustomerName}</span>
+                    </p>
+                  )}
+                  {order.cashier && (
+                    <p className="text-slate-600">
+                      Thu ngân: <span className="font-semibold text-slate-900">{order.cashier}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="border-t border-slate-200 pt-4">
+                <h3 className="font-bold text-lg mb-4 text-slate-900">Dịch vụ đã chọn</h3>
+
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {groupedItems.map(({ time, items }, index) => {
+                    const isAllConfirmed = (items as any[]).every((i) => i.is_confirmed);
+                    const unconfirmedIds = (items as any[]).filter((i) => !i.is_confirmed).map((i) => i.id);
+
                     return (
-                      <div key={batchIndex} className={`border rounded-lg ${allConfirmed ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'}`}>
-                        <div className={`flex items-center justify-between px-4 py-3 border-b ${allConfirmed ? 'bg-green-100 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                      <div key={time} className="mb-6 last:mb-0 border border-slate-200 rounded-lg overflow-hidden">
+                        <div
+                          className={`px-4 py-3 flex items-center justify-between ${isAllConfirmed ? 'bg-green-100 border-b border-green-200' : 'bg-slate-50 border-b border-slate-200'
+                            }`}
+                        >
                           <div className="flex items-center gap-3">
-                            {isActive && (
-                              <input
-                                type="checkbox"
-                                checked={allConfirmed}
-                                onChange={handleConfirmBatch}
-                                disabled={allConfirmed || confirmServiceItemMutation.isPending}
-                                className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                              />
+                            {isActive && !isAllConfirmed ? (
+                              <button
+                                onClick={() => confirmBatchMutation.mutate(unconfirmedIds)}
+                                disabled={confirmBatchMutation.isPending}
+                                className="w-6 h-6 rounded border border-slate-400 bg-white flex items-center justify-center hover:border-blue-500 text-transparent hover:text-blue-500 transition-colors"
+                              >
+                                {confirmBatchMutation.isPending ? (
+                                  <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </button>
+                            ) : (
+                              <div className="w-6 h-6 rounded bg-green-500 flex items-center justify-center text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
                             )}
-                            {allConfirmed && (
-                              <span className="text-green-600 font-semibold text-lg">✓</span>
-                            )}
-                            <h4 className="font-semibold text-gray-900">Order {orderNumber}</h4>
+                            <span className={`font-bold ${isAllConfirmed ? 'text-green-800' : 'text-slate-800'}`}>Order {index + 1}</span>
                           </div>
+                          {isAllConfirmed && (
+                            <span className="text-xs font-semibold text-green-700 bg-green-200 px-2 py-1 rounded-full">
+                              Đã xác nhận
+                            </span>
+                          )}
                         </div>
-                        <div className="p-2 space-y-2">
-                          {batch.map((item) => (
-                            <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                              <div className="flex-1">
-                                <p className="font-medium">{item.service.name}</p>
-                                {isActive && (
-                                  <div className="flex items-center space-x-2 mt-2">
+
+                        <div className="p-4 space-y-4 bg-white">
+                          {(items as any[]).map((item) => (
+                            <div key={item.id} className="flex justify-between items-center">
+                              <div>
+                                <p className="font-semibold text-slate-800">{item.service.name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-slate-500">Số lượng: {item.qty}</p>
+                                  {isActive && !item.is_confirmed && (
                                     <button
-                                      onClick={() => {
-                                        if (item.qty > 1) {
-                                          updateServiceMutation.mutate({ itemId: item.id, qty: item.qty - 1 });
-                                        }
-                                      }}
-                                      disabled={item.is_confirmed || item.qty <= 1 || updateServiceMutation.isPending}
-                                      className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      −
-                                    </button>
-                                    <span className="text-sm font-medium">Số lượng: {item.qty}</span>
-                                    <button
-                                      onClick={() => {
-                                        updateServiceMutation.mutate({ itemId: item.id, qty: item.qty + 1 });
-                                      }}
-                                      disabled={item.is_confirmed || updateServiceMutation.isPending}
-                                      className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-                                    >
-                                      +
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (confirm('Bạn có chắc muốn xóa dịch vụ này?')) {
-                                          removeServiceMutation.mutate(item.id);
-                                        }
-                                      }}
-                                      disabled={item.is_confirmed || removeServiceMutation.isPending}
-                                      className="ml-4 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                      onClick={() => removeServiceMutation.mutate(item.id)}
+                                      className="text-red-500 text-xs hover:underline bg-red-50 px-2 py-1 rounded"
                                     >
                                       Xóa
                                     </button>
-                                  </div>
-                                )}
-                                {!isActive && (
-                                  <p className="text-sm text-gray-500 mt-1">Số lượng: {item.qty}</p>
-                                )}
+                                  )}
+                                </div>
                               </div>
-                              <p className="font-semibold ml-4">
+                              <p className="font-semibold text-slate-800">
                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.total_price)}
                               </p>
                             </div>
@@ -528,466 +581,153 @@ export function OrderPage() {
                         </div>
                       </div>
                     );
-                  });
-                })()}
-              </div>
-            </div>
-          )}
+                  })}
 
-          {isActive && (
-            <div className="mb-6">
-              <button
-                onClick={() => setShowAddService(!showAddService)}
-                className="w-full py-2 px-4 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
-              >
-                {showAddService ? 'Ẩn danh sách dịch vụ' : 'Gọi thêm dịch vụ'}
-              </button>
-
-              {showAddService && services && categories.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex gap-2 overflow-x-auto pb-2 mb-4 border-b">
-                    {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
-                        className={`px-4 py-2 whitespace-nowrap rounded-t-md transition-colors ${
-                          selectedCategory === category.id
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {category.name}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
-                    {displayedServices.map((service: Service) => {
-                      const availableQuantity = service.inventory_quantity ?? 0;
-                      const qty = selected[service.id] || 0;
-                      const isOutOfStock = availableQuantity <= 0;
-                      const cardClasses = `bg-white rounded-lg shadow-sm p-3 flex flex-col ${
-                        isOutOfStock ? 'opacity-50' : ''
-                      }`;
-
-                      const handleIncrease = () => {
-                        if (isOutOfStock) {
-                          showNotification('Dịch vụ này đã hết hàng.');
-                          return;
-                        }
-                        if (qty >= availableQuantity) {
-                          showNotification('Số lượng dịch vụ trong kho đã đến giới hạn.');
-                          return;
-                        }
-                        setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }));
-                      };
-
-                      return (
-                        <div key={service.id} className={cardClasses}>
-                          {service.image && (
-                            <img
-                              src={service.image}
-                              alt={service.name}
-                              className="w-full h-32 object-cover rounded mb-2"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-medium text-sm mb-1">{service.name}</p>
-                            {service.description && (
-                              <p className="text-xs text-gray-500 mb-2 line-clamp-2">{service.description}</p>
-                            )}
-                            <p className="font-semibold text-blue-600 mb-2">
-                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.price)}
-                            </p>
-                            {isOutOfStock && (
-                              <p className="text-xs mb-2 text-red-600">Hết hàng</p>
-                            )}
+                  {/* New Order Block (Selected Items) */}
+                  {Object.keys(selected).length > 0 && (
+                    <div className="mb-6 last:mb-0 border border-blue-200 rounded-lg overflow-hidden">
+                      <div className="px-4 py-3 flex items-center justify-between bg-blue-50 border-b border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded border border-blue-400 bg-white flex items-center justify-center">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                           </div>
-                          <div className="flex items-center justify-between mt-auto">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => {
-                                  if (qty <= 0) return;
-                                  setSelected((s) => {
-                                    const current = s[service.id] || 0;
-                                    const next = Math.max(0, current - 1);
-                                    const copy = { ...s };
-                                    if (next === 0) delete copy[service.id]; else copy[service.id] = next;
-                                    return copy;
-                                  });
-                                }}
-                                disabled={qty <= 0}
-                                className={`w-7 h-7 flex items-center justify-center rounded text-sm ${
-                                  qty <= 0
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                                }`}
-                              >
-                                −
-                              </button>
-                              <span className="w-6 text-center text-sm font-medium">{qty}</span>
-                              <button
-                                onClick={handleIncrease}
-                                className={`w-7 h-7 flex items-center justify-center rounded text-lg font-bold ${
-                                  isOutOfStock || qty >= availableQuantity
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                }`}
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
+                          <span className="font-bold text-blue-800">Order Mới (Đang chọn)</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
 
+                      <div className="p-4 space-y-4 bg-white">
+                        {Object.entries(selected).map(([id, qty]) => {
+                          const service = services?.find((s) => s.id === Number(id));
+                          if (!service) return null;
+                          return (
+                            <div key={`selected-${id}`} className="flex justify-between items-center">
+                              <div>
+                                <p className="font-semibold text-slate-800">
+                                  {service.name} <span className="text-blue-600 font-normal text-xs ml-1">(Mới)</span>
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-slate-500">Số lượng: {qty}</p>
+                                </div>
+                              </div>
+                              <p className="font-semibold text-slate-800">
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.price * qty)}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 mt-4 pt-4 flex justify-between items-center">
+                <p className="font-bold text-lg text-slate-900">Tổng cộng</p>
+                <p className="font-bold text-lg text-blue-600">
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                    (currentTotalBeforeDiscount - (order.total_discount || 0)) +
+                    Object.entries(selected).reduce((sum, [id, qty]) => {
+                      const s = services?.find((x) => x.id === Number(id));
+                      return sum + (s ? s.price * qty : 0);
+                    }, 0),
+                  )}
+                </p>
+              </div>
+
+              {
+                hasSelected && isActive && (
                   <button
-                    onClick={async () => {
-                      if (!hasSelected || isSubmitting) return;
-                      const entries = Object.entries(selected).map(([serviceId, qty]) => ({
-                        serviceId: Number(serviceId),
-                        qty,
-                      }));
-                      const exceededEntry = entries.find((entry) => {
-                        const matched = services?.find((svc) => svc.id === entry.serviceId);
-                        const available = matched?.inventory_quantity ?? 0;
-                        return available <= 0 || entry.qty > available;
-                      });
-                      if (exceededEntry) {
-                        showNotification('Số lượng dịch vụ trong kho đã đến giới hạn.');
-                        return;
-                      }
-                      setIsSubmitting(true);
-                      try {
-                        await Promise.all(
-                          entries.map((e) =>
-                            ordersApi.addService(Number(id!), { service_id: e.serviceId, qty: e.qty }),
-                          ),
-                        );
-                        setSelected({});
-                        queryClient.invalidateQueries({ queryKey: ['order', id] });
-                        showNotification('Đã đặt dịch vụ thành công!');
-                      } catch (error) {
-                        showNotification('Có lỗi xảy ra khi đặt dịch vụ. Vui lòng thử lại.');
-                      } finally {
-                        setIsSubmitting(false);
-                      }
-                    }}
-                    disabled={!hasSelected || isSubmitting}
-                    className={`mt-4 w-full py-2 px-4 rounded-md text-white ${
-                      hasSelected && !isSubmitting ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'
-                    }`}
+                    onClick={submitSelectedItems}
+                    disabled={isSubmitting}
+                    className="w-full mt-6 bg-blue-600 text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
-                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
+                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
                   </button>
-                </div>
-              )}
-            </div>
-          )}
+                )
+              }
 
-          {(isCompleted || isPendingEnd) && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              {order.total_before_discount > 0 && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Mã giảm giá</label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      type="text"
-                      value={discountCodeInput}
-                      onChange={(e) => {
-                        setDiscountCodeInput(e.target.value.toUpperCase());
-                        setDiscountFeedback(null);
-                      }}
-                      placeholder="Nhập mã (VD: VIP1)"
-                      disabled={!canApplyDiscount || applyDiscountMutation.isPending}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md uppercase disabled:bg-gray-100"
-                    />
-                    <button
-                      onClick={handleApplyDiscount}
-                      disabled={
-                        !canApplyDiscount ||
-                        applyDiscountMutation.isPending ||
-                        discountCodeInput.trim().length === 0
-                      }
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {applyDiscountMutation.isPending ? 'Đang áp dụng...' : order.applied_discount ? 'Đổi mã' : 'Áp dụng'}
-                    </button>
-                  </div>
-                  {order.applied_discount && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      Đang áp dụng: <span className="font-semibold">{order.applied_discount.code}</span> (
-                      {appliedDiscountLabel})
-                    </p>
-                  )}
-                  {discountFeedback && (
-                    <p
-                      className={`text-sm mt-2 ${
-                        discountFeedback.type === 'error' ? 'text-red-600' : 'text-green-600'
-                      }`}
-                    >
-                      {discountFeedback.message}
-                    </p>
-                  )}
-                </div>
-              )}
-              <div className="flex justify-between mb-2">
-                <span>Tổng trước giảm giá:</span>
-                <span className="font-semibold">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_before_discount)}
-                </span>
-              </div>
-              {order.total_discount > 0 && (
-                <div className="flex justify-between mb-2 text-green-600">
-                  <span>Giảm giá:</span>
-                  <span className="font-semibold">
-                    -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_discount)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between pt-2 border-t border-gray-300">
-                <span className="text-lg font-bold">Tổng thanh toán:</span>
-                <span className="text-lg font-bold">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_paid)}
-                </span>
-              </div>
-            </div>
-          )}
-
-              {isCompleted && !hasSuccessfulTransaction && (
-                <div className="mt-6 space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Chọn phương thức thanh toán</p>
-                    <div className="grid gap-3">
-                      {(['cash', 'card', 'mobile'] as Array<'cash' | 'card' | 'mobile'>).map((method) => (
-                        <label
-                          key={method}
-                          className={`flex items-center gap-3 rounded-xl border px-3 py-2 cursor-pointer transition ${
-                            selectedPaymentMethod === method
-                              ? 'border-green-500 bg-white shadow'
-                              : 'border-gray-200 bg-white hover:border-green-300'
-                          }`}
-                        >
+              {
+                (isCompleted || isPendingEnd) && (
+                  <div className="mt-6">
+                    {order.total_before_discount > 0 && !hasSuccessfulTransaction && (
+                      <div className="mb-4">
+                        <div className="flex gap-2">
                           <input
-                            type="radio"
-                            name="staff-payment-method"
-                            value={method}
-                            checked={selectedPaymentMethod === method}
-                            onChange={() => setSelectedPaymentMethod(method)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500"
+                            type="text"
+                            value={discountCodeInput}
+                            onChange={(e) => setDiscountCodeInput(e.target.value.toUpperCase())}
+                            placeholder="Mã giảm giá"
+                            className="flex-1 px-3 py-2 border rounded-lg"
                           />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">
-                              {method === 'cash'
-                                ? 'Tiền mặt'
-                                : method === 'card'
-                                ? 'Quẹt thẻ'
-                                : 'Chuyển khoản (Mobile)'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {method === 'mobile'
-                                ? 'Hỗ trợ khách chuyển khoản ngay tại quầy'
-                                : 'Xác nhận trực tiếp với khách hàng'}
-                            </p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => {
-                        paymentMutation.mutate({
-                          method: selectedPaymentMethod,
-                          amount: order.total_paid,
-                        });
-                      }}
-                      disabled={paymentMutation.isPending}
-                      className="w-full mt-4 py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {paymentMutation.isPending ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
-                    </button>
-                  </div>
-
-                  {pendingTransaction && !hasSuccessfulTransaction && (
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                      {pendingTransactionHasMethod ? (
-                        <>
-                          <p className="mb-2 text-yellow-800">
-                            Khách đã yêu cầu thanh toán ({pendingTransaction.method === 'cash' ? 'tiền mặt' : pendingTransaction.method === 'card' ? 'thẻ' : 'chuyển khoản'}).
-                          </p>
                           <button
-                            onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
-                            disabled={confirmPaymentMutation.isPending}
-                            className="w-full py-2 px-4 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                            onClick={handleApplyDiscount}
+                            className="px-4 py-2 bg-slate-200 rounded-lg text-slate-800"
                           >
-                            {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đã thanh toán'}
+                            Áp dụng
                           </button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mb-2 text-yellow-800">
-                            Khách chưa chọn phương thức thanh toán. Vui lòng chờ khách gửi yêu cầu hoặc chọn phương thức tại mục{' '}
-                            <span className="font-semibold">Thanh toán</span> để xử lý thủ công.
+                        </div>
+                        {discountFeedback && (
+                          <p className={`text-sm mt-2 ${discountFeedback.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                            {discountFeedback.message}
                           </p>
-                          <p className="text-sm text-yellow-700">
-                            Sau khi có phương thức, nút xác nhận sẽ xuất hiện tại đây.
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                        )}
+                      </div>
+                    )}
+
+                    {!hasSuccessfulTransaction && pendingTransaction && (
+                      <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p className="text-center text-yellow-800 font-bold mb-2">
+                          Đang chờ xác nhận thanh toán ({pendingTransaction.method === 'cash' ? 'Tiền mặt' : pendingTransaction.method === 'card' ? 'Thẻ' : 'Chuyển khoản'})
+                        </p>
+                        <button
+                          onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
+                          className="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold hover:bg-yellow-700 transition-colors"
+                        >
+                          Xác nhận đã nhận tiền
+                        </button>
+                      </div>
+                    )}
+
+                    {!hasSuccessfulTransaction && !isPendingEnd && (
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        {(['cash', 'card', 'mobile'] as const).map((method) => (
+                          <button
+                            key={method}
+                            onClick={() => setSelectedPaymentMethod(method)}
+                            className={`py-2 rounded-lg border ${selectedPaymentMethod === method
+                              ? 'border-blue-600 bg-blue-50 text-blue-600'
+                              : 'border-slate-200 text-slate-600'
+                              }`}
+                          >
+                            {method === 'cash' ? 'Tiền mặt' : method === 'card' ? 'Thẻ' : 'Chuyển khoản'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {!hasSuccessfulTransaction && !isPendingEnd && (
+                      <button
+                        onClick={() => paymentMutation.mutate({ method: selectedPaymentMethod, amount: order.total_before_discount - order.total_discount })}
+                        className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700"
+                      >
+                        Thanh toán
+                      </button>
+                    )}
+
+                    {hasSuccessfulTransaction && (
+                      <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-center text-green-800 font-bold mb-2">Đã thanh toán thành công</p>
+                        <button onClick={handlePrintBill} className="w-full bg-blue-600 text-white py-2 rounded-lg">
+                          In hóa đơn
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
-          </>
-        )}
-
-        {hasSuccessfulTransaction && (
-          <div id="staff-bill" className="bg-white rounded-lg shadow-md p-8 border-2 border-green-200 mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-center flex-1 text-gray-900">HÓA ĐƠN</h3>
-                <button
-                  onClick={handlePrintBill}
-                  className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  In hóa đơn
-                </button>
-              </div>
-              
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Mã đơn hàng:</span>
-                  <span className="font-semibold">{order.order_code}</span>
-                </div>
-                {order.cashier && (
-                  <div className="flex justify-between text-gray-600">
-                    <span>Thu ngân:</span>
-                    <span className="font-semibold text-gray-900">{order.cashier}</span>
-                  </div>
-                )}
-                {orderCustomerName && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Khách hàng:</span>
-                    <span className="font-semibold">{orderCustomerName}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Bàn:</span>
-                  <span className="font-semibold">{order.table.name}</span>
-                </div>
-                {order.start_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Bắt đầu:</span>
-                    <span>{new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
-                  </div>
-                )}
-                {order.end_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Kết thúc:</span>
-                    <span>{new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
-                  </div>
-                )}
-                {order.total_play_time_minutes && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Thời gian chơi:</span>
-                    <span>{Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p</span>
-                  </div>
-                )}
-              </div>
-
-              {order.items && order.items.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-semibold mb-2 text-gray-700">Dịch vụ:</h4>
-                  <div className="space-y-1">
-                    {(() => {
-                      const sortedItems = [...order.items].sort((a, b) => {
-                        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-                        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-                        return timeA - timeB;
-                      });
-                      
-                      const groupedItems = sortedItems.reduce((acc: Record<number, Array<typeof sortedItems[0]>>, item) => {
-                        const serviceId = item.service.id;
-                        if (!acc[serviceId]) {
-                          acc[serviceId] = [];
-                        }
-                        acc[serviceId].push(item);
-                        return acc;
-                      }, {});
-
-                      return Object.values(groupedItems).map((items) => {
-                        const firstItem = items[0];
-                        if (!firstItem) return null;
-                        
-                        const totalQty = items.reduce((sum, item) => {
-                          const qty = Number(item.qty) || 0;
-                          return sum + qty;
-                        }, 0);
-                        
-                        const totalPrice = items.reduce((sum, item) => {
-                          if (!item.total_price && item.total_price !== 0) {
-                            const calculatedPrice = (Number(item.unit_price) || 0) * (Number(item.qty) || 0);
-                            return sum + calculatedPrice;
-                          }
-                          const price = Number(item.total_price) || 0;
-                          return sum + price;
-                        }, 0);
-                        
-                        return (
-                          <div key={firstItem.service.id} className="flex justify-between text-sm">
-                            <span>{firstItem.service.name} x{totalQty}</span>
-                            <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPrice)}</span>
-                          </div>
-                        );
-                      }).filter(Boolean);
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-gray-300 pt-3 space-y-2">
-                {order.total_before_discount > 0 && (
-                  <div className="flex justify-between">
-                    <span>Tổng trước giảm giá:</span>
-                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_before_discount)}</span>
-                  </div>
-                )}
-                {order.total_discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Giảm giá:</span>
-                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_discount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
-                  <span>Tổng thanh toán:</span>
-                  <span className="text-green-600">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_paid)}</span>
-                </div>
-              </div>
-
-              {order.transactions?.find((t: any) => t.status === 'success') && (
-                <div className="mt-4 pt-4 border-t border-gray-300">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Phương thức thanh toán:</span>
-                    <span className="capitalize">
-                      {order.transactions.find((t: any) => t.status === 'success')?.method === 'cash' ? 'Tiền mặt' :
-                       order.transactions.find((t: any) => t.status === 'success')?.method === 'card' ? 'Quẹt thẻ' :
-                       'Chuyển khoản'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-6 text-center text-sm text-gray-500">
-                <p>Cảm ơn bạn đã sử dụng dịch vụ!</p>
-              </div>
           </div>
-        )}
+        </main>
       </div>
     </div>
   );
 }
-
