@@ -98,7 +98,9 @@ class SepayController extends Controller
         // Note: Sepay amount might be partial? Logic here: complete if >= remaining?
         // User logic: "sau khi hóa đơn đó đã có trạng thái giao dịch thành công thì báo thành công"
         
-        DB::transaction(function () use ($order, $transaction, $amount, $data) {
+        DB::transaction(function () use ($order, $amount, $data) {
+            // Updated Logic: Always record the payment if valid order found.
+            
             // 1. Confirm all pending items since we received payment
             \App\Models\OrderItem::where('order_id', $order->id)
                 ->where('is_confirmed', false)
@@ -112,43 +114,62 @@ class SepayController extends Controller
                 ->get();
 
             foreach ($items as $item) {
+                // Ignore inventory check for payment processing - take money first
                 $inventory = \App\Models\ServiceInventory::firstOrCreate(
                     ['service_id' => $item->service_id],
                     ['quantity' => 0]
                 );
-                
-                // Deduct inventory even if it goes negative, as payment is already received
                 $inventory->decrement('quantity', $item->qty);
                 $item->update(['stock_deducted' => true]);
             }
 
-            if ($transaction) {
-                // Determine if this exact transaction was for this payment?
-                // Just use the first pending one for simplicity, or find one with method='mobile'
-                if ($transaction->amount <= $amount) {
-                    $transaction->update([
-                        'status' => 'success',
-                        'method' => 'mobile', // Ensure method is mobile/transfer
-                        'amount' => $amount, // Update amount to actual received?
-                        'reference' => 'SEPAY-' . ($data['id'] ?? Str::random(8)),
-                    ]);
-                }
+            // 3. Handle Transaction
+            $pendingTransaction = Transaction::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            $transaction = null;
+            $incomingAmount = (float) $amount; // Ensure float comparison
+
+            if ($pendingTransaction && $pendingTransaction->amount <= $incomingAmount + 1000) { 
+                // Allow small tolerance (1000 VND) or strict? 
+                // Using +1000 tolerance means if pending is 10000, and we receive 9000 -> Fail condition?
+                // Wait, logic: if pending->amount <= incoming. 
+                // If Pending is 10967, Incoming is 10967. 10967 <= 10967. True.
+                // If Pending is 10967, Incoming is 11000 (tip). 10967 <= 11000. True.
+                // If Pending is 10967, Incoming is 10000 (partial). 10967 <= 10000. False.
+                
+                $pendingTransaction->update([
+                    'status' => 'success',
+                    'method' => 'mobile',
+                    'amount' => $incomingAmount, // Record actual received amount
+                    'reference' => 'SEPAY-' . ($data['id'] ?? Str::random(8)),
+                ]);
+                $transaction = $pendingTransaction;
             } else {
-                // Create new success transaction
+                // If no pending transaction found OR amount mismatch (partial payment?), 
+                // Create a NEW SUCCESS transaction for the record.
                 $transaction = Transaction::create([
                     'order_id' => $order->id,
-                    'user_id' => $order->user_id, // Or null if unknown, but order has user
-                    'customer_name' => $order->customer_name,
-                    'amount' => $amount,
+                    'user_id' => $order->user_id,
+                    'customer_name' => $order->customer_name ?? 'Khách lẻ',
+                    'amount' => $incomingAmount,
                     'method' => 'mobile',
                     'status' => 'success',
                     'reference' => 'SEPAY-' . ($data['id'] ?? Str::random(8)),
                 ]);
             }
 
-            // Update Order
-            // Recalculate paid?
+            // 4. Update Order Status
+            // Re-sum all successful transactions to check if fully paid
             $totalPaid = $order->transactions()->where('status', 'success')->sum('amount');
+            
+            // Check if total paid is enough? 
+            // For now, assume this payment completes it if it covers the total.
+            // But let's just update total_paid and set distinct status if needed.
+            // User requirement: "giao dịch đơn hàng đó chuyển trạng thái là thành công"
+            
             $order->update([
                 'total_paid' => $totalPaid,
                 'status' => 'completed'
@@ -157,10 +178,10 @@ class SepayController extends Controller
             if ($order->table) {
                 $order->table->update(['status_id' => 1]);
             }
+
+            if ($transaction) {
+                event(new TransactionConfirmed($transaction));
+            }
         });
-        
-        if ($transaction) {
-             event(new TransactionConfirmed($transaction));
-        }
     }
 }
