@@ -57,7 +57,15 @@ class SePayWebhookListener
             return;
         }
 
-        DB::transaction(function () use ($order, $amount, $data) {
+        // Idempotency Check: Prevent processing if transaction already exists for this SePay ID
+        // Note: SePay ID might be int or string, cast to string for matching
+        $referenceCode = 'SEPAY-' . ($data->id ?? 'UNKNOWN');
+        if (Transaction::where('reference', $referenceCode)->exists()) {
+            Log::info("Sepay: Transaction already processed for reference $referenceCode");
+            return;
+        }
+
+        DB::transaction(function () use ($order, $amount, $data, $referenceCode) {
             // Updated Logic: Always record the payment if valid order found.
             
             // 1. Confirm all pending items since we received payment
@@ -91,12 +99,12 @@ class SePayWebhookListener
             $transaction = null;
             $incomingAmount = (float) $amount; // Ensure float comparison
 
-            if ($pendingTransaction) { 
+            if ($pendingTransaction) {
                 $pendingTransaction->update([
                     'status' => 'success',
                     'method' => 'mobile',
                     'amount' => $incomingAmount, 
-                    'reference' => 'SEPAY-' . ($data->id ?? Str::random(8)),
+                    'reference' => $referenceCode,
                 ]);
                 $transaction = $pendingTransaction;
             } else {
@@ -108,7 +116,7 @@ class SePayWebhookListener
                     'amount' => $incomingAmount,
                     'method' => 'mobile',
                     'status' => 'success',
-                    'reference' => 'SEPAY-' . ($data->id ?? Str::random(8)),
+                    'reference' => $referenceCode,
                 ]);
             }
 
