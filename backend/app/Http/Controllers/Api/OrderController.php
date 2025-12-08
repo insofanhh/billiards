@@ -121,17 +121,31 @@ class OrderController extends Controller
 
         $qty = (int) $request->qty;
 
-        $orderItem = DB::transaction(function () use ($order, $service, $qty) {
+        $orderItem = DB::transaction(function () use ($order, $service, $qty, $request) {
             $this->ensureInventoryAvailable($service, $qty);
 
-            return OrderItem::create([
-            'order_id' => $order->id,
-            'service_id' => $service->id,
+            $shouldAutoConfirm = $this->isStaff($request);
+
+            $orderItem = OrderItem::create([
+                'order_id' => $order->id,
+                'service_id' => $service->id,
                 'qty' => $qty,
-            'unit_price' => $service->price,
+                'unit_price' => $service->price,
                 'total_price' => $service->price * $qty,
-            'is_confirmed' => false,
-        ]);
+                'is_confirmed' => $shouldAutoConfirm,
+            ]);
+
+            if ($shouldAutoConfirm) {
+                // If auto-confirming, we should also deduct inventory immediately to be consistent
+                // or just mark as confirmed. 
+                // The `confirmServiceItem` logic does: deduct + set confirmed.
+                // So let's call deductInventoryForItem here.
+                
+                // Note: deductInventoryForItem updates the item, so we pass the item instance.
+                $this->deductInventoryForItem($orderItem);
+            }
+
+            return $orderItem;
         });
 
         $order->refresh();
@@ -191,11 +205,22 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
-        if ($orderItem->is_confirmed || $orderItem->stock_deducted) {
-            return response()->json(['message' => 'Không thể xóa dịch vụ đã được xác nhận hoặc đã trừ kho'], 400);
-        }
+        // Remove the restriction on confirmed/stock-deducted items
+        // if ($orderItem->is_confirmed || $orderItem->stock_deducted) {
+        //     return response()->json(['message' => 'Không thể xóa dịch vụ đã được xác nhận hoặc đã trừ kho'], 400);
+        // }
 
-        $orderItem->delete();
+        DB::transaction(function () use ($orderItem) {
+            if ($orderItem->stock_deducted) {
+                // Hoàn trả lại kho
+                $inventory = ServiceInventory::firstOrCreate(
+                    ['service_id' => $orderItem->service_id],
+                    ['quantity' => 0]
+                );
+                $inventory->increment('quantity', $orderItem->qty);
+            }
+            $orderItem->delete();
+        });
 
         $order->refresh();
         $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount']);
@@ -240,12 +265,10 @@ class OrderController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        $order->update(['status' => 'pending_end']);
-        $order->load(['table', 'user']);
+        // Skip approval step: Complete the order immediately
+        $this->completeOrderInternal($order, $request);
 
-        event(new OrderEndRequested($order));
-
-        return response()->json(['message' => 'Yêu cầu kết thúc giờ chơi đã được gửi'], 200);
+        return response()->json(['message' => 'Đã kết thúc giờ chơi. Vui lòng thanh toán.'], 200);
     }
 
     public function approveEnd(Request $request, $id)
@@ -257,6 +280,13 @@ class OrderController extends Controller
         }
         $order = $query->with(['transactions', 'table', 'priceRate', 'items.service', 'appliedDiscount', 'user'])->firstOrFail();
 
+        $this->completeOrderInternal($order, $request);
+
+        return new OrderResource($order);
+    }
+
+    private function completeOrderInternal(Order $order, Request $request)
+    {
         $transaction = null;
         $customerName = $this->resolveCustomerName($order, $request);
 
@@ -327,8 +357,6 @@ class OrderController extends Controller
         }
 
         event(new OrderEndApproved($order));
-
-        return new OrderResource($order);
     }
 
     private function calculateTableCost(Order $order, Carbon $startTime, Carbon $endTime): float

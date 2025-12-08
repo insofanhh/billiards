@@ -27,11 +27,14 @@ class StatsOverview extends StatsOverviewWidget
             ->where('status', 'success')
             ->sum('amount');
 
-        $todayServicesSold = OrderItem::whereBetween('updated_at', [$dayStart, $dayEnd])
-            ->where('stock_deducted', true)
+        $todayServicesSold = OrderItem::whereHas('order', function ($query) use ($dayStart, $dayEnd) {
+                $query->where('status', 'completed')
+                    ->whereBetween('updated_at', [$dayStart, $dayEnd]);
+            })
             ->sum('total_price');
 
-        $todayTablesRevenue = Order::whereBetween('updated_at', [$dayStart, $dayEnd])
+        $todayTablesRevenue = Order::where('status', 'completed')
+            ->whereBetween('updated_at', [$dayStart, $dayEnd])
             ->sum('total_before_discount') - $todayServicesSold;
 
         $todayTablesRevenue = max($todayTablesRevenue, 0);

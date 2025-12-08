@@ -36,13 +36,16 @@ class ServiceForm
                     ->searchable()
                     ->preload()
                     ->createOptionForm([
-                        TextInput::make('name')
-                            ->label('Tên danh mục')
-                            ->required(),
-                        TextInput::make('slug')
-                            ->label('Slug'),
-                        Textarea::make('description')
-                            ->label('Mô tả'),
+                TextInput::make('name')
+                    ->label('Tên danh mục')
+                    ->required()
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (string $operation, $state, $set) => $operation === 'create' ? $set('slug', \Illuminate\Support\Str::slug($state)) : null),
+                TextInput::make('slug')
+                    ->label('Slug')
+                    ->unique(ignoreRecord: true),
+                Textarea::make('description')
+                    ->label('Mô tả'),
                     ]),
                 TextInput::make('price')
                     ->label('Giá')

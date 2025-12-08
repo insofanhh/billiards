@@ -66,7 +66,7 @@ export function ClientOrderPage() {
     mutationFn: () => ordersApi.requestEnd(Number(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-order', id] });
-      showNotification('Yêu cầu kết thúc giờ chơi đã được gửi. Vui lòng đợi nhân viên xác nhận.');
+      showNotification('Đã kết thúc giờ chơi. Vui lòng thanh toán.');
     },
   });
 

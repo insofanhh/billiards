@@ -62,7 +62,7 @@ export function OrderPage() {
 
   const categories = useMemo(() => {
     if (!services) return [];
-    const categoryMap = new Map<number, { id: number; name: string; slug?: string }>();
+    const categoryMap = new Map<number, { id: number; name: string; slug?: string; sort_order?: number }>();
     services.forEach((service) => {
       if (service.category_service) {
         const cat = service.category_service;
@@ -71,7 +71,14 @@ export function OrderPage() {
         }
       }
     });
-    return Array.from(categoryMap.values());
+    return Array.from(categoryMap.values()).sort((a, b) => {
+      const orderA = a.sort_order ?? 0;
+      const orderB = b.sort_order ?? 0;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return a.id - b.id;
+    });
   }, [services]);
 
   const servicesByCategory = useMemo(() => {
@@ -384,7 +391,7 @@ export function OrderPage() {
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
                         className={`px-4 py-2 font-semibold rounded-lg whitespace-nowrap transition-colors ${selectedCategory === cat.id
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[#13ec6d] text-white'
                           : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                           }`}
                       >
@@ -422,7 +429,7 @@ export function OrderPage() {
                                 return copy;
                               });
                             }}
-                            className="w-8 h-8 rounded-full bg-slate-200 text-slate-900 flex items-center justify-center font-bold text-xl hover:bg-slate-300"
+                            className="w-8 h-8 rounded-full bg-slate-200 text-slate-900 flex justify-center font-bold text-xl hover:bg-slate-300"
                           >
                             -
                           </button>
@@ -435,7 +442,7 @@ export function OrderPage() {
                               }
                               setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }));
                             }}
-                            className={`w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl hover:opacity-90 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''
+                            className={`w-8 h-8 rounded-full bg-[#13ec6d] text-white flex justify-center font-bold text-xl hover:opacity-90 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
                           >
                             +
@@ -548,11 +555,6 @@ export function OrderPage() {
                           Khách hàng: <span className="font-semibold text-slate-900">{orderCustomerName}</span>
                         </p>
                       )}
-                      {order.cashier && (
-                        <p className="text-slate-600">
-                          Thu ngân: <span className="font-semibold text-slate-900">{order.cashier}</span>
-                        </p>
-                      )}
                     </div>
                   )}
 
@@ -602,27 +604,41 @@ export function OrderPage() {
                             </div>
 
                             <div className="p-4 space-y-4 bg-white">
-                              {(items as any[]).map((item) => (
-                                <div key={item.id} className="flex justify-between items-center">
-                                  <div>
-                                    <p className="font-semibold text-slate-800">{item.service.name}</p>
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm text-slate-500">Số lượng: {item.qty}</p>
-                                      {isActive && !item.is_confirmed && (
-                                        <button
-                                          onClick={() => removeServiceMutation.mutate(item.id)}
-                                          className="text-red-500 text-xs hover:underline bg-red-50 px-2 py-1 rounded"
-                                        >
-                                          Xóa
-                                        </button>
-                                      )}
+                              {(() => {
+                                const aggregatedItems = (items as any[]).reduce((acc: any[], item) => {
+                                  const existing = acc.find((i) => i.service.id === item.service.id);
+                                  if (existing) {
+                                    existing.qty += item.qty;
+                                    existing.total_price += Number(item.total_price);
+                                    existing.ids = [...(existing.ids || [existing.id]), item.id];
+                                  } else {
+                                    acc.push({ ...item, ids: [item.id], total_price: Number(item.total_price) });
+                                  }
+                                  return acc;
+                                }, []);
+
+                                return aggregatedItems.map((item) => (
+                                  <div key={item.service.id} className="flex justify-between items-center">
+                                    <div>
+                                      <p className="font-semibold text-slate-800">{item.service.name}</p>
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-sm text-slate-500">Số lượng: {item.qty}</p>
+                                        {isActive && (
+                                          <button
+                                            onClick={() => removeServiceMutation.mutate(item.id)}
+                                            className="text-red-500 text-xs hover:underline bg-red-50 px-2 py-1 rounded"
+                                          >
+                                            Xóa
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
+                                    <p className="font-semibold text-slate-800">
+                                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.total_price)}
+                                    </p>
                                   </div>
-                                  <p className="font-semibold text-slate-800">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.total_price)}
-                                  </p>
-                                </div>
-                              ))}
+                                ))
+                              })()}
                             </div>
                           </div>
                         );
