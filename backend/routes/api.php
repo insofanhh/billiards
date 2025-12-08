@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\SepayController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('sepay')->group(function () {
-    Route::post('/webhook', [SepayController::class, 'webhook']);
     Route::get('/config', [SepayController::class, 'config']);
 });
 

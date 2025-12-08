@@ -25,7 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'broadcasting/auth*',
             'api/*',
             'api/tables/*/request-open',
-            'hooks/sepay-payment', 
+
         ]);
         
         $middleware->web(prepend: [
