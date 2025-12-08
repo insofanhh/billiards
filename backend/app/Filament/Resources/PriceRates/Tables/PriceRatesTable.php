@@ -6,8 +6,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\DeleteAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -87,12 +87,8 @@ class PriceRatesTable
                     ->alignCenter()
                     ->badge()
                     ->color(fn ($state) => $state > 0 ? 'warning' : 'gray'),
-                IconColumn::make('active')
-                    ->label('Trạng thái')
-                    ->boolean()
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->sortable(),
+                ToggleColumn::make('active')
+                    ->label('Trạng thái'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i')

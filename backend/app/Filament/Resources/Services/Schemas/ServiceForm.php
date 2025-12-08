@@ -55,7 +55,7 @@ class ServiceForm
                     ->label('Loại tính phí')
                     ->options([
                         'per_unit' => 'Theo đơn vị',
-                        'one_time' => 'Một lần',
+                        // 'one_time' => 'Một lần',
                     ])
                     ->required()
                     ->default('per_unit'),

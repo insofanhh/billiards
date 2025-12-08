@@ -6,9 +6,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\DeleteAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -59,7 +59,7 @@ class ServicesTable
                 TextColumn::make('available_quantity')
                     ->label('Tồn kho')
                     ->sortable()
-                    ->alignEnd()
+                    ->alignCenter()
                     ->badge()
                     ->color(fn (?int $state): string => match (true) {
                         $state === null => 'gray',
@@ -68,14 +68,8 @@ class ServicesTable
                         default => 'success',
                     })
                     ->formatStateUsing(fn (?int $state): string => (string) ($state ?? 0)),
-                IconColumn::make('active')
-                    ->label('Trạng thái')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->sortable(),
+                ToggleColumn::make('active')
+                    ->label('Trạng thái'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i')

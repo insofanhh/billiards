@@ -6,8 +6,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\DeleteAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
@@ -33,19 +33,14 @@ class CategoryServicesTable
                 TextColumn::make('sort_order')
                     ->label('Thứ tự')
                     ->sortable()
-                    ->alignEnd(),
-                IconColumn::make('active')
-                    ->label('Trạng thái')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->sortable(),
+                    ->alignCenter(),
                 TextColumn::make('services_count')
                     ->label('Số lượng dịch vụ')
                     ->counts('services')
+                    ->alignCenter()
                     ->sortable(),
+                    ToggleColumn::make('active')
+                    ->label('Trạng thái'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i')

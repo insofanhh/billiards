@@ -185,15 +185,18 @@ export function TableDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNavigation userName={user?.name} onLogout={logout} />
-      <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="max-w-7xl mx-auto py-8 px-4 lg:px-8">
         <button
           onClick={() => navigate('/staff')}
-          className="mb-6 text-blue-600 hover:text-blue-800"
+          className="mb-8 text-gray-500 hover:text-gray-700 flex items-center"
         >
-          ← Quay lại
+          <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span className="font-medium">Quay lại</span>
         </button>
 
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{table.code}</h1>

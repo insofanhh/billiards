@@ -6,8 +6,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\DeleteAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -56,10 +56,12 @@ class DiscountCodesTable
                 TextColumn::make('usage_limit')
                     ->label('Giới hạn')
                     ->formatStateUsing(fn ($state) => $state ? $state : 'Không giới hạn')
+                    ->alignCenter()
                     ->toggleable(),
                 TextColumn::make('used_count')
                     ->label('Đã dùng')
                     ->numeric()
+                    ->alignCenter()
                     ->sortable(),
                 TextColumn::make('start_at')
                     ->label('Bắt đầu')
@@ -71,12 +73,8 @@ class DiscountCodesTable
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(),
-                IconColumn::make('active')
-                    ->label('Trạng thái')
-                    ->boolean()
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->sortable(),
+                ToggleColumn::make('active')
+                    ->label('Trạng thái'),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i')
