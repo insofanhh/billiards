@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
 import { discountCodesApi } from '../api/discountCodes';
+import { sepayApi } from '../api/sepay';
 import type { Service } from '../types';
 import { echo } from '../echo';
 import { useNotification } from '../contexts/NotificationContext';
@@ -62,6 +63,11 @@ export function ClientOrderPage() {
     enabled: !!localStorage.getItem('auth_token') && !!order,
   });
 
+  const { data: sepayConfig } = useQuery({
+    queryKey: ['sepay-config'],
+    queryFn: sepayApi.getConfig,
+  });
+
   const requestEndMutation = useMutation({
     mutationFn: () => ordersApi.requestEnd(Number(id!)),
     onSuccess: () => {
@@ -116,9 +122,11 @@ export function ClientOrderPage() {
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
       ordersApi.createTransaction(Number(id!), data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['client-order', id] });
-      showNotification('Đã gửi yêu cầu thanh toán. Vui lòng đợi nhân viên xác nhận.');
+      if (variables.method !== 'mobile') {
+        showNotification('Đã gửi yêu cầu thanh toán. Vui lòng đợi nhân viên xác nhận.');
+      }
     },
   });
 
@@ -136,7 +144,6 @@ export function ClientOrderPage() {
   });
 
   const pendingTransaction = order?.transactions?.find((t: any) => t.status === 'pending') ?? null;
-  const hasPendingTransaction = !!pendingTransaction;
   const canSelectPaymentMethod = !hasSuccessfulTransaction && (!pendingTransaction || !pendingTransaction.method);
 
   const cancelRequestMutation = useMutation({
@@ -282,6 +289,13 @@ export function ClientOrderPage() {
       }, 100);
     }
   }, [hasSuccessfulTransaction]);
+
+  const qrUrl = useMemo(() => {
+    if (!sepayConfig || !order) return '';
+    const amount = order.total_paid;
+    const content = `${sepayConfig.pattern} ${order.order_code}`;
+    return `https://qr.sepay.vn/img?acc=${sepayConfig.bank_account}&bank=${sepayConfig.bank_provider}&amount=${amount}&content=${content}`;
+  }, [sepayConfig, order]);
 
   if (isLoading) {
     return (
@@ -784,38 +798,50 @@ export function ClientOrderPage() {
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {method === 'mobile'
-                                ? 'Nhân viên sẽ hiển thị QR cho bạn'
+                                ? 'Quét mã QR bên dưới để thanh toán tự động'
                                 : 'Xác nhận tại quầy với nhân viên'}
                             </p>
+                            {method === 'mobile' && selectedPaymentMethod === 'mobile' && sepayConfig && (
+                              <div className="mt-3 bg-white p-2 rounded-lg border border-gray-100 dark:border-white/10 w-fit mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>
+                                <img src={qrUrl} alt="QR Code" className="w-48 h-48 object-contain" />
+                                <p className="text-center font-mono font-bold text-sm mt-1">{sepayConfig.bank_provider}</p>
+                                <p className="text-center text-xs text-gray-500">{sepayConfig.bank_account}</p>
+                              </div>
+                            )}
                           </div>
                         </label>
                       ))}
                     </div>
-                    <button
-                      onClick={() => {
-                        const method = selectedPaymentMethod;
-                        if (method === 'mobile') {
-                          showNotification('Nhân viên sẽ hỗ trợ bạn chuyển khoản ngay tại quầy.');
-                        }
-                        paymentMutation.mutate({ method, amount: order.total_paid });
-                      }}
-                      disabled={paymentMutation.isPending}
-                      className="w-full py-3 px-6 bg-green-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 font-bold rounded-xl hover:bg-green-700 dark:hover:bg-[#10d863] disabled:opacity-50 shadow-lg shadow-green-500/20 transition-all"
-                    >
-                      {paymentMutation.isPending ? 'Đang gửi yêu cầu...' : 'Xác nhận thanh toán'}
-                    </button>
-                  </div>
-                )}
-
-                {hasPendingTransaction && pendingTransaction?.method && !hasSuccessfulTransaction && (
-                  <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                    <p className="text-orange-800 font-medium text-center">Đang chờ nhân viên xác nhận thanh toán...</p>
+                    {selectedPaymentMethod !== 'mobile' && (
+                      <button
+                        onClick={() => {
+                          const method = selectedPaymentMethod;
+                          paymentMutation.mutate({ method, amount: order.total_paid });
+                        }}
+                        disabled={paymentMutation.isPending}
+                        className="w-full py-3 px-6 bg-blue-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 rounded-xl hover:bg-blue-700 dark:hover:bg-[#10d863] disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20 dark:shadow-green-500/20 font-medium"
+                      >
+                        {paymentMutation.isPending
+                          ? 'Đang xử lý...'
+                          : 'Xác nhận thanh toán'}
+                      </button>
+                    )}
+                    {selectedPaymentMethod === 'mobile' && (
+                      <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-[#13ec6d] animate-pulse py-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span className="font-medium">Đang chờ ngân hàng xác nhận...</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
         ) : null}
+
+
 
         {hasSuccessfulTransaction && (
           <>
@@ -958,9 +984,10 @@ export function ClientOrderPage() {
               </div>
             </div>
           </>
-        )}
-      </div>
-    </div>
+        )
+        }
+      </div >
+    </div >
   );
 }
 
