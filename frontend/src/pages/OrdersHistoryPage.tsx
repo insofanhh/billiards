@@ -18,7 +18,7 @@ export function OrdersHistoryPage() {
   const { user, logout } = useAuthStore();
   const [filterDate, setFilterDate] = useState<string>(getTodayDateString);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  
+
   const { data: orders, isLoading } = useQuery({
     queryKey: ['orders'],
     queryFn: ordersApi.getAll,
@@ -26,15 +26,15 @@ export function OrdersHistoryPage() {
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    
-    let filtered = orders.filter((order: Order) => 
+
+    let filtered = orders.filter((order: Order) =>
       order.status === 'completed' || order.status === 'cancelled'
     );
 
     if (filterDate) {
       const selectedDate = new Date(filterDate);
       selectedDate.setHours(0, 0, 0, 0);
-      
+
       filtered = filtered.filter((order: Order) => {
         if (!order.start_at) return false;
         const orderDate = new Date(order.start_at);
@@ -46,9 +46,10 @@ export function OrdersHistoryPage() {
     if (searchTerm.trim()) {
       const keyword = searchTerm.trim().toLowerCase();
       filtered = filtered.filter((order: Order) => {
-        const playerName = order.user?.name || '';
+        const rawName = order.user?.name || '';
+        const displayPlayerName = order.customer_name || (rawName === 'Staff' ? 'Khách lẻ' : rawName);
         const orderCode = order.order_code || '';
-        return playerName.toLowerCase().includes(keyword) || orderCode.toLowerCase().includes(keyword);
+        return displayPlayerName.toLowerCase().includes(keyword) || orderCode.toLowerCase().includes(keyword);
       });
     }
 
@@ -142,14 +143,14 @@ export function OrdersHistoryPage() {
                     <h3 className="text-lg font-bold text-gray-900">{order.order_code}</h3>
                     <p className="text-gray-600 mt-1">Bàn: {order.table.name}</p>
                     <p className="text-sm text-gray-500">
-                      Người chơi: <span className="font-medium text-gray-900">{order.user?.name || 'Không xác định'}</span>
+                      Khách hàng: <span className="font-medium text-gray-900">{order.customer_name || (order.user?.name === 'Staff' ? 'Khách lẻ' : (order.user?.name || 'Không xác định'))}</span>
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                     {getStatusText(order.status)}
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Bắt đầu</p>
