@@ -12,11 +12,6 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\SePayWebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('sepay')->group(function () {
-    Route::post('/webhook-fix', [\App\Http\Controllers\Api\CustomSepayController::class, 'webhook']);
-    Route::get('/config', [SepayController::class, 'config']);
-});
-
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'timestamp' => now()]);
 });

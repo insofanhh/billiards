@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
 import { discountCodesApi } from '../api/discountCodes';
-import { sepayApi } from '../api/sepay';
 import type { Service } from '../types';
 import { echo } from '../echo';
 import { useNotification } from '../contexts/NotificationContext';
@@ -62,11 +61,6 @@ export function ClientOrderPage() {
     queryKey: ['saved-discounts'],
     queryFn: discountCodesApi.getSavedDiscounts,
     enabled: !!localStorage.getItem('auth_token') && !!order,
-  });
-
-  const { data: sepayConfig } = useQuery({
-    queryKey: ['sepay-config'],
-    queryFn: sepayApi.getConfig,
   });
 
   const requestEndMutation = useMutation({
@@ -292,13 +286,6 @@ export function ClientOrderPage() {
       }, 100);
     }
   }, [hasSuccessfulTransaction]);
-
-  const qrUrl = useMemo(() => {
-    if (!sepayConfig || !order) return '';
-    const amount = order.total_paid;
-    const content = `${sepayConfig.pattern} ${order.order_code}`;
-    return `https://qr.sepay.vn/img?acc=${sepayConfig.bank_account}&bank=${sepayConfig.bank_provider}&amount=${amount}&content=${content}`;
-  }, [sepayConfig, order]);
 
   if (isLoading) {
     return (
@@ -804,13 +791,6 @@ export function ClientOrderPage() {
                                 ? 'Tự động xác nhận sau khi chuyển khoản'
                                 : 'Xác nhận tại quầy với nhân viên'}
                             </p>
-                            {method === 'mobile' && selectedPaymentMethod === 'mobile' && sepayConfig && (
-                              <div className="mt-3 bg-white p-2 rounded-lg border border-gray-100 dark:border-white/10 w-fit mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>
-                                <img src={qrUrl} alt="QR Code" className="w-48 h-48 object-contain" />
-                                <p className="text-center font-mono font-bold text-sm mt-1">{sepayConfig.bank_provider}</p>
-                                <p className="text-center text-xs text-gray-500">{sepayConfig.bank_account}</p>
-                              </div>
-                            )}
                           </div>
                         </label>
                       ))}
@@ -828,7 +808,7 @@ export function ClientOrderPage() {
                   </div>
                 )}
 
-                {hasPendingTransaction && pendingTransaction?.method && !hasSuccessfulTransaction && (
+                {pendingTransaction && pendingTransaction?.method && !hasSuccessfulTransaction && (
                   <>
                     {pendingTransaction.method === 'mobile' && 'reference' in pendingTransaction ? (
                       <div className="mt-4">
