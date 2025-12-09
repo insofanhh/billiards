@@ -121,6 +121,7 @@ export interface Order {
     amount: number;
     method: string;
     status: string;
+    reference: string;
     created_at: string;
     customer_name?: string | null;
     user?: {

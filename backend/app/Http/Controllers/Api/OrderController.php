@@ -563,6 +563,7 @@ class OrderController extends Controller
             'start_at' => $startTime,
             'price_rate_id' => $priceRate->id,
             'status' => 'active',
+            'admin_confirmed_by' => $request->user()->id,
         ]);
 
         if ($order->table) {
@@ -632,7 +633,8 @@ class OrderController extends Controller
         $customerName = $this->resolveCustomerName($order, $request);
 
         // Nếu khách tạo yêu cầu thanh toán tiền mặt/thẻ -> tạo giao dịch PENDING để nhân viên xác nhận.
-        $shouldPending = !$isStaff && in_array($method, ['cash', 'card'], true);
+        // Nếu khách chọn mobile (chuyển khoản) -> tạo giao dịch PENDING để webhook SePay tự động xác nhận.
+        $shouldPending = !$isStaff && in_array($method, ['cash', 'card', 'mobile'], true);
 
         $hasPendingTransaction = Transaction::where('order_id', $order->id)
             ->where('status', 'pending')
@@ -642,7 +644,8 @@ class OrderController extends Controller
             ->where('is_confirmed', false)
             ->exists();
 
-        $shouldForceConfirmItems = $isStaff && $hasUnconfirmedItems;
+        // Staff hoặc client chọn mobile (chuyển khoản) thì tự động confirm items
+        $shouldForceConfirmItems = ($isStaff || $method === 'mobile') && $hasUnconfirmedItems;
 
         if (!$hasPendingTransaction && $hasUnconfirmedItems && !$shouldForceConfirmItems) {
             return response()->json(['message' => 'Vẫn còn dịch vụ chưa xác nhận, vui lòng xác nhận trước khi thanh toán.'], 422);

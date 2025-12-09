@@ -10,14 +10,16 @@ class OrderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['transactions.user']);
+        $this->resource->loadMissing(['transactions.user', 'adminConfirmedBy']);
 
         $successfulTransaction = $this->transactions->firstWhere('status', 'success');
         $pendingTransaction = $this->transactions
             ->where('status', 'pending')
             ->sortByDesc('created_at')
             ->first();
-        $cashierName = optional($successfulTransaction ?? $pendingTransaction)->user?->name;
+        
+        // Ưu tiên lấy tên admin duyệt order, nếu không có thì lấy từ transaction
+        $cashierName = $this->adminConfirmedBy?->name ?? optional($successfulTransaction ?? $pendingTransaction)->user?->name;
         $customerName = $successfulTransaction?->customer_name ?? $pendingTransaction?->customer_name;
 
         return [
@@ -51,7 +53,7 @@ class OrderResource extends JsonResource
                     'service' => [
                         'id' => $item->service->id,
                         'name' => $item->service->name,
-                        'image' => $item->service->image ? Storage::disk('public')->url($item->service->image) : null,
+                        'image' => $item->service->image ? url('storage/' . $item->service->image) : null,
                         'price' => (float) $item->service->price,
                     ],
                     'qty' => (int) $item->qty,
@@ -74,6 +76,7 @@ class OrderResource extends JsonResource
                     'amount' => $transaction->amount,
                     'method' => $transaction->method,
                     'status' => $transaction->status,
+                    'reference' => $transaction->reference,
                     'created_at' => $transaction->created_at->toIso8601String(),
                     'customer_name' => $transaction->customer_name,
                     'user' => $transaction->user ? [

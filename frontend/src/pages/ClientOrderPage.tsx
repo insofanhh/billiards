@@ -10,6 +10,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
 import { clearClientActiveOrder, isClientOrderContinuable, persistClientActiveOrderFromOrder } from '../utils/clientActiveOrder';
+import { PaymentQRCode } from '../components/PaymentQRCode';
 
 
 export function ClientOrderPage() {
@@ -116,9 +117,13 @@ export function ClientOrderPage() {
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
       ordersApi.createTransaction(Number(id!), data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-order', id] });
-      showNotification('Đã gửi yêu cầu thanh toán. Vui lòng đợi nhân viên xác nhận.');
+    onSuccess: async (_response, variables) => {
+      await queryClient.refetchQueries({ queryKey: ['client-order', id] });
+      if (variables.method === 'mobile') {
+        showNotification('Vui lòng quét mã QR để thanh toán.');
+      } else {
+        showNotification('Đã gửi yêu cầu thanh toán. Vui lòng đợi nhân viên xác nhận.');
+      }
     },
   });
 
@@ -784,7 +789,7 @@ export function ClientOrderPage() {
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {method === 'mobile'
-                                ? 'Nhân viên sẽ hiển thị QR cho bạn'
+                                ? 'Tự động xác nhận sau khi chuyển khoản'
                                 : 'Xác nhận tại quầy với nhân viên'}
                             </p>
                           </div>
@@ -794,23 +799,35 @@ export function ClientOrderPage() {
                     <button
                       onClick={() => {
                         const method = selectedPaymentMethod;
-                        if (method === 'mobile') {
-                          showNotification('Nhân viên sẽ hỗ trợ bạn chuyển khoản ngay tại quầy.');
-                        }
                         paymentMutation.mutate({ method, amount: order.total_paid });
                       }}
                       disabled={paymentMutation.isPending}
                       className="w-full py-3 px-6 bg-green-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 font-bold rounded-xl hover:bg-green-700 dark:hover:bg-[#10d863] disabled:opacity-50 shadow-lg shadow-green-500/20 transition-all"
                     >
-                      {paymentMutation.isPending ? 'Đang gửi yêu cầu...' : 'Xác nhận thanh toán'}
+                      {paymentMutation.isPending ? 'Đang xử lý...' : selectedPaymentMethod === 'mobile' ? 'Thanh toán chuyển khoản' : 'Xác nhận thanh toán'}
                     </button>
                   </div>
                 )}
 
                 {hasPendingTransaction && pendingTransaction?.method && !hasSuccessfulTransaction && (
-                  <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                    <p className="text-orange-800 font-medium text-center">Đang chờ nhân viên xác nhận thanh toán...</p>
-                  </div>
+                  <>
+                    {pendingTransaction.method === 'mobile' && 'reference' in pendingTransaction ? (
+                      <div className="mt-4">
+                        <PaymentQRCode 
+                          amount={pendingTransaction.amount}
+                          referenceCode={pendingTransaction.reference}
+                        />
+                      </div>
+                    ) : pendingTransaction.method === 'mobile' ? (
+                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
+                        <p className="text-blue-800 dark:text-blue-400 font-medium text-center">Đang tạo mã thanh toán...</p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                        <p className="text-orange-800 dark:text-orange-400 font-medium text-center">Đang chờ nhân viên xác nhận thanh toán...</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
