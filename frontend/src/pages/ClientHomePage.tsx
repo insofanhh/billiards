@@ -18,6 +18,7 @@ import {
   persistClientActiveOrderFromOrder,
 } from '../utils/clientActiveOrder';
 import { blogApi } from '../api/blog';
+import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
 
 function LatestPosts() {
   const navigate = useNavigate();
@@ -602,6 +603,8 @@ export function ClientHomePage() {
           </div>
         </div>
       )}
+
+      <PWAInstallPrompt />
     </div>
   );
 }
