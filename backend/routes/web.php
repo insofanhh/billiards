@@ -1,9 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\SepayController;
-
-
 
 Route::get('/', function () {
     if (file_exists(public_path('index.html'))) {
