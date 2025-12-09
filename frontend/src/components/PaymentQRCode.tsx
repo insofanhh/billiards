@@ -69,7 +69,7 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
             {description}
           </span>
           <span className="text-xs text-red-600 dark:text-red-400 mt-1">
-            ⚠️ Nhập chính xác nội dung để tự động xác nhận
+            Nhập chính xác nội dung để tự động xác nhận
           </span>
         </div>
       </div>
