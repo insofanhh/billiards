@@ -27,28 +27,45 @@ class SePayWebhookController extends Controller
 
         // Log for debugging
         Log::info("SePay Webhook Auth Check", [
-            'expected' => 'Apikey ' . $sepayApiKey,
+            'expected' => $sepayApiKey,
             'received_auth' => $incomingApiKey,
             'received_direct' => $incomingDirectKey,
-            'env_key' => $sepayApiKey
+            'all_headers' => $request->headers->all()
         ]);
 
         // Support multiple formats
         $isValidApiKey = false;
-        if ($incomingApiKey === 'Apikey ' . $sepayApiKey) {
+        
+        // Format 1: Authorization: Apikey YOUR_KEY
+        if ($incomingApiKey && str_contains(strtolower($incomingApiKey), 'apikey')) {
+            $extractedKey = trim(str_ireplace('Apikey', '', $incomingApiKey));
+            if ($extractedKey === $sepayApiKey) {
+                $isValidApiKey = true;
+            }
+        }
+        
+        // Format 2: Authorization: YOUR_KEY (Direct - SePay production format)
+        if (!$isValidApiKey && $incomingApiKey === $sepayApiKey) {
             $isValidApiKey = true;
-        } elseif ($incomingDirectKey === $sepayApiKey) {
-            $isValidApiKey = true;
-        } elseif (str_replace('Apikey ', '', $incomingApiKey) === $sepayApiKey) {
+        }
+        
+        // Format 3: SEPAY_API_KEY: YOUR_KEY (Custom header)
+        if (!$isValidApiKey && $incomingDirectKey === $sepayApiKey) {
             $isValidApiKey = true;
         }
 
         if (!$isValidApiKey) {
+            Log::warning("SePay Webhook: Unauthorized attempt", [
+                'received_auth' => $incomingApiKey,
+                'received_direct' => $incomingDirectKey,
+            ]);
             return response()->json([
                 'success' => false, 
                 'message' => 'Unauthorized'
             ], 401);
         }
+        
+        Log::info("SePay Webhook: Authentication successful");
 
         // 2. Extract data
         $data = $request->all();
