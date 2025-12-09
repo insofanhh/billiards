@@ -69,19 +69,14 @@ class SePayWebhookController extends Controller
 
         // 2. Extract data
         $data = $request->all();
-        $transferContent = $data['content'] ?? ''; // Content: "TKPBMS TXN-ZVI9APD0ZZ"
+        $transferContent = $data['content'] ?? '';
         $transferAmount = floatval($data['transferAmount'] ?? 0);
 
-        // --- BẮT ĐẦU CẬP NHẬT LOGIC REGEX ---
+        // --- LOGIC REGEX ---
 
-        // Log lại nội dung gốc để debug
         Log::info("SePay Webhook Content Raw: " . $transferContent);
 
         // 3. Find Transaction Reference from Content using Improved Regex
-        // Regex này linh hoạt hơn:
-        // - Tìm chữ "TXN" (không phân biệt hoa thường)
-        // - Chấp nhận ký tự ngăn cách: gạch ngang (-), gạch dưới (_), dấu chấm (.), hoặc khoảng trắng (\s)
-        // - Bắt lấy chuỗi Alphanumeric phía sau (Mã giao dịch)
         preg_match('/TXN[-_.\s]*([A-Z0-9]+)/i', $transferContent, $matches);
         
         if (empty($matches[1])) {
@@ -89,16 +84,11 @@ class SePayWebhookController extends Controller
             return response()->json(['success' => false, 'message' => 'No transaction code found in content']);
         }
 
-        // Lấy phần đuôi mã code tìm được (Ví dụ: ZVI9APD0ZZ) và đưa về chữ in hoa
         $codeSuffix = strtoupper($matches[1]);
 
-        // Tái tạo lại định dạng chuẩn trong Database (TXN-XXXX) để tìm kiếm chính xác
-        // Vì trong DB bạn lưu đầy đủ cả tiền tố "TXN-", nên ta cần nối chuỗi lại.
         $transactionCode = 'TXN-' . $codeSuffix;
 
         Log::info("SePay: Extracted & Reconstructed Code: " . $transactionCode);
-
-        // --- KẾT THÚC CẬP NHẬT LOGIC REGEX ---
 
         // 4. Find the Transaction record
         $transaction = Transaction::where('reference', $transactionCode)
@@ -126,12 +116,9 @@ class SePayWebhookController extends Controller
                 ]);
 
                 if ($order) {
-                    // Không cộng thêm total_paid vì đã được set khi tạo transaction (logic của bạn)
-                    // Chỉ cần set order status = completed
                     $order->status = 'completed';
                     $order->save();
-                    
-                    // Update table status về "Trống"
+
                     if ($order->table) {
                         $order->table->update(['status_id' => 1]);
                     }
@@ -144,7 +131,6 @@ class SePayWebhookController extends Controller
                     broadcast(new TransactionConfirmed($transaction))->toOthers();
                 } catch (\Exception $e) {
                     Log::error("SePay Broadcast Error: " . $e->getMessage());
-                    // Không throw lỗi ở đây để tránh rollback transaction đã thành công
                 }
                 
                 Log::info("SePay Webhook: Transaction {$transactionCode} success. Amount: {$transferAmount}");

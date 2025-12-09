@@ -24,6 +24,7 @@ export function OrderPage() {
   const [discountCodeInput, setDiscountCodeInput] = useState('');
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -275,6 +276,17 @@ export function OrderPage() {
       if (data.transaction?.order_id === Number(id)) {
         queryClient.invalidateQueries({ queryKey: ['order', id] });
         queryClient.refetchQueries({ queryKey: ['order', id] });
+
+        // Hiển thị thông báo thanh toán thành công
+        if (data.transaction?.status === 'success') {
+          setShowPaymentSuccess(true);
+          showNotification('Thanh toán thành công!');
+
+          // Tự động ẩn sau 5 giây
+          setTimeout(() => {
+            setShowPaymentSuccess(false);
+          }, 5000);
+        }
       }
     };
 
@@ -738,7 +750,18 @@ export function OrderPage() {
                           </div>
                         )}
 
-                        {!hasSuccessfulTransaction && pendingTransaction && (
+                        {showPaymentSuccess && (
+                          <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200 animate-pulse">
+                            <div className="flex items-center justify-center text-green-800 font-bold">
+                              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Thanh toán thành công!
+                            </div>
+                          </div>
+                        )}
+
+                        {!hasSuccessfulTransaction && pendingTransaction && !showPaymentSuccess && (
                           <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                             <p className="text-center text-yellow-800 font-bold mb-2">
                               Đang chờ xác nhận thanh toán ({pendingTransaction.method === 'cash' ? 'Tiền mặt' : pendingTransaction.method === 'card' ? 'Thẻ' : pendingTransaction.method === 'mobile' ? 'Chuyển khoản' : 'Đang chờ'})
