@@ -47,6 +47,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Exclude admin routes from being cached or handled by service worker
+        navigateFallbackDenylist: [/^\/api/, /^\/admin/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -103,8 +105,7 @@ export default defineConfig({
             }
           }
         ],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/]
+        navigateFallback: '/index.html'
       },
       devOptions: {
         enabled: true,
