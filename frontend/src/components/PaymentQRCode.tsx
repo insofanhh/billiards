@@ -3,13 +3,11 @@ import React, { useEffect, useState } from 'react';
 interface PaymentQRCodeProps {
   amount: number;
   referenceCode: string;
-  onPaymentSuccess?: () => void;
 }
 
 export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({ 
   amount, 
-  referenceCode,
-  onPaymentSuccess 
+  referenceCode
 }) => {
   const [timeLeft, setTimeLeft] = useState(600);
 
