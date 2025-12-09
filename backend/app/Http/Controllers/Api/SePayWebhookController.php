@@ -30,7 +30,7 @@ class SePayWebhookController extends Controller
             'expected' => $sepayApiKey,
             'received_auth' => $incomingApiKey,
             'received_direct' => $incomingDirectKey,
-            'all_headers' => $request->headers->all()
+            // 'all_headers' => $request->headers->all() // Uncomment if need full headers debug
         ]);
 
         // Support multiple formats
@@ -72,15 +72,33 @@ class SePayWebhookController extends Controller
         $transferContent = $data['content'] ?? ''; // Content: "TKPBMS TXN-ZVI9APD0ZZ"
         $transferAmount = floatval($data['transferAmount'] ?? 0);
 
-        // 3. Find Transaction Reference from Content using Regex
-        // Pattern matches "TXN-" followed by alphanumeric characters (based on your DB image)
-        preg_match('/(TXN-[A-Z0-9]+)/i', $transferContent, $matches);
+        // --- BẮT ĐẦU CẬP NHẬT LOGIC REGEX ---
+
+        // Log lại nội dung gốc để debug
+        Log::info("SePay Webhook Content Raw: " . $transferContent);
+
+        // 3. Find Transaction Reference from Content using Improved Regex
+        // Regex này linh hoạt hơn:
+        // - Tìm chữ "TXN" (không phân biệt hoa thường)
+        // - Chấp nhận ký tự ngăn cách: gạch ngang (-), gạch dưới (_), dấu chấm (.), hoặc khoảng trắng (\s)
+        // - Bắt lấy chuỗi Alphanumeric phía sau (Mã giao dịch)
+        preg_match('/TXN[-_.\s]*([A-Z0-9]+)/i', $transferContent, $matches);
         
         if (empty($matches[1])) {
+            Log::warning("SePay: Regex failed. Content does not contain valid TXN code: " . $transferContent);
             return response()->json(['success' => false, 'message' => 'No transaction code found in content']);
         }
 
-        $transactionCode = $matches[1]; // e.g., TXN-ZVI9APD0ZZ
+        // Lấy phần đuôi mã code tìm được (Ví dụ: ZVI9APD0ZZ) và đưa về chữ in hoa
+        $codeSuffix = strtoupper($matches[1]);
+
+        // Tái tạo lại định dạng chuẩn trong Database (TXN-XXXX) để tìm kiếm chính xác
+        // Vì trong DB bạn lưu đầy đủ cả tiền tố "TXN-", nên ta cần nối chuỗi lại.
+        $transactionCode = 'TXN-' . $codeSuffix;
+
+        Log::info("SePay: Extracted & Reconstructed Code: " . $transactionCode);
+
+        // --- KẾT THÚC CẬP NHẬT LOGIC REGEX ---
 
         // 4. Find the Transaction record
         $transaction = Transaction::where('reference', $transactionCode)
@@ -88,6 +106,7 @@ class SePayWebhookController extends Controller
             ->first();
 
         if (!$transaction) {
+            Log::info("SePay: Transaction not found or processed. Code: " . $transactionCode);
             return response()->json(['success' => true, 'message' => 'Transaction not found or already processed']);
         }
 
@@ -107,8 +126,8 @@ class SePayWebhookController extends Controller
                 ]);
 
                 if ($order) {
-                    // Không cộng thêm total_paid vì đã được set khi tạo transaction
-                    // Chỉ cần set order status = completed và update table status
+                    // Không cộng thêm total_paid vì đã được set khi tạo transaction (logic của bạn)
+                    // Chỉ cần set order status = completed
                     $order->status = 'completed';
                     $order->save();
                     
@@ -121,7 +140,12 @@ class SePayWebhookController extends Controller
                 DB::commit();
                 
                 // Broadcast event to client
-                broadcast(new TransactionConfirmed($transaction))->toOthers();
+                try {
+                    broadcast(new TransactionConfirmed($transaction))->toOthers();
+                } catch (\Exception $e) {
+                    Log::error("SePay Broadcast Error: " . $e->getMessage());
+                    // Không throw lỗi ở đây để tránh rollback transaction đã thành công
+                }
                 
                 Log::info("SePay Webhook: Transaction {$transactionCode} success. Amount: {$transferAmount}");
                 
