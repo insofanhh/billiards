@@ -72,6 +72,47 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->plugin(FilamentShieldPlugin::make())
+            ->renderHook(
+                'panels::head.start',
+                fn (): string => <<<'HTML'
+                    <!-- PWA Meta Tags -->
+                    <meta name="theme-color" content="#000000ff">
+                    <meta name="apple-mobile-web-app-capable" content="yes">
+                    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+                    <meta name="apple-mobile-web-app-title" content="Billiards CMS">
+                    <link rel="manifest" href="/manifest.json">
+                    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
+                HTML
+            )
+            ->renderHook(
+                'panels::body.end',
+                fn (): string => <<<'HTML'
+                    <!-- PWA Service Worker Registration -->
+                    <script>
+                        if ('serviceWorker' in navigator) {
+                            window.addEventListener('load', () => {
+                                navigator.serviceWorker.register('/sw.js')
+                                    .then(registration => {
+                                        console.log('[PWA] Service Worker registered successfully:', registration.scope);
+                                        
+                                        // Check for updates
+                                        registration.addEventListener('updatefound', () => {
+                                            const newWorker = registration.installing;
+                                            newWorker.addEventListener('statechange', () => {
+                                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                                    console.log('[PWA] New content available, please refresh.');
+                                                }
+                                            });
+                                        });
+                                    })
+                                    .catch(error => {
+                                        console.error('[PWA] Service Worker registration failed:', error);
+                                    });
+                            });
+                        }
+                    </script>
+                HTML
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);
