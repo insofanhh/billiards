@@ -11,6 +11,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
 import { clearClientActiveOrder, isClientOrderContinuable, persistClientActiveOrderFromOrder } from '../utils/clientActiveOrder';
+import { PaymentQRCode } from '../components/PaymentQRCode';
 
 
 export function ClientOrderPage() {
@@ -122,9 +123,11 @@ export function ClientOrderPage() {
   const paymentMutation = useMutation({
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
       ordersApi.createTransaction(Number(id!), data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['client-order', id] });
-      if (variables.method !== 'mobile') {
+    onSuccess: async (_response, variables) => {
+      await queryClient.refetchQueries({ queryKey: ['client-order', id] });
+      if (variables.method === 'mobile') {
+        showNotification('Vui lòng quét mã QR để thanh toán.');
+      } else {
         showNotification('Đã gửi yêu cầu thanh toán. Vui lòng đợi nhân viên xác nhận.');
       }
     },
@@ -798,7 +801,7 @@ export function ClientOrderPage() {
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {method === 'mobile'
-                                ? 'Quét mã QR bên dưới để thanh toán tự động'
+                                ? 'Tự động xác nhận sau khi chuyển khoản'
                                 : 'Xác nhận tại quầy với nhân viên'}
                             </p>
                             {method === 'mobile' && selectedPaymentMethod === 'mobile' && sepayConfig && (
@@ -812,29 +815,38 @@ export function ClientOrderPage() {
                         </label>
                       ))}
                     </div>
-                    {selectedPaymentMethod !== 'mobile' && (
-                      <button
-                        onClick={() => {
-                          const method = selectedPaymentMethod;
-                          paymentMutation.mutate({ method, amount: order.total_paid });
-                        }}
-                        disabled={paymentMutation.isPending}
-                        className="w-full py-3 px-6 bg-blue-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 rounded-xl hover:bg-blue-700 dark:hover:bg-[#10d863] disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20 dark:shadow-green-500/20 font-medium"
-                      >
-                        {paymentMutation.isPending
-                          ? 'Đang xử lý...'
-                          : 'Xác nhận thanh toán'}
-                      </button>
-                    )}
-                    {selectedPaymentMethod === 'mobile' && (
-                      <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-[#13ec6d] animate-pulse py-2">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span className="font-medium">Đang chờ ngân hàng xác nhận...</span>
+                    <button
+                      onClick={() => {
+                        const method = selectedPaymentMethod;
+                        paymentMutation.mutate({ method, amount: order.total_paid });
+                      }}
+                      disabled={paymentMutation.isPending}
+                      className="w-full py-3 px-6 bg-green-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 font-bold rounded-xl hover:bg-green-700 dark:hover:bg-[#10d863] disabled:opacity-50 shadow-lg shadow-green-500/20 transition-all"
+                    >
+                      {paymentMutation.isPending ? 'Đang xử lý...' : selectedPaymentMethod === 'mobile' ? 'Thanh toán chuyển khoản' : 'Xác nhận thanh toán'}
+                    </button>
+                  </div>
+                )}
+
+                {hasPendingTransaction && pendingTransaction?.method && !hasSuccessfulTransaction && (
+                  <>
+                    {pendingTransaction.method === 'mobile' && 'reference' in pendingTransaction ? (
+                      <div className="mt-4">
+                        <PaymentQRCode 
+                          amount={pendingTransaction.amount}
+                          referenceCode={pendingTransaction.reference}
+                        />
+                      </div>
+                    ) : pendingTransaction.method === 'mobile' ? (
+                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
+                        <p className="text-blue-800 dark:text-blue-400 font-medium text-center">Đang tạo mã thanh toán...</p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                        <p className="text-orange-800 dark:text-orange-400 font-medium text-center">Đang chờ nhân viên xác nhận thanh toán...</p>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             )}

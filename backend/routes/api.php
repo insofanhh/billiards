@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\DiscountCodeController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\CommentController;
-use App\Http\Controllers\Api\SepayController;
+use App\Http\Controllers\Api\SePayWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('sepay')->group(function () {
@@ -70,4 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('posts/upload-image', [PostController::class, 'uploadImage']);
     Route::post('posts/{id}/comments', [CommentController::class, 'store']);
 });
+
+// Endpoint for SePay to call
+Route::post('/webhook/sepay', [SePayWebhookController::class, 'handle']);
 
