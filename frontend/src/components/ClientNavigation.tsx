@@ -194,7 +194,7 @@ export function ClientNavigation({
   return (
     <>
       <nav className="relative z-50 bg-white dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white shadow border-b border-gray-200 dark:border-white/5 transition-colors duration-300">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-8xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex-shrink-0">
             <button
               type="button"

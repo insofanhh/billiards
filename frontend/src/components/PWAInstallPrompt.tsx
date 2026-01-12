@@ -1,7 +1,7 @@
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 export const PWAInstallPrompt = () => {
-    const { isInstallable, promptInstall } = usePWAInstall();
+    const { isInstallable, promptInstall, dismissPrompt } = usePWAInstall();
 
     if (!isInstallable) {
         return null;
@@ -33,11 +33,7 @@ export const PWAInstallPrompt = () => {
                                 Cài đặt
                             </button>
                             <button
-                                onClick={() => {
-                                    // Hide the prompt (will show again on next visit)
-                                    const event = new Event('beforeinstallprompt');
-                                    window.dispatchEvent(event);
-                                }}
+                                onClick={dismissPrompt}
                                 className="px-3 py-2 text-gray-400 hover:text-white text-xs transition-colors"
                             >
                                 Để sau
