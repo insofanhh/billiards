@@ -34,7 +34,7 @@ class Dashboard extends BaseDashboard
 
     public function getTitle(): string
     {
-        return 'Tổng quan - ' . $this->getSelectedDate()->format('d/m/Y');
+        return 'Mừng trở lại, '.auth()->user()->name.' !';
     }
 
     public function filtersForm(Schema $schema): Schema
