@@ -9,6 +9,7 @@ PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
 echo "--> PHP Version: $PHP_VERSION"
 
 echo "--> Làm sạch và cập nhật code mới nhất..."
+# Git running as current user (ubuntu)
 git fetch origin main
 git reset --hard origin/main
 
@@ -150,10 +151,14 @@ if [ -f "$BACKUP_DIR/.htaccess" ]; then
     fi
 fi
 
-echo "--> Set quyền thư mục..."
+echo "--> Set quyền thư mục (Cần quyền sudo NOPASSWD)..."
+# Đảm bảo đang ở đúng thư mục backend
 cd /var/www/billiards/backend
-chown -R www-data:www-data storage bootstrap/cache public
-chmod -R 775 storage bootstrap/cache
-chmod -R 755 public
+
+# === PHẦN ĐÃ SỬA: THÊM SUDO VÀO CÁC LỆNH DƯỚI ĐÂY ===
+# Cần dùng sudo vì user ubuntu không thể chown file cho user www-data
+sudo chown -R www-data:www-data storage bootstrap/cache public
+sudo chmod -R 775 storage bootstrap/cache
+sudo chmod -R 755 public
 
 echo "=== Deploy hoàn tất thành công ==="
