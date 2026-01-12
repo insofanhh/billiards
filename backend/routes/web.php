@@ -11,7 +11,7 @@ Route::get('/', function () {
 
 Route::get('/{any}', function () {
     return file_get_contents(public_path('index.html'));
-})->where('any', '^(?!api|admin|broadcasting|livewire).*$');
+})->where('any', '^(?!api|admin|broadcasting|livewire|phpmyadmin).*$');
 
 Route::fallback(function () {
     $path = request()->path();
