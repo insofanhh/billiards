@@ -124,7 +124,7 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
   return (
     <>
       <nav className="bg-gray-900 text-white shadow">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-8xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             type="button"
             onClick={() => handleNavigate('/staff')}

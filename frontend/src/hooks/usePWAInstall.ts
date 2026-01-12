@@ -53,5 +53,9 @@ export const usePWAInstall = () => {
         setIsInstallable(false);
     };
 
-    return { isInstallable, promptInstall };
+    const dismissPrompt = () => {
+        setIsInstallable(false);
+    };
+
+    return { isInstallable, promptInstall, dismissPrompt };
 };
