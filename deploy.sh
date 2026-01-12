@@ -65,7 +65,7 @@ php artisan view:cache
 # Bắt buộc chạy lệnh này để copy CSS/JS mới nhất của Filament ra public
 # Nếu thiếu lệnh này, sau khi update code giao diện Admin có thể bị lỗi
 echo "--> Publish Filament Assets..."
-php artisan filament:assets --force
+php artisan filament:assets
 
 # === [BỔ SUNG QUAN TRỌNG 2] ===
 # Link storage để đảm bảo ảnh upload hiển thị được (chạy thừa còn hơn thiếu)
