@@ -6,11 +6,12 @@ import { Scanner } from '@yudiel/react-qr-scanner';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName, isGuestUser } from '../utils/temporaryUser';
 import { discountCodesApi } from '../api/discountCodes';
+import type { BannerSettings } from '../api/settings';
+import { settingsApi } from '../api/settings';
 import type { DiscountCode } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
 import { ordersApi } from '../api/orders';
 import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
-import { settingsApi } from '../api/settings';
 import {
   clearClientActiveOrder,
   getClientOrderStatusLabel,
@@ -122,6 +123,14 @@ const highlightCards: Highlight[] = [
   },
 ];
 
+// Helper to extract ID
+function extractYoutubeId(url: string | null): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2]?.length === 11) ? match[2] : null;
+}
+
 export function ClientHomePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -156,14 +165,18 @@ export function ClientHomePage() {
     queryFn: discountCodesApi.getPublicDiscounts,
   });
 
-  const { data: bannerImages = [] } = useQuery<string[]>({
-    queryKey: ['client-banner-images'],
+  const { data: bannersData } = useQuery<BannerSettings>({
+    queryKey: ['client-banner-settings'],
     queryFn: settingsApi.getBanners,
     staleTime: 5 * 60_000,
   });
 
+  const bannerImages = bannersData?.images ?? [];
+  const bannerVideoUrl = bannersData?.videoUrl ?? null;
+  const youtubeId = extractYoutubeId(bannerVideoUrl);
+
   useEffect(() => {
-    if (!bannerImages.length) {
+    if (!bannerImages.length || youtubeId) {
       setCurrentBannerIndex(0);
       return;
     }
@@ -172,31 +185,32 @@ export function ClientHomePage() {
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [bannerImages.length]);
+  }, [bannerImages.length, youtubeId]);
 
   const showNextBanner = () => {
-    if (!bannerImages.length) return;
+    if (!bannerImages.length || youtubeId) return;
     setCurrentBannerIndex((prev) => (prev + 1) % bannerImages.length);
   };
 
   const showPrevBanner = () => {
-    if (!bannerImages.length) return;
+    if (!bannerImages.length || youtubeId) return;
     setCurrentBannerIndex((prev) => (prev - 1 + bannerImages.length) % bannerImages.length);
   };
-
+ 
   const goToBanner = (index: number) => {
-    if (!bannerImages.length) return;
+    if (!bannerImages.length || youtubeId) return;
     setCurrentBannerIndex((index + bannerImages.length) % bannerImages.length);
   };
 
   const handleDragStart = (clientX: number) => {
+    if (youtubeId) return;
     setDragStartX(clientX);
     setIsDragging(true);
   };
 
   const handleDragEnd = (clientX: number | null) => {
-    if (dragStartX === null) {
-      setIsDragging(false);
+    if (youtubeId || dragStartX === null) {
+      if (isDragging) setIsDragging(false);
       return;
     }
     if (clientX !== null) {
@@ -325,86 +339,111 @@ export function ClientHomePage() {
         onHomeClick={() => navigate('/client')}
         onHistoryClick={() => navigate('/client/history')}
         onVouchersClick={() => navigate('/client/vouchers')}
+        isOverBanner={true}
       />
 
-      <main className="mx-auto max-w-7xl px-4 py-10 lg:px-8 space-y-10">
-        <section className="rounded-3xl bg-white dark:bg-white/5 px-8 py-10 shadow-xl border border-gray-100 dark:border-white/10 backdrop-blur-sm transition-colors duration-300">
-          <div className="grid gap-8 md:grid-cols-2 md:items-center">
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm uppercase tracking-wide text-blue-600 dark:text-[#13ec6d]">Trang khách hàng</p>
-                <h1 className="mt-2 text-3xl font-bold sm:text-4xl text-gray-900 dark:text-white">Quét mã QR để mở bàn và nhận thông báo mới nhất</h1>
-                <p className="mt-4 text-gray-600 dark:text-gray-300">
-                  Mọi thông điệp, thông báo hoặc ưu đãi từ quản trị viên sẽ xuất hiện tại đây. Bạn chỉ cần một lần quét để
-                  bắt đầu trải nghiệm.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScanError(null);
-                    setIsScannerOpen(true);
-                  }}
-                  className="flex-1 rounded-2xl bg-blue-600 dark:bg-[#13ec6d] px-6 py-3 text-center text-base font-semibold text-white dark:text-zinc-900 shadow-lg shadow-blue-500/20 dark:shadow-green-500/20 transition hover:bg-blue-700 dark:hover:bg-[#10d863]"
-                >
-                  Quét mã QR bàn
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/client/history')}
-                  className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-6 py-3 text-center text-base font-semibold text-gray-900 dark:text-white transition hover:bg-gray-100 dark:hover:bg-white/10"
-                >
-                  Lịch sử của tôi
-                </button>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {bannerImages.length > 0 ? (
-                <div
-                  className="relative overflow-hidden rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 shadow-2xl shadow-black/5 dark:shadow-black/50 backdrop-blur select-none"
-                  onTouchStart={(event) => handleDragStart(event.touches[0].clientX)}
-                  onTouchEnd={(event) => handleDragEnd(event.changedTouches[0]?.clientX ?? null)}
-                  onMouseDown={(event) => handleDragStart(event.clientX)}
-                  onMouseUp={(event) => handleDragEnd(event.clientX)}
-                  onMouseLeave={() => isDragging && handleDragEnd(null)}
-                >
-                  <div
-                    className={`flex transition-transform duration-500 ease-out ${isDragging ? 'transition-none' : ''}`}
-                    style={{ transform: `translateX(-${currentBannerIndex * 100}%)` }}
-                  >
-                    {bannerImages.map((src, index) => (
-                      <img
-                        key={src}
-                        src={src}
-                        alt={`Banner ${index + 1}`}
-                        loading={index === 0 ? 'eager' : 'lazy'}
-                        className="h-56 w-full flex-shrink-0 object-cover sm:h-64"
-                        draggable={false}
-                      />
-                    ))}
-                  </div>
-                  <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
-                    {bannerImages.map((_, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => goToBanner(index)}
-                        className={`h-2.5 w-2.5 rounded-full transition ${index === currentBannerIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
-                          }`}
-                        aria-label={`Chọn banner ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-gray-50 dark:bg-white/5 p-6 text-center text-sm text-gray-500 dark:text-white/50">
-                  Chưa có ảnh banner. Hãy thêm trong CMS để hiển thị tại đây.
-                </div>
-              )}
-            </div>
+      <div className="relative h-[85vh] w-full overflow-hidden bg-gray-900">
+        {youtubeId ? (
+          <div className="absolute inset-0 h-full w-full bg-black">
+            <iframe
+              className="h-full w-full object-cover pointer-events-none scale-150" 
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&playsinline=1`}
+              title="Youtube Banner"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              style={{ pointerEvents: 'none' }}
+            />
+            <div className="absolute inset-0 bg-black/40" />
           </div>
-        </section>
+        ) : bannerImages.length > 0 ? (
+          <div
+            className="absolute inset-0 h-full w-full"
+            onTouchStart={(event) => handleDragStart(event.touches[0].clientX)}
+            onTouchEnd={(event) => handleDragEnd(event.changedTouches[0]?.clientX ?? null)}
+            onMouseDown={(event) => handleDragStart(event.clientX)}
+            onMouseUp={(event) => handleDragEnd(event.clientX)}
+            onMouseLeave={() => isDragging && handleDragEnd(null)}
+          >
+            {bannerImages.map((src, index) => (
+              <div
+                key={src}
+                className={`absolute inset-0 h-full w-full transition-opacity duration-1000 ${
+                  index === currentBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
+              >
+                <img
+                  src={src}
+                  alt={`Banner ${index + 1}`}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+                <div className="absolute inset-0 bg-black/50" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+             <div className="text-white/50">Chưa có banner</div>
+          </div>
+        )}
+
+        <div className="absolute inset-0 z-20 flex items-center">
+            <div className="mx-auto max-w-7xl px-4 w-full lg:px-8">
+               <div className="max-w-2xl space-y-8 animate-fade-in-up">
+                  <div>
+                    <p className="text-base uppercase tracking-widest text-[#13ec6d] font-semibold mb-4">Trang khách hàng</p>
+                    <h1 className="text-4xl font-bold sm:text-5xl md:text-6xl text-white leading-tight">
+                      Quét mã QR để mở bàn <br className="hidden sm:block"/>và nhận thông báo mới
+                    </h1>
+                    <p className="mt-6 text-lg text-gray-200 max-w-xl leading-relaxed">
+                      Mọi thông điệp, thông báo hoặc ưu đãi từ quản trị viên sẽ xuất hiện tại đây. Bạn chỉ cần một lần quét để bắt đầu trải nghiệm.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScanError(null);
+                        setIsScannerOpen(true);
+                      }}
+                      className="rounded-full bg-[#13ec6d] px-8 py-4 text-center text-lg font-bold text-zinc-900 shadow-lg shadow-green-500/30 transition hover:bg-[#10d863] hover:scale-105 active:scale-95"
+                    >
+                      Quét mã QR bàn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/client/history')}
+                      className="rounded-full border border-white/30 bg-white/10 px-8 py-4 text-center text-lg font-bold text-white transition hover:bg-white/20 backdrop-blur-sm"
+                    >
+                      Lịch sử của tôi
+                    </button>
+                  </div>
+               </div>
+            </div>
+        </div>
+
+        {/* Dots Navigation */}
+        {bannerImages.length > 0 && (
+          <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center gap-3">
+            {bannerImages.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => goToBanner(index)}
+                className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                  index === currentBannerIndex 
+                    ? 'bg-[#13ec6d] w-10' 
+                    : 'bg-white/40 hover:bg-white/80'
+                }`}
+                aria-label={`Chọn banner ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <main className="mx-auto max-w-7xl px-4 py-10 lg:px-8 space-y-10">
 
         {activeOrderSnapshot && isAuthenticated && (
           <div className="rounded-2xl border border-yellow-200 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-500/10 px-6 py-4 text-sm text-gray-900 dark:text-white shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between backdrop-blur-sm">

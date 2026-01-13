@@ -40,10 +40,14 @@ class ManageGeneralSettings extends SettingsPage
                         ->multiple()
                         ->imageEditor()
                         ->reorderable()
-                        ->disk('public')
                         ->directory('banners')
                         ->preserveFilenames()
                         ->helperText('Upload nhiều ảnh để hiển thị dạng slider trên trang khách.'),
+                    TextInput::make('banner_video_url')
+                        ->label('Youtube Video URL')
+                        ->url()
+                        ->placeholder('https://www.youtube.com/watch?v=...')
+                        ->helperText('Nhập link Youtube. Nếu có video, slider ảnh sẽ bị tắt và hiển thị video nền.'),
                 ]),
             Section::make('Thông báo hệ thống')
                 ->schema([

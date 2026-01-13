@@ -14,6 +14,7 @@ type ClientNavigationProps = {
   historyActive?: boolean;
   vouchersActive?: boolean;
   blogActive?: boolean;
+  isOverBanner?: boolean;
 };
 
 export function ClientNavigation({
@@ -25,6 +26,7 @@ export function ClientNavigation({
   historyActive = false,
   vouchersActive = false,
   blogActive = false,
+  isOverBanner = false,
 }: ClientNavigationProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -34,8 +36,26 @@ export function ClientNavigation({
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [canLogout, setCanLogout] = useState(() => !!localStorage.getItem('auth_token'));
+  const [isScrolled, setIsScrolled] = useState(false);
   const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideGuestDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isOverBanner) {
+      setIsScrolled(false);
+      return;
+    }
+    
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Check initial position
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isOverBanner]);
 
   const clearHideTimeout = () => {
     if (hideDropdownTimeout.current) {
@@ -191,9 +211,21 @@ export function ClientNavigation({
     return true;
   };
 
+  // Logic Class Styles
+  const navClasses = isOverBanner
+      ? `fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-white/95 dark:bg-[rgb(16,34,24)]/95 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-white/5' 
+            : 'bg-transparent border-transparent'
+        }`
+      : 'relative z-50 bg-white dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white shadow border-b border-gray-200 dark:border-white/5 transition-colors duration-300';
+  
+  const textColorClass = (isOverBanner && !isScrolled) ? 'text-white' : 'text-gray-900 dark:text-white';
+  const subTextColorClass = (isOverBanner && !isScrolled) ? 'text-white/80' : 'text-gray-500 dark:text-gray-400';
+
   return (
     <>
-      <nav className="relative z-50 bg-white dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white shadow border-b border-gray-200 dark:border-white/5 transition-colors duration-300">
+      <nav className={navClasses}>
         <div className="mx-auto flex h-16 max-w-8xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex-shrink-0">
             <button
@@ -205,20 +237,24 @@ export function ClientNavigation({
                 {icons.home}
               </div>
               <div>
-                <p className="text-lg font-semibold">CMS</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Billiards Client</p>
+                <p className={`text-lg font-semibold ${textColorClass}`}>CMS</p>
+                <p className={`text-xs ${subTextColorClass}`}>Billiards Client</p>
               </div>
             </button>
           </div>
           <div className="hidden md:flex flex-1 justify-center">
-            <div className="flex items-center rounded-full bg-gray-100 dark:bg-white/5 p-1 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
+            <div className={`flex items-center rounded-full p-1 border backdrop-blur-sm ${
+                isOverBanner && !isScrolled
+                  ? 'bg-black/20 border-white/10'
+                  : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
+              }`}>
               {onHistoryClick && (
                 <button
                   type="button"
                   onClick={handleHistory}
                   className={`rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${historyActive
                     ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                    : `hover:bg-white/50 dark:hover:bg-white/5 ${isOverBanner && !isScrolled ? 'text-white/90 hover:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`
                     }`}
                 >
                   Lịch sử chơi
@@ -241,7 +277,7 @@ export function ClientNavigation({
                 onClick={() => navigate('/blog')}
                 className={`rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${blogActive
                   ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                  : `hover:bg-white/50 dark:hover:bg-white/5 ${isOverBanner && !isScrolled ? 'text-white/90 hover:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`
                   }`}
               >
                 Tin tức
@@ -253,7 +289,11 @@ export function ClientNavigation({
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-full p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+              className={`rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                isOverBanner && !isScrolled 
+                  ? 'text-white/80 hover:bg-white/20 hover:text-white' 
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
+              }`}
               aria-label="Chuyển đổi giao diện"
             >
               {theme === 'dark' ? icons.sun : icons.moon}
@@ -276,9 +316,13 @@ export function ClientNavigation({
                       setShowLogoutDesktop((prev) => !prev);
                     }
                   }}
-                  className="rounded-2xl bg-gray-100 dark:bg-white/5 px-4 py-2 text-left text-gray-900 dark:text-white transition hover:bg-gray-200 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+                  className={`rounded-2xl px-4 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 ${
+                    isOverBanner && !isScrolled
+                      ? 'bg-white/10 text-white hover:bg-white/20'
+                      : 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10'
+                  }`}
                 >
-                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{subtitle}</p>
+                  <p className={`text-xs uppercase tracking-wide ${subTextColorClass}`}>{subtitle}</p>
                   <p className="text-sm font-semibold">{displayName}</p>
                 </button>
                 {showLogoutDesktop && (
@@ -312,9 +356,13 @@ export function ClientNavigation({
                     clearGuestDropdownTimeout();
                     setShowGuestDropdown((prev) => !prev);
                   }}
-                  className="rounded-2xl bg-gray-100 dark:bg-white/5 px-4 py-2 text-left text-gray-900 dark:text-white transition hover:bg-gray-200 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+                  className={`rounded-2xl px-4 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 ${
+                    isOverBanner && !isScrolled
+                      ? 'bg-white/10 text-white hover:bg-white/20'
+                      : 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10'
+                  }`}
                 >
-                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{subtitle}</p>
+                  <p className={`text-xs uppercase tracking-wide ${subTextColorClass}`}>{subtitle}</p>
                   <p className="text-sm font-semibold">{displayName}</p>
                 </button>
                 {showGuestDropdown && (
@@ -346,14 +394,22 @@ export function ClientNavigation({
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-full p-2 text-gray-500 dark:text-white transition hover:bg-gray-100 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className={`rounded-full p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                isOverBanner && !isScrolled
+                  ? 'text-white/80 hover:bg-white/20 hover:text-white'
+                  : 'text-gray-500 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+              }`}
               aria-label="Chuyển đổi giao diện"
             >
               {theme === 'dark' ? icons.sun : icons.moon}
             </button>
             <button
               type="button"
-              className="rounded-full p-2 text-gray-900 dark:text-white transition hover:bg-gray-100 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className={`rounded-full p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                 isOverBanner && !isScrolled
+                  ? 'text-white hover:bg-white/20'
+                  : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+              }`}
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Mở menu"
             >
