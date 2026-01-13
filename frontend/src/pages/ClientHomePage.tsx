@@ -342,11 +342,11 @@ export function ClientHomePage() {
         isOverBanner={true}
       />
 
-      <div className="relative h-[85vh] w-full overflow-hidden bg-gray-900">
+      <div className="relative h-screen w-full overflow-hidden bg-gray-900">
         {youtubeId ? (
           <div className="absolute inset-0 h-full w-full bg-black">
             <iframe
-              className="h-full w-full object-cover pointer-events-none scale-150" 
+              className="h-full w-full object-cover pointer-events-none scale-[4] md:scale-150" 
               src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&playsinline=1`}
               title="Youtube Banner"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

@@ -32,6 +32,7 @@ class SettingController extends Controller
 
         return response()->json([
             'banners' => $banners,
+            'banner_video_url' => $settings->banner_video_url,
         ]);
     }
 }
