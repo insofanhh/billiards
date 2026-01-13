@@ -27,6 +27,8 @@ class GeneralSettings extends Settings
      * Additional notification entries (title + link pairs).
      */
     public array $extra_notifications;
+    
+    public ?string $daily_report_email;
 
     public static function group(): string
     {
@@ -45,7 +47,9 @@ class GeneralSettings extends Settings
             'banner_video_url' => null,
             'is_notification_active' => false,
             'notification_content' => null,
+            'notification_content' => null,
             'extra_notifications' => [],
+            'daily_report_email' => null,
         ];
     }
 }
