@@ -10,6 +10,8 @@ class GeneralSettings extends Settings
      * Store banner images for the client landing page.
      */
     public ?array $image_banner;
+    
+    public ?string $banner_video_url;
 
     /**
      * Determine whether system-wide notifications are enabled.
@@ -40,6 +42,7 @@ class GeneralSettings extends Settings
     {
         return [
             'image_banner' => [],
+            'banner_video_url' => null,
             'is_notification_active' => false,
             'notification_content' => null,
             'extra_notifications' => [],

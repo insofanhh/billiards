@@ -12,6 +12,7 @@ return new class extends Migration
     {
         $defaults = [
             'image_banner' => [],
+            'banner_video_url' => null,
             'is_notification_active' => false,
             'notification_content' => null,
             'extra_notifications' => [],
