@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\DailyRevenueReportMail;
+use App\Settings\GeneralSettings;
 
 class SendDailyRevenueReport extends Command
 {
@@ -29,7 +30,7 @@ class SendDailyRevenueReport extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(GeneralSettings $settings)
     {
         $date = Carbon::today('Asia/Ho_Chi_Minh')->format('Y-m-d');
         $startTime = Carbon::createFromFormat('Y-m-d H:i:s', "$date 00:00:00", 'Asia/Ho_Chi_Minh');
@@ -43,8 +44,11 @@ class SendDailyRevenueReport extends Command
             ->get()
             ->groupBy('service_id');
 
-        Mail::to('anhha2k2@gmail.com')->send(new DailyRevenueReportMail($orders, $transactions, $services, $date));
-
-        $this->info('Daily revenue report sent successfully.');
+        if ($settings->daily_report_email) {
+             Mail::to($settings->daily_report_email)->send(new DailyRevenueReportMail($orders, $transactions, $services, $date));
+             $this->info('Daily revenue report sent successfully to ' . $settings->daily_report_email);
+        } else {
+             $this->warn('No daily report email configured.');
+        }
     }
 }
