@@ -266,7 +266,7 @@ export function ClientNavigation({
                   onClick={handleVouchers}
                   className={`rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${vouchersActive
                     ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                    : `hover:bg-white/50 dark:hover:bg-white/5 ${isOverBanner && !isScrolled ? 'text-white/90 hover:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`
                     }`}
                 >
                   Ví voucher
