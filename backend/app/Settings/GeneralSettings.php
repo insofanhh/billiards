@@ -30,6 +30,13 @@ class GeneralSettings extends Settings
     
     public ?string $daily_report_email;
 
+    public ?string $mail_host;
+    public ?string $mail_port;
+    public ?string $mail_username;
+    public ?string $mail_password;
+    public ?string $mail_from_address;
+    public ?string $mail_from_name;
+
     public static function group(): string
     {
         return 'general';
@@ -50,6 +57,12 @@ class GeneralSettings extends Settings
             'notification_content' => null,
             'extra_notifications' => [],
             'daily_report_email' => null,
+            'mail_host' => null,
+            'mail_port' => null,
+            'mail_username' => null,
+            'mail_password' => null,
+            'mail_from_address' => null,
+            'mail_from_name' => null,
         ];
     }
 }

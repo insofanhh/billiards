@@ -32,70 +32,11 @@ class ManageGeneralSettings extends SettingsPage
 
 
 
-    public function mount(): void
-    {
-        parent::mount();
-
-        $this->form->fill([
-            ...$this->form->getState(),
-            'mail_host' => config('mail.mailers.smtp.host'),
-            'mail_port' => config('mail.mailers.smtp.port'),
-            'mail_username' => config('mail.mailers.smtp.username'),
-            'mail_password' => config('mail.mailers.smtp.password'),
-            'mail_from_address' => config('mail.from.address'),
-            'mail_from_name' => config('mail.from.name'),
-        ]);
-    }
-
-    public function save(): void
-    {
-        try {
-            $data = $this->form->getState();
-
-            // Update .env
-            $this->updateEnv([
-                'MAIL_HOST' => $data['mail_host'] ?? '',
-                'MAIL_PORT' => $data['mail_port'] ?? '',
-                'MAIL_USERNAME' => $data['mail_username'] ?? '',
-                'MAIL_PASSWORD' => $data['mail_password'] ?? '',
-                'MAIL_FROM_ADDRESS' => $data['mail_from_address'] ?? '',
-                'MAIL_FROM_NAME' => $data['mail_from_name'] ?? '',
-            ]);
-
-            // Clear cache to make sure new env values are picked up immediately (optional but recommended)
-            // Artisan::call('config:clear'); // Might be too aggressive for production
-
-            // Remove SMTP fields before saving settings
-            unset(
-                $data['mail_host'],
-                $data['mail_port'],
-                $data['mail_username'],
-                $data['mail_password'],
-                $data['mail_from_address'],
-                $data['mail_from_name']
-            );
-
-            $settings = app(static::$settings);
-            $settings->fill($data);
-            $settings->save();
-
-            Notification::make()
-                ->title('Saved successfully')
-                ->success()
-                ->send();
-        } catch (\Throwable $exception) {
-            Notification::make()
-                ->title('Save failed')
-                ->danger()
-                ->send();
-        }
-    }
-
     public function form(Schema $schema): Schema
     {
         return parent::form($schema)->components([
             Section::make('Cấu hình Email (SMTP)')
-                ->description('Cấu hình gửi mail hệ thống. Các thay đổi sẽ được lưu vào file .env')
+                ->description('Cấu hình gửi mail hệ thống.')
                 ->schema([
                     TextInput::make('mail_host')
                         ->label('Mail Host')
@@ -175,26 +116,6 @@ class ManageGeneralSettings extends SettingsPage
                  ])
                  ->columns(1),
         ]);
-    }
-    protected function updateEnv(array $data): void
-    {
-        $envPath = base_path('.env');
-        if (!file_exists($envPath)) {
-            return;
-        }
-
-        $envContent = file_get_contents($envPath);
-
-        foreach ($data as $key => $value) {
-            $value = '"' . $value . '"';
-            if (preg_match("/^{$key}=.*/m", $envContent)) {
-                $envContent = preg_replace("/^{$key}=.*/m", "{$key}={$value}", $envContent);
-            } else {
-                $envContent .= "\n{$key}={$value}";
-            }
-        }
-
-        file_put_contents($envPath, $envContent);
     }
 }
 
