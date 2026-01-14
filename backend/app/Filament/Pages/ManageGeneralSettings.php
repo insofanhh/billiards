@@ -15,10 +15,13 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use UnitEnum;
 use Filament\Notifications\Notification;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Illuminate\Support\Facades\Config;
 
 class ManageGeneralSettings extends SettingsPage
 {
+    use HasPageShield;
+
     protected static string $settings = GeneralSettings::class;
 
     protected static BackedEnum | string | null $navigationIcon = 'heroicon-o-cog-6-tooth';
