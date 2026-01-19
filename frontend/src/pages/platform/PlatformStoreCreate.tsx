@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { platformClient } from '../../api/platformClient';
 
 export const PlatformStoreCreate = () => {
     const navigate = useNavigate();
@@ -24,10 +24,7 @@ export const PlatformStoreCreate = () => {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem('platform_token');
-            await axios.post('http://localhost:8000/api/platform/stores', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await platformClient.post('/platform/stores', formData);
             alert('Store created successfully');
             navigate('/platform/stores');
         } catch (err: any) {

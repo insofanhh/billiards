@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { platformClient } from '../../api/platformClient';
 
 export const PlatformStoreDetail = () => {
     const { id } = useParams();
@@ -13,10 +13,7 @@ export const PlatformStoreDetail = () => {
     useEffect(() => {
         const fetchStore = async () => {
             try {
-                const token = localStorage.getItem('platform_token');
-                const res = await axios.get(`http://localhost:8000/api/platform/stores/${id}`, {
-                     headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await platformClient.get(`/platform/stores/${id}`);
                 setStore(res.data);
                 setName(res.data.name);
                 setSlug(res.data.slug);
@@ -31,12 +28,9 @@ export const PlatformStoreDetail = () => {
 
     const handleSave = async () => {
         try {
-            const token = localStorage.getItem('platform_token');
-            await axios.put(`http://localhost:8000/api/platform/stores/${id}`, {
+            await platformClient.put(`/platform/stores/${id}`, {
                 name,
                 slug
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
             alert('Updated successfully');
             navigate('/platform/stores');
