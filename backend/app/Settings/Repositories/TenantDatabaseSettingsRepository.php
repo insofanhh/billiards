@@ -58,34 +58,21 @@ class TenantDatabaseSettingsRepository extends DatabaseSettingsRepository
 
     public function updatePropertiesPayload(string $group, array $properties): void
     {
-        $propertiesInBatch = collect($properties)->map(function ($payload, $name) use ($group) {
-            $data = [
+        foreach ($properties as $name => $payload) {
+            $search = [
                 'group' => $group,
                 'name' => $name,
-                'payload' => $this->encode($payload),
             ];
 
             if (app()->has('currentStoreId')) {
-                $data['store_id'] = app('currentStoreId');
+                $search['store_id'] = app('currentStoreId');
+            } else {
+                $search['store_id'] = null;
             }
 
-            return $data;
-        })->values()->toArray();
-
-        // Must match the UNIQUE constraint for upsert
-        $uniqueBy = ['group', 'name'];
-        if (app()->has('currentStoreId')) {
-             $uniqueBy[] = 'store_id';
+            $this->getBuilder()->updateOrInsert($search, [
+                'payload' => $this->encode($payload),
+            ]);
         }
-
-        // Note: upsert requires the exact columns to check for uniqueness. 
-        // If store_id is nullable and we are in tenant context, we insert store_id.
-        // If store_id is NOT in the uniqueBy array when it IS in the data, upsert might fail or duplicate if null vs value mismatch?
-        // Actually, Postgres/MySQL handle unique constraint checks.
-        // But the second argument to upsert is `uniqueBy`.
-        
-        $this->getBuilder()
-            ->where('group', $group) // Does this where clause affect upsert? No, upsert is on the model/table.
-            ->upsert($propertiesInBatch, $uniqueBy, ['payload']);
     }
 }
