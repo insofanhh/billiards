@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { platformClient } from '../api/platformClient';
 
 export const PlatformLayout = () => {
     const navigate = useNavigate();
@@ -15,9 +15,8 @@ export const PlatformLayout = () => {
         }
 
         // Simple check or fetch user
-        axios.get('http://localhost:8000/api/platform/me', {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(res => {
+        platformClient.get('/platform/me')
+        .then(res => {
             setUser(res.data);
         }).catch(() => {
             localStorage.removeItem('platform_token');
@@ -26,10 +25,8 @@ export const PlatformLayout = () => {
     }, [navigate]);
 
     const handleLogout = () => {
-        const token = localStorage.getItem('platform_token');
-        axios.post('http://localhost:8000/api/platform/logout', {}, {
-             headers: { Authorization: `Bearer ${token}` }
-        }).finally(() => {
+        platformClient.post('/platform/logout')
+        .finally(() => {
             localStorage.removeItem('platform_token');
             navigate('/platform/login');
         });
