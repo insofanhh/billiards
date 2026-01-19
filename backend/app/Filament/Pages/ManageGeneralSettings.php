@@ -32,9 +32,6 @@ class ManageGeneralSettings extends SettingsPage
 
     protected static ?string $title = 'Cài đặt chung';
 
-
-
-
     public function form(Schema $schema): Schema
     {
         return parent::form($schema)->components([
