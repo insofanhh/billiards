@@ -37,11 +37,16 @@ return new class extends Migration
 
         // Add new primary key including store_id and Restore FK
         Schema::table('model_has_roles', function (Blueprint $table) {
-            $table->primary(
+            // Cannot use primary key with nullable store_id in MySQL
+            // generic primary key cannot contain null
+            // We use unique index instead
+            $table->unique(
                 ['store_id', 'role_id', 'model_id', 'model_type'],
-                'model_has_roles_role_model_type_primary'
+                'model_has_roles_store_role_unique'
             );
             
+            // Re-add FK if it doesn't exist (safety check not strictly needed if we know flow, but good practice)
+            // But since we are in a migration retry scenario, it might have failed before adding this
             $table->foreign('role_id')
                 ->references('id')
                 ->on('roles')
@@ -76,9 +81,9 @@ return new class extends Migration
 
         // Add new primary key including store_id and Restore FK
         Schema::table('model_has_permissions', function (Blueprint $table) {
-            $table->primary(
+            $table->unique(
                 ['store_id', 'permission_id', 'model_id', 'model_type'],
-                'model_has_permissions_permission_model_type_primary'
+                'model_has_permissions_store_perm_unique'
             );
              
             $table->foreign('permission_id')
@@ -94,12 +99,13 @@ return new class extends Migration
         Schema::table('model_has_roles', function (Blueprint $table) {
              // Drop FK so we can mess with indexes/PK
              $table->dropForeign(['role_id']);
-             $table->dropPrimary('model_has_roles_role_model_type_primary');
+             // No primary key to drop, we drop unique index in next block
         });
 
         Schema::table('model_has_roles', function (Blueprint $table) {
             $table->dropIndex('model_has_roles_store_id_index');
             $table->dropIndex('model_has_roles_role_id_index'); // Drop the helper index
+            $table->dropUnique('model_has_roles_store_role_unique'); // Drop unique index
             $table->dropColumn('store_id');
             
             $table->primary(
@@ -117,7 +123,7 @@ return new class extends Migration
         // Restore model_has_permissions
         Schema::table('model_has_permissions', function (Blueprint $table) {
              $table->dropForeign(['permission_id']);
-             $table->dropPrimary('model_has_permissions_permission_model_type_primary');
+             $table->dropUnique('model_has_permissions_store_perm_unique'); // Drop unique index
         });
 
         Schema::table('model_has_permissions', function (Blueprint $table) {
