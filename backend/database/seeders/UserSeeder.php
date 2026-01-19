@@ -12,8 +12,16 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        // Ensure we have a currentStoreId for tenant-scoped users
+        $currentStoreId = app()->has('currentStoreId') ? app('currentStoreId') : null;
+        
+        if (!$currentStoreId) {
+            $this->command->warn('No currentStoreId found. Users will be created without store context.');
+            return;
+        }
+        
         $admin = User::firstOrCreate(
-            ['email' => 'admin@billiards.com'],
+            ['email' => 'admin@billiards.com', 'store_id' => $currentStoreId],
             [
                 'name' => 'Admin',
                 'phone' => '0123456789',
@@ -22,7 +30,7 @@ class UserSeeder extends Seeder
         );
 
         $staff = User::firstOrCreate(
-            ['email' => 'staff@billiards.com'],
+            ['email' => 'staff@billiards.com', 'store_id' => $currentStoreId],
             [
                 'name' => 'Staff',
                 'phone' => '0123456790',
@@ -31,7 +39,7 @@ class UserSeeder extends Seeder
         );
 
         $customer = User::firstOrCreate(
-            ['email' => 'customer@billiards.com'],
+            ['email' => 'customer@billiards.com', 'store_id' => $currentStoreId],
             [
                 'name' => 'Customer',
                 'phone' => '0123456791',
@@ -80,23 +88,45 @@ class UserSeeder extends Seeder
 
         if (!$admin->hasRole('super_admin')) {
             $admin->assignRole($superAdminRole);
-            $this->command->info('Assigned Super Admin role to admin.');
+            
+            // Update store_id in pivot table
+            \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->where('model_id', $admin->id)
+                ->where('model_type', get_class($admin))
+                ->where('role_id', $superAdminRole->id)
+                ->update(['store_id' => $currentStoreId]);
+                
+            $this->command->info('✓ Assigned Super Admin role to admin.');
         } else {
-            $this->command->info('Admin already has Super Admin role.');
+            $this->command->info('ℹ Admin already has Super Admin role.');
         }
 
         if (!$staff->hasRole('staff')) {
             $staff->assignRole($staffRole);
-            $this->command->info('Assigned Staff role to staff user.');
+            
+            \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->where('model_id', $staff->id)
+                ->where('model_type', get_class($staff))
+                ->where('role_id', $staffRole->id)
+                ->update(['store_id' => $currentStoreId]);
+                
+            $this->command->info('✓ Assigned Staff role to staff user.');
         } else {
-            $this->command->info('Staff already has Staff role.');
+            $this->command->info('ℹ Staff already has Staff role.');
         }
 
         if (!$customer->hasRole('customer')) {
             $customer->assignRole($customerRole);
-            $this->command->info('Assigned Customer role to customer user.');
+            
+            \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->where('model_id', $customer->id)
+                ->where('model_type', get_class($customer))
+                ->where('role_id', $customerRole->id)
+                ->update(['store_id' => $currentStoreId]);
+                
+            $this->command->info('✓ Assigned Customer role to customer user.');
         } else {
-            $this->command->info('Customer already has Customer role.');
+            $this->command->info('ℹ Customer already has Customer role.');
         }
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
