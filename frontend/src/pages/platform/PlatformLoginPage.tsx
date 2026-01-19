@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { platformClient } from '../../api/platformClient';
 
 export const PlatformLoginPage = () => {
     const [email, setEmail] = useState('');
@@ -12,7 +12,7 @@ export const PlatformLoginPage = () => {
         e.preventDefault();
         setError('');
         try {
-            const res = await axios.post('http://localhost:8000/api/platform/login', {
+            const res = await platformClient.post('/platform/login', {
                 email,
                 password
             });
