@@ -5,6 +5,11 @@ export interface User {
   phone?: string;
   roles?: string[];
   permissions?: string[];
+  store?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
 }
 
 export interface Table {

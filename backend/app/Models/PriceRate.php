@@ -6,10 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use App\Traits\BelongsToTenant;
 
 class PriceRate extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
+        'store_id',
         'table_type_id',
         'price_per_hour',
         'active',

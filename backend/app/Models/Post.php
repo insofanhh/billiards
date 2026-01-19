@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToTenant;
 
 class Post extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
+        'store_id',
         'category_id',
         'title',
         'slug',

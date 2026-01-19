@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { tablesApi } from '../api/tables';
 import { useAuthStore } from '../store/authStore';
@@ -12,6 +12,15 @@ export function HomePage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuthStore();
+    const { slug } = useParams(); /* Note: useParams needs to be imported if not already, checking existing imports */
+    
+    // Redirect to store-specific staff page if accessing generic /staff
+    useEffect(() => {
+        if (!slug && user?.store?.slug) {
+            navigate(`/s/${user.store.slug}/staff`, { replace: true });
+        }
+    }, [slug, user, navigate]);
+
     const queryClient = useQueryClient();
     const [tablesWithNotifications, setTablesWithNotifications] = useState<Set<number>>(new Set());
     const [hasInitialized, setHasInitialized] = useState(false);

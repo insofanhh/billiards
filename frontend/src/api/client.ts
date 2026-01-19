@@ -15,6 +15,13 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Inject Tenant Slug from URL (assuming path is /s/:slug/...)
+  const match = window.location.pathname.match(/^\/s\/([^/]+)/);
+  if (match && match[1]) {
+      config.headers['X-Store-Slug'] = match[1];
+  }
+  
   return config;
 });
 

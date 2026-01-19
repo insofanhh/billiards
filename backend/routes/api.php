@@ -16,6 +16,24 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'timestamp' => now()]);
 });
 
+Route::post('/platform/register-store', [\App\Http\Controllers\PlatformController::class, 'register']);
+
+Route::prefix('platform')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\PlatformAuthController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'platform.admin'])->group(function () {
+        Route::get('/me', [\App\Http\Controllers\Api\PlatformAuthController::class, 'me']);
+        Route::post('/logout', [\App\Http\Controllers\Api\PlatformAuthController::class, 'logout']);
+        
+        // Store Management
+        Route::get('/stores', [\App\Http\Controllers\Api\PlatformStoreController::class, 'index']);
+        Route::post('/stores', [\App\Http\Controllers\Api\PlatformStoreController::class, 'store']); // Create
+        Route::get('/stores/{id}', [\App\Http\Controllers\Api\PlatformStoreController::class, 'show']);
+        Route::put('/stores/{id}', [\App\Http\Controllers\Api\PlatformStoreController::class, 'update']);
+        Route::delete('/stores/{id}', [\App\Http\Controllers\Api\PlatformStoreController::class, 'destroy']); // Delete
+    });
+});
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 

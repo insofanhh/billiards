@@ -115,6 +115,10 @@ class AdminPanelProvider extends PanelProvider
             )
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->tenant(\App\Models\Store::class, slugAttribute: 'slug')
+            ->tenantMiddleware([
+                \App\Http\Middleware\SyncFilamentTenant::class,
+            ], isPersistent: true);
     }
 }

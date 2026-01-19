@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
 import { getClientOrderStatusLabel } from '../utils/clientActiveOrder';
@@ -29,6 +29,15 @@ export function ClientNavigation({
   isOverBanner = false,
 }: ClientNavigationProps) {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
+  
+  const getPath = (path: string) => {
+      if (!slug) return path;
+      if (path.startsWith('/client')) return path.replace('/client', `/s/${slug}`);
+      if (path.startsWith('/blog')) return path.replace('/blog', `/s/${slug}/blog`);
+      return path;
+  };
+
   const { theme, toggleTheme } = useTheme();
   const user = useAuthStore((state) => state.user);
   const activeOrder = useClientActiveOrder();
@@ -147,7 +156,7 @@ export function ClientNavigation({
 
   const handleHome = () => {
     if (activeOrder) {
-      navigate(`/client/order/${activeOrder.orderId}`);
+      navigate(getPath(`/client/order/${activeOrder.orderId}`));
     } else {
       onHomeClick?.();
     }
@@ -192,7 +201,7 @@ export function ClientNavigation({
       .map((role) => role?.toLowerCase?.() ?? '')
       .filter(Boolean);
     if (normalizedRoles.some((role) => role === 'staff' || role === 'admin' || role === 'super_admin')) {
-      return '/staff';
+      return slug ? `/s/${slug}/staff` : '/staff';
     }
     if (normalizedRoles.includes('customer')) {
       return '/';
@@ -274,7 +283,7 @@ export function ClientNavigation({
               )}
               <button
                 type="button"
-                onClick={() => navigate('/blog')}
+                onClick={() => navigate(getPath('/blog'))}
                 className={`rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${blogActive
                   ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
                   : `hover:bg-white/50 dark:hover:bg-white/5 ${isOverBanner && !isScrolled ? 'text-white/90 hover:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`
@@ -504,7 +513,7 @@ export function ClientNavigation({
             <button
               type="button"
               onClick={() => {
-                navigate('/blog');
+                navigate(getPath('/blog'));
                 setMobileMenuOpen(false);
               }}
               className={`flex w-full items-center justify-between rounded-2xl border border-gray-200 dark:border-white/5 bg-white dark:bg-white/5 px-4 py-3 text-left text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 dark:focus-visible:ring-white ${blogActive ? 'text-yellow-600 dark:text-yellow-300' : 'text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-white/10'

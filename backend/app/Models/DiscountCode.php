@@ -5,10 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use App\Traits\BelongsToTenant;
 
 class DiscountCode extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
+        'store_id',
         'code',
         'description',
         'discount_type',

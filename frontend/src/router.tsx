@@ -14,6 +14,12 @@ import { VoucherWalletPage } from './pages/VoucherWalletPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { BlogListPage } from './pages/client/blog/BlogListPage';
 import { BlogPostPage } from './pages/client/blog/BlogPostPage';
+import { PlatformLayout } from './layouts/PlatformLayout';
+import { PlatformLoginPage } from './pages/platform/PlatformLoginPage';
+import { PlatformDashboard } from './pages/platform/PlatformDashboard';
+import { PlatformStoreList } from './pages/platform/PlatformStoreList';
+import { PlatformStoreDetail } from './pages/platform/PlatformStoreDetail';
+import { PlatformStoreCreate } from './pages/platform/PlatformStoreCreate';
 
 export const router = createBrowserRouter([
   {
@@ -57,21 +63,91 @@ export const router = createBrowserRouter([
     path: '/client/order/:id',
     element: <ClientOrderPage />,
   },
+  // {
+  //   path: '/client/history',
+  //   element: <ClientHistoryPage />,
+  // },
+  // {
+  //   path: '/client/vouchers',
+  //   element: <VoucherWalletPage />,
+  // },
+  // {
+  //   path: '/blog',
+  //   element: <BlogListPage />,
+  // },
+  // {
+  //   path: '/blog/:id',
+  //   element: <BlogPostPage />,
+  // },
+  
+  // Multi-tenant routes
   {
-    path: '/client/history',
+    path: '/s/:slug',
+    element: <ClientHomePage />,
+  },
+  {
+    path: '/s/:slug/table/:code',
+    element: <ClientTablePage />,
+  },
+  {
+    path: '/s/:slug/order/:id',
+    element: <ClientOrderPage />,
+  },
+  {
+    path: '/s/:slug/history',
     element: <ClientHistoryPage />,
   },
   {
-    path: '/client/vouchers',
+    path: '/s/:slug/vouchers',
     element: <VoucherWalletPage />,
   },
   {
-    path: '/blog',
+    path: '/s/:slug/blog',
     element: <BlogListPage />,
   },
   {
-    path: '/blog/:id',
+    path: '/s/:slug/blog/:id',
     element: <BlogPostPage />,
+  },
+  {
+    path: '/s/:slug/staff',
+    element: <ProtectedRoute><HomePage /></ProtectedRoute>,
+  },
+  {
+    path: '/s/:slug/orders',
+    element: <ProtectedRoute><OrdersHistoryPage /></ProtectedRoute>,
+  },
+
+  // Platform Admin Routes
+  {
+    path: '/platform/login',
+    element: <PlatformLoginPage />,
+  },
+  {
+    path: '/platform',
+    element: <PlatformLayout />,
+    children: [
+        {
+            path: 'dashboard',
+            element: <PlatformDashboard />,
+        },
+        {
+            path: 'stores',
+            element: <PlatformStoreList />,
+        },
+        {
+            path: 'stores/create',
+            element: <PlatformStoreCreate />,
+        },
+        {
+            path: 'stores/:id',
+            element: <PlatformStoreDetail />,
+        },
+        {
+            index: true,
+            element: <PlatformDashboard />,
+        }
+    ]
   },
   {
     path: '*',

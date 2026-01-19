@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             TableBilliardSeeder::class,
             ServiceSeeder::class,
             UserSeeder::class,
+            PlatformAdminSeeder::class,
         ]);
     }
 }

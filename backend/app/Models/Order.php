@@ -5,10 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToTenant;
 
 class Order extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
+        'store_id',
         'order_code',
         'user_id',
         'table_id',
