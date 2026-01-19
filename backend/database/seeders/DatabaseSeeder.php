@@ -49,7 +49,7 @@ class DatabaseSeeder extends Seeder
         }
         
         $this->command->info("\n=== Seeding completed ===");
-        $this->command->info("Platform Admin: admin@platform.com / password");
-        $this->command->info("Store Admin: admin@billiards.com / password (Store: demo)");
+        $this->command->info("Platform Admin created!");
+        $this->command->info("Store Admin created! (Store: demo)");
     }
 }
