@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToTenant;
 
 class Category extends Model
 {
-    protected $fillable = ['name', 'slug', 'description'];
+    use BelongsToTenant;
+
+    protected $fillable = ['store_id', 'name', 'slug', 'description'];
 
     public function posts()
     {

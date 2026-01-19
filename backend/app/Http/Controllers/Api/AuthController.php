@@ -39,6 +39,11 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
+                'store' => $user->store ? [
+                    'id' => $user->store->id,
+                    'name' => $user->store->name,
+                    'slug' => $user->store->slug,
+                ] : null,
             ],
             'token' => $token,
         ]);

@@ -1,9 +1,10 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { ClientNavigation } from '../components/ClientNavigation';
+import { TenantRegistrationForm } from '../components/TenantRegistrationForm';
 import { getTemporaryUserName, isGuestUser } from '../utils/temporaryUser';
 import { discountCodesApi } from '../api/discountCodes';
 import type { BannerSettings } from '../api/settings';
@@ -131,7 +132,7 @@ function extractYoutubeId(url: string | null): string | null {
   return (match && match[2]?.length === 11) ? match[2] : null;
 }
 
-export function ClientHomePage() {
+export function TenantHomePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
@@ -646,6 +647,74 @@ export function ClientHomePage() {
       <PWAInstallPrompt />
     </div>
   );
+}
+
+function PlatformHomePage() {
+  return (
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542385106-93d395a4c9c1?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
+       <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-900/80 to-gray-900"></div>
+
+       <div className="relative z-10 grid lg:grid-cols-2 gap-12 w-full max-w-6xl items-center my-10">
+          <div className="space-y-6 animate-fade-in-up">
+             <div className="inline-block rounded-full bg-[#13ec6d]/10 px-4 py-2 text-sm font-semibold text-[#13ec6d] border border-[#13ec6d]/20">
+                Giải pháp quản lý Bida số 1
+             </div>
+             <h1 className="text-5xl font-bold leading-tight">
+                Quản lý CLB Bida <br/> <span className="text-[#13ec6d] bg-clip-text text-transparent bg-gradient-to-r from-[#13ec6d] to-emerald-400">Chuyên nghiệp & Hiện đại</span>
+             </h1>
+             <p className="text-xl text-gray-300 max-w-lg leading-relaxed">
+                Nền tảng SaaS giúp bạn vận hành quán bida hiệu quả. Quét QR, gọi món, quản lý bàn và doanh thu tất cả trong một.
+             </p>
+             <ul className="space-y-4 pt-4">
+               {[
+                 'Tính tiền giờ tự động theo khung giờ', 
+                 'Khách gọi món qua QR Code tại bàn', 
+                 'Quản lý kho & Doanh thu chi tiết', 
+                 'Hỗ trợ đa nền tảng PWA (iOS/Android)'
+               ].map(item => (
+                 <li key={item} className="flex items-center gap-3 text-gray-200">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#13ec6d]/20 text-[#13ec6d]">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    {item}
+                 </li>
+               ))}
+             </ul>
+             
+             <div className="pt-4 flex gap-4">
+                <button 
+                  onClick={() => document.getElementById('register-form')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="rounded-xl bg-[#13ec6d] px-6 py-3 font-bold text-zinc-900 transition hover:bg-[#10d863] shadow-lg shadow-green-500/20"
+                >
+                  Đăng ký dùng thử
+                </button>
+                <button className="rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-bold text-white transition hover:bg-white/10 backdrop-blur-sm">
+                  Tìm hiểu thêm
+                </button>
+             </div>
+          </div>
+
+          <div id="register-form" className="flex justify-center animate-fade-in-up delay-100">
+             <TenantRegistrationForm />
+          </div>
+       </div>
+
+       <div className="absolute bottom-4 text-center text-xs text-gray-500 w-full z-10">
+          &copy; {new Date().getFullYear()} Billiards SaaS Platform. All rights reserved.
+       </div>
+    </div>
+  );
+}
+
+export function ClientHomePage() {
+  const { slug } = useParams<{ slug?: string }>();
+  
+  if (!slug) {
+    return <PlatformHomePage />;
+  }
+
+  return <TenantHomePage />;
 }
 
 

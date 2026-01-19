@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\PrioritizeSanctumToken::class,
             \App\Http\Middleware\DebugAuth::class,
+            \App\Http\Middleware\IdentifyTenant::class,
+        ]);
+
+        $middleware->alias([
+            'platform.admin' => \App\Http\Middleware\CheckPlatformAdmin::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

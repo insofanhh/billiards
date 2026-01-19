@@ -51,8 +51,16 @@ class RoleResource extends Resource
                                 TextInput::make('name')
                                     ->label(__('filament-shield::filament-shield.field.name'))
                                     ->unique(
-                                        ignoreRecord: true, /** @phpstan-ignore-next-line */
-                                        modifyRuleUsing: fn (Unique $rule): Unique => Utils::isTenancyEnabled() ? $rule->where(Utils::getTenantModelForeignKey(), Filament::getTenant()?->id) : $rule
+                                        table: 'roles',
+                                        column: 'name',
+                                        ignoreRecord: true,
+                                        modifyRuleUsing: function (Unique $rule) {
+                                            $tenant = Filament::getTenant();
+                                            if ($tenant) {
+                                                return $rule->where('store_id', $tenant->id);
+                                            }
+                                            return $rule;
+                                        }
                                     )
                                     ->required()
                                     ->maxLength(255),

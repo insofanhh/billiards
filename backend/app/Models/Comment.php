@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToTenant;
 
 class Comment extends Model
 {
-    protected $fillable = ['post_id', 'user_id', 'content'];
+    use BelongsToTenant;
+
+    protected $fillable = ['store_id', 'post_id', 'user_id', 'content'];
 
     public function post()
     {

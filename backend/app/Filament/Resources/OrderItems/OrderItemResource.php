@@ -25,6 +25,7 @@ class OrderItemResource extends Resource
     protected static ?string $navigationLabel = 'Chi tiết dịch vụ';
     protected static ?string $modelLabel = 'Chi tiết dịch vụ';
     protected static ?string $pluralModelLabel = 'Chi tiết dịch vụ';
+    protected static ?string $tenantOwnershipRelationshipName = 'order';
     protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema

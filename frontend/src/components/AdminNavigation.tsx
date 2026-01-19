@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 type AdminNavigationProps = {
   userName?: string;
@@ -8,9 +8,15 @@ type AdminNavigationProps = {
 
 export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
   const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const getPath = (path: string) => {
+      if (!slug) return path;
+      return `/s/${slug}${path}`;
+  };
 
   useEffect(() => {
     return () => {
@@ -71,7 +77,7 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
   };
 
   const handleNavigate = (path: string) => {
-    navigate(path);
+    navigate(getPath(path));
     setMobileMenuOpen(false);
   };
 

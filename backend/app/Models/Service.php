@@ -7,10 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
+use App\Traits\BelongsToTenant;
 
 class Service extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
+        'store_id',
         'name',
         'description',
         'image',

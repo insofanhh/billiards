@@ -38,38 +38,13 @@ class ManageGeneralSettings extends SettingsPage
     public function form(Schema $schema): Schema
     {
         return parent::form($schema)->components([
-            Section::make('Cấu hình Email (SMTP)')
-                ->description('Cấu hình gửi mail hệ thống.')
-                ->schema([
-                    TextInput::make('mail_host')
-                        ->label('Mail Host')
-                        ->placeholder('smtp.gmail.com')
-                        ->required(),
-                    TextInput::make('mail_port')
-                        ->label('Mail Port')
-                        ->placeholder('587')
-                        ->required(),
-                    TextInput::make('mail_username')
-                        ->label('Username')
-                        ->required(),
-                    TextInput::make('mail_password')
-                        ->label('Password')
-                        ->password()
-                        ->revealable()
-                        ->required(),
-                    TextInput::make('mail_from_address')
-                        ->label('From Address')
-                        ->email()
-                        ->required(),
-                    TextInput::make('mail_from_name')
-                        ->label('From Name')
-                        ->required(),
-                ])->columns(2),
+
             Section::make('Banner & Giao diện')
                 ->schema([
                     FileUpload::make('image_banner')
                         ->label('Ảnh bìa (Banners)')
-                        ->image()
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/jpg'])
+                        ->disk('public')
                         ->multiple()
                         ->imageEditor()
                         ->reorderable()
@@ -114,7 +89,6 @@ class ManageGeneralSettings extends SettingsPage
                     TextInput::make('daily_report_email')
                         ->label('Email nhận báo cáo ngày')
                         ->email()
-                        ->placeholder('example@email.com')
                         ->helperText('Báo cáo doanh thu hàng ngày sẽ được gửi đến email này.'),
                  ])
                  ->columns(1),
