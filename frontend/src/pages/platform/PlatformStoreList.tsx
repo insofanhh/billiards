@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { platformClient } from '../../api/platformClient';
 
 export const PlatformStoreList = () => {
     const [stores, setStores] = useState<any[]>([]);
@@ -9,10 +9,7 @@ export const PlatformStoreList = () => {
     useEffect(() => {
         const fetchStores = async () => {
             try {
-                const token = localStorage.getItem('platform_token');
-                const res = await axios.get('http://localhost:8000/api/platform/stores', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await platformClient.get('/platform/stores');
                 setStores(res.data.data);
             } catch (error) {
                 console.error("Failed to fetch stores", error);
@@ -27,10 +24,7 @@ export const PlatformStoreList = () => {
     const handleDelete = async (id: number) => {
         if (!confirm('Are you sure you want to delete this store? include data')) return;
         try {
-            const token = localStorage.getItem('platform_token');
-            await axios.delete(`http://localhost:8000/api/platform/stores/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await platformClient.delete(`/platform/stores/${id}`);
             setStores(stores.filter(s => s.id !== id));
             alert('Store deleted successfully');
         } catch (error) {
