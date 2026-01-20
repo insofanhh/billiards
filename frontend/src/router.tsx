@@ -114,6 +114,14 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute><HomePage /></ProtectedRoute>,
   },
   {
+    path: '/s/:slug/staff/table/:code',
+    element: <ProtectedRoute><TableDetailPage /></ProtectedRoute>,
+  },
+  {
+    path: '/s/:slug/staff/order/:id',
+    element: <ProtectedRoute><OrderPage /></ProtectedRoute>,
+  },
+  {
     path: '/s/:slug/orders',
     element: <ProtectedRoute><OrdersHistoryPage /></ProtectedRoute>,
   },

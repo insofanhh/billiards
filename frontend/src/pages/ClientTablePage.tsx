@@ -77,7 +77,7 @@ const getCurrentPriceRate = (rates: Table['table_type']['price_rates'] | undefin
 };
 
 export function ClientTablePage() {
-  const { code } = useParams<{ code: string }>();
+  const { code, slug } = useParams<{ code: string; slug: string }>();
   const navigate = useNavigate();
   const [name, setName] = useState(localStorage.getItem('guest_name') || '');
   const [guestName, setGuestName] = useState(getTemporaryUserName);
@@ -96,15 +96,15 @@ export function ClientTablePage() {
   const { showNotification } = useNotification();
 
   const { data: table, isLoading, refetch } = useQuery({
-    queryKey: ['client-table', code],
-    queryFn: () => tablesApi.getByCode(code!),
+    queryKey: ['client-table', code, slug],
+    queryFn: () => tablesApi.getByCode(code!, slug),
     enabled: !!code,
   });
 
   const requestOpenMutation = useMutation({
     mutationFn: async () => {
       const isAuthenticated = !!localStorage.getItem('auth_token');
-      return tablesApi.requestOpen(code!, isAuthenticated ? '' : name.trim());
+      return tablesApi.requestOpen(code!, isAuthenticated ? '' : name.trim(), slug);
     },
     onSuccess: (res) => {
       if (res.token) {
@@ -125,7 +125,7 @@ export function ClientTablePage() {
 
       if (res.order?.id) {
         refetch();
-        navigate(`/client/order/${res.order.id}`);
+        navigate(slug ? `/s/${slug}/order/${res.order.id}` : `/client/order/${res.order.id}`);
       }
     },
     onError: (error: any) => {
@@ -215,7 +215,7 @@ export function ClientTablePage() {
               <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                 Bạn đã có tài khoản?{' '}
                 <Link
-                  to={`/login?redirect=${encodeURIComponent(`/client/table/${code}`)}`}
+                  to={`/login?redirect=${encodeURIComponent(slug ? `/s/${slug}/table/${code}` : `/client/table/${code}`)}`}
                   className="text-blue-600 dark:text-[#13ec6d] hover:text-blue-500 dark:hover:text-[#10d863] font-medium"
                 >
                   Đăng nhập

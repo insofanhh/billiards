@@ -36,7 +36,7 @@ export function TenantRegistrationForm() {
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-gray-100 dark:border-white/10 bg-white/80 dark:bg-white/5 p-8 shadow-xl backdrop-blur-md">
-      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Đăng ký mở quán mới</h3>
+      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Đăng ký mở cửa hàng</h3>
       
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 dark:bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">

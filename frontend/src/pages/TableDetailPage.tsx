@@ -6,6 +6,7 @@ import { tablesApi } from '../api/tables';
 import { ordersApi } from '../api/orders';
 import { useAuthStore } from '../store/authStore';
 import { AdminNavigation } from '../components/AdminNavigation';
+import { useNotification } from '../contexts/NotificationContext';
 import type { Table } from '../types';
 
 const getCurrentPriceRate = (rates: Table['table_type']['price_rates'] | undefined) => {
@@ -77,22 +78,29 @@ const getCurrentPriceRate = (rates: Table['table_type']['price_rates'] | undefin
 };
 
 export function TableDetailPage() {
-  const { code } = useParams<{ code: string }>();
+  const { code, slug } = useParams<{ code: string; slug: string }>();
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const queryClient = useQueryClient();
   const { user, logout } = useAuthStore();
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const { data: table, isLoading } = useQuery({
-    queryKey: ['table', code],
-    queryFn: () => tablesApi.getByCode(code!),
+    queryKey: ['table', code, slug],
+    queryFn: () => tablesApi.getByCode(code!, slug),
     enabled: !!code,
   });
 
   const createOrderMutation = useMutation({
-    mutationFn: ordersApi.create,
+    mutationFn: (data: { table_code: string }) => ordersApi.create(data, slug),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
-      navigate(`/order/${order.id}`);
+      navigate(slug ? `/s/${slug}/staff/order/${order.id}` : `/order/${order.id}`);
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Có lỗi xảy ra khi mở bàn';
+      const debug = error.response?.data?.debug;
+      console.error('Create order error:', error);
+      showNotification(message + (debug ? ` (${JSON.stringify(debug)})` : ''));
     },
   });
 
@@ -101,7 +109,7 @@ export function TableDetailPage() {
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: ['table', code] });
-      navigate(`/order/${order.id}`);
+      navigate(slug ? `/s/${slug}/staff/order/${order.id}` : `/order/${order.id}`);
     },
   });
 
@@ -118,7 +126,7 @@ export function TableDetailPage() {
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: ['table', code] });
-      navigate(`/order/${order.id}`);
+      navigate(slug ? `/s/${slug}/staff/order/${order.id}` : `/order/${order.id}`);
     },
   });
 
@@ -159,7 +167,7 @@ export function TableDetailPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy bàn</h2>
           <button
-            onClick={() => navigate('/staff')}
+            onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
             className="text-blue-600 hover:text-blue-800"
           >
             Quay lại trang chủ
@@ -178,7 +186,7 @@ export function TableDetailPage() {
 
   const handleViewOrder = () => {
     if (table.active_order?.id) {
-      navigate(`/order/${table.active_order.id}`);
+      navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}` : `/order/${table.active_order.id}`);
     }
   };
 
@@ -187,7 +195,7 @@ export function TableDetailPage() {
       <AdminNavigation userName={user?.name} onLogout={logout} />
       <div className="max-w-7xl mx-auto py-8 px-4 lg:px-8">
         <button
-          onClick={() => navigate('/staff')}
+          onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
           className="mb-8 text-gray-500 hover:text-gray-700 flex items-center"
         >
           <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

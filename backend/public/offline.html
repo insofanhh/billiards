@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline - Billiards CMS</title>
+    <title>Offline - Billiards Client</title>
     <style>
         * {
             margin: 0;
@@ -14,7 +14,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -26,11 +26,12 @@
         .container {
             text-align: center;
             max-width: 500px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .icon {
@@ -48,7 +49,7 @@
             }
 
             50% {
-                opacity: 0.7;
+                opacity: 0.6;
                 transform: scale(0.95);
             }
         }
@@ -57,31 +58,37 @@
             font-size: 32px;
             margin-bottom: 16px;
             font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, #999999 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         p {
             font-size: 16px;
             line-height: 1.6;
             margin-bottom: 30px;
-            opacity: 0.9;
+            opacity: 0.8;
+            color: #ccc;
         }
 
         .retry-btn {
-            background: #fff;
-            color: #f59e0b;
-            border: none;
+            background: linear-gradient(135deg, #333 0%, #000 100%);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 14px 32px;
             font-size: 16px;
             font-weight: 600;
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
         .retry-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(135deg, #444 0%, #111 100%);
         }
 
         .retry-btn:active {
@@ -91,7 +98,7 @@
         .status {
             margin-top: 20px;
             font-size: 14px;
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
         .online {
@@ -101,14 +108,46 @@
         .offline {
             color: #ef4444;
         }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="icon">📡</div>
+        <div class="logo">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="40" cy="40" r="38" fill="url(#gradient)" stroke="#fff" stroke-width="2" />
+                <circle cx="40" cy="40" r="25" fill="#fff" />
+                <text x="40" y="50" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#000"
+                    text-anchor="middle">8</text>
+                <defs>
+                    <linearGradient id="gradient" x1="0" y1="0" x2="80" y2="80">
+                        <stop offset="0%" stop-color="#666" />
+                        <stop offset="100%" stop-color="#000" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
         <h1>Không có kết nối</h1>
-        <p>Bạn đang offline. Vui lòng kiểm tra kết nối mạng và thử lại.</p>
+        <p>Bạn đang offline. Vui lòng kiểm tra kết nối mạng của bạn và thử lại.</p>
         <button class="retry-btn" onclick="retryConnection()">Thử lại</button>
         <div class="status" id="status">
             Đang kiểm tra kết nối...

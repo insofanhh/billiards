@@ -1,0 +1,9 @@
+--- Debugging Permission Verification ---
+Testing User: chung@gmail.com (Store: 4)
+Context set to Store ID: 4
+User->hasPermissionTo('ViewAny:TableStatus'): YES
+User->can('ViewAny:TableStatus'): YES
+Gate::allows('ViewAny:TableStatus'): YES
+User->can('viewAny', TableStatus::class): YES
+Total Permissions for user: 125
+Does collection contain 'ViewAny:TableStatus'? YES
