@@ -113,6 +113,7 @@ class OrderController extends Controller
             'order_code' => 'ORD-' . Str::upper(Str::random(8)),
             'user_id' => $request->user()->id,
             'table_id' => $table->id,
+            'store_id' => $table->store_id,
             'price_rate_id' => $priceRate->id,
             'start_at' => $startTime,
             'status' => 'active',
@@ -371,6 +372,7 @@ class OrderController extends Controller
             if (!$existingPending) {
                 $transaction = Transaction::create([
                     'order_id' => $order->id,
+                    'store_id' => $order->store_id,
                     'user_id' => $request->user()->id,
                     'customer_name' => $customerName,
                     'amount' => $order->total_paid,
@@ -739,6 +741,7 @@ class OrderController extends Controller
 
             $transaction = Transaction::create([
                 'order_id' => $order->id,
+                'store_id' => $order->store_id,
                 'user_id' => $request->user()->id,
                 'customer_name' => $customerName,
                 'amount' => $amount,

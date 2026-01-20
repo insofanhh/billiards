@@ -140,6 +140,7 @@ class TableController extends Controller
             'order_code' => 'ORD-' . Str::upper(Str::random(8)),
             'user_id' => $user->id,
             'table_id' => $table->id,
+            'store_id' => $table->store_id,
             'price_rate_id' => $priceRate?->id,
             'status' => 'pending',
         ]);
