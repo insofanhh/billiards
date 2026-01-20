@@ -12,6 +12,8 @@ use App\Models\ServiceInventory;
 use App\Models\TableBilliard;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\TableStatus;
+use App\Scopes\TenantScope;
 use App\Events\OrderApproved;
 use App\Events\OrderRejected;
 use App\Events\OrderEndRequested;
@@ -119,7 +121,10 @@ class OrderController extends Controller
             'status' => 'active',
         ]);
 
-        $table->update(['status_id' => 2]);
+        $statusInUse = $this->getTableStatusId($table->store_id, 'Đang sử dụng');
+        if ($statusInUse) {
+            $table->update(['status_id' => $statusInUse]);
+        }
 
         return new OrderResource($order->load(['table', 'priceRate']));
     }
@@ -485,6 +490,14 @@ class OrderController extends Controller
         return $totalCost;
     }
 
+    private function getTableStatusId($storeId, $name)
+    {
+        return TableStatus::withoutGlobalScope(TenantScope::class)
+            ->where('store_id', $storeId)
+            ->where('name', $name)
+            ->value('id');
+    }
+
     public function applyDiscount(Request $request, $id)
     {
         $request->validate([
@@ -606,7 +619,10 @@ class OrderController extends Controller
         ]);
 
         if ($order->table) {
-            $order->table->update(['status_id' => 2]);
+            $statusInUse = $this->getTableStatusId($order->table->store_id, 'Đang sử dụng');
+            if ($statusInUse) {
+                $order->table->update(['status_id' => $statusInUse]);
+            }
         }
 
         $order->load(['table', 'priceRate', 'user']);
@@ -732,7 +748,10 @@ class OrderController extends Controller
                         'status' => 'completed',
                     ]);
                     if ($order->table) {
-                        $order->table->update(['status_id' => 1]);
+                        $statusEmpty = $this->getTableStatusId($order->table->store_id, 'Trống');
+                        if ($statusEmpty) {
+                            $order->table->update(['status_id' => $statusEmpty]);
+                        }
                     }
                 }
 
@@ -756,7 +775,10 @@ class OrderController extends Controller
                     'status' => 'completed',
                 ]);
                 if ($order->table) {
-                    $order->table->update(['status_id' => 1]);
+                    $statusEmpty = $this->getTableStatusId($order->table->store_id, 'Trống');
+                    if ($statusEmpty) {
+                        $order->table->update(['status_id' => $statusEmpty]);
+                    }
                 }
             }
 
