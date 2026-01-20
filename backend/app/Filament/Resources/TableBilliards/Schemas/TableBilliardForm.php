@@ -17,21 +17,25 @@ class TableBilliardForm
                     ->label('Mã bàn')
                     ->required()
                     ->maxLength(50)
-                    ->unique(ignoreRecord: true)
+                    ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule) {
+                        return $rule->where('store_id', \Filament\Facades\Filament::getTenant()->id);
+                    })
                     ->helperText('Mã bàn duy nhất (ví dụ: T01, T02). Liên kết QR sẽ tự tạo sau khi lưu.')
                     ->live()
                     ->afterStateHydrated(function ($state, $set, ?\App\Models\TableBilliard $record) {
                         $code = $state ?: ($record?->code ?? null);
                         if ($code) {
                             $base = rtrim(config('app.url'), '/');
-                            $set('qr_code', $base . '/client/table/' . $code);
+                            $slug = \Filament\Facades\Filament::getTenant()?->slug;
+                            $set('qr_code', $base . '/s/' . $slug . '/table/' . $code);
                         }
                     })
                     ->afterStateUpdated(function ($state, $set, ?\App\Models\TableBilliard $record) {
                         $code = $state ?: ($record?->code ?? null);
                         if ($code) {
                             $base = rtrim(config('app.url'), '/');
-                            $set('qr_code', $base . '/client/table/' . $code);
+                            $slug = \Filament\Facades\Filament::getTenant()?->slug;
+                            $set('qr_code', $base . '/s/' . $slug . '/table/' . $code);
                         }
                     }),
                 TextInput::make('name')

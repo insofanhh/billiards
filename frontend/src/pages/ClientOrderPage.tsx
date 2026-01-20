@@ -14,7 +14,7 @@ import { PaymentQRCode } from '../components/PaymentQRCode';
 
 
 export function ClientOrderPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
@@ -28,8 +28,8 @@ export function ClientOrderPage() {
   const [guestName] = useState(getTemporaryUserName);
 
   const { data: order, isLoading } = useQuery({
-    queryKey: ['client-order', id],
-    queryFn: () => ordersApi.getById(Number(id)),
+    queryKey: ['client-order', id, slug],
+    queryFn: () => ordersApi.getById(Number(id), slug),
     enabled: !!id,
   });
 
@@ -49,8 +49,8 @@ export function ClientOrderPage() {
   }, [order]);
 
   const { data: services } = useQuery({
-    queryKey: ['services'],
-    queryFn: servicesApi.getAll,
+    queryKey: ['services', slug],
+    queryFn: servicesApi.getAll, // Note: servicesApi.getAll might need update too if it depends on tenant
   });
 
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
@@ -340,9 +340,9 @@ export function ClientOrderPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => navigate('/client')}
-        onHistoryClick={() => navigate('/client/history')}
-        onVouchersClick={() => navigate('/client/vouchers')}
+        onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+        onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+        onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
       />
       <div className="max-w-4xl mx-auto py-12 px-4">
         {!hasSuccessfulTransaction ? (

@@ -8,12 +8,74 @@ import { ordersApi } from '../api/orders';
 import { echo } from '../echo';
 import { AdminNavigation } from '../components/AdminNavigation';
 
+const getCurrentPriceRate = (rates: any[] | undefined) => {
+    if (!rates || rates.length === 0) return undefined;
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 (Sun) - 6 (Sat)
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}:00`;
+
+    // Filter active rates
+    const activeRates = rates.filter(rate => rate.active);
+
+    // Filter by validity
+    const validRates = activeRates.filter(rate => {
+        const hasDayConstraint = rate.day_of_week && rate.day_of_week.length > 0;
+        const hasTimeConstraint = !!(rate.start_time && rate.end_time);
+
+        if (!hasTimeConstraint) {
+            if (hasDayConstraint) {
+                return rate.day_of_week!.includes(currentDay.toString());
+            }
+            return true;
+        }
+
+        const start = rate.start_time!;
+        const end = rate.end_time!;
+
+        if (start <= end) {
+            if (hasDayConstraint && !rate.day_of_week!.includes(currentDay.toString())) return false;
+            return currentTimeStr >= start && currentTimeStr <= end;
+        } else {
+            const matchesStart = currentTimeStr >= start;
+            const matchesEnd = currentTimeStr <= end;
+
+            if (matchesStart) {
+                if (hasDayConstraint && !rate.day_of_week!.includes(currentDay.toString())) return false;
+                return true;
+            }
+            if (matchesEnd) {
+                if (hasDayConstraint) {
+                    const prevDay = (currentDay + 6) % 7;
+                    if (!rate.day_of_week!.includes(prevDay.toString())) return false;
+                }
+                return true;
+            }
+            return false;
+        }
+    });
+
+    validRates.sort((a, b) => {
+        const priorityA = a.priority || 0;
+        const priorityB = b.priority || 0;
+        if (priorityB !== priorityA) return priorityB - priorityA;
+        
+        const idA = a.id || 0;
+        const idB = b.id || 0;
+        return idA - idB;
+    });
+
+    return validRates[0];
+};
+
 export function HomePage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuthStore();
-    const { slug } = useParams(); /* Note: useParams needs to be imported if not already, checking existing imports */
-    
+    const { slug } = useParams();
+
     // Redirect to store-specific staff page if accessing generic /staff
     useEffect(() => {
         if (!slug && user?.store?.slug) {
@@ -26,10 +88,24 @@ export function HomePage() {
     const [hasInitialized, setHasInitialized] = useState(false);
     const [paymentSuccessNotifications, setPaymentSuccessNotifications] = useState<Map<number, boolean>>(new Map());
 
-    const { data: tables, isLoading } = useQuery({
-        queryKey: ['tables'],
-        queryFn: tablesApi.getAll,
+    const { data: tables = [], isLoading } = useQuery({
+        queryKey: ['tables', slug],
+        queryFn: () => tablesApi.getAll(slug),
     });
+
+    // ... (rest of mutations same as before, skipping purely for brevity in this tool call, but I need to be careful not to delete them. 
+    // Wait, replacing lines 11-32 covers the helper and start of function.
+    // I need to use `multi_replace` or be precise.
+    // The previous tool replaced lines 29-32.
+    // I will insert `getCurrentPriceRate` BEFORE `export function HomePage`.
+    // And update `handleTableClick` inside.
+    // And update the Card JSX.
+    
+    // Let's stick to updating `handleTableClick` and Card JSX first, and insert helper separately?
+    // Or replace `export function HomePage` line to include helper before it?
+    
+    // I will use `replace_file_content` to insert helper before line 11.
+
 
     const approveMutation = useMutation({
         mutationFn: (orderId: number) => ordersApi.approve(orderId),
@@ -202,7 +278,11 @@ export function HomePage() {
 
     // --- CÁC HÀM XỬ LÝ CLICK ---
     const handleTableClick = (code: string) => {
-        navigate(`/table/${code}`);
+        if (slug) {
+            navigate(`/s/${slug}/staff/table/${code}`);
+        } else {
+            navigate(`/table/${code}`);
+        }
     };
 
     const getStatusColor = (statusName: string) => {
@@ -236,6 +316,7 @@ export function HomePage() {
                                 const showNotification = hasNotification && !isViewingOrderDetail && table.active_order;
                                 const isPendingPayment = table.active_order?.status === 'completed';
                                 const showPaymentSuccess = paymentSuccessNotifications.get(table.id);
+                                const activePriceRate = table.table_type.current_price_rate || getCurrentPriceRate(table.table_type.price_rates);
 
                                 return (
                                     <div
@@ -254,6 +335,11 @@ export function HomePage() {
                                         <p className="text-sm text-gray-500">Số ghế: {table.seats}</p>
                                         {table.location && (
                                             <p className="text-sm text-gray-500">Vị trí: {table.location}</p>
+                                        )}
+                                        {activePriceRate && (
+                                            <p className="text-sm text-gray-500">
+                                                Giá: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activePriceRate.price_per_hour)}/h
+                                            </p>
                                         )}
                                         {showNotification && (
                                             <div className="absolute bottom-2 right-2">

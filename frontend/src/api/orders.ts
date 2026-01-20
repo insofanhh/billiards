@@ -21,13 +21,15 @@ export const ordersApi = {
     return response.data.data || response.data;
   },
 
-  getById: async (id: number): Promise<Order> => {
-    const response = await apiClient.get(`/orders/${id}`);
+  getById: async (id: number, storeSlug?: string): Promise<Order> => {
+    const url = storeSlug ? `/orders/${id}?store_slug=${storeSlug}` : `/orders/${id}`;
+    const response = await apiClient.get(url);
     return response.data.data || response.data;
   },
 
-  create: async (data: CreateOrderRequest): Promise<Order> => {
-    const response = await apiClient.post('/orders', data);
+  create: async (data: CreateOrderRequest, storeSlug?: string): Promise<Order> => {
+    const url = storeSlug ? `/orders?store_slug=${storeSlug}` : '/orders';
+    const response = await apiClient.post(url, data);
     return response.data.data || response.data;
   },
 

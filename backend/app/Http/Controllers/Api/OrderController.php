@@ -62,14 +62,51 @@ class OrderController extends Controller
 
         $table = TableBilliard::where('code', $request->table_code)->firstOrFail();
         
-        if ($table->status_id !== 1) {
-            return response()->json(['message' => 'Bàn đã được sử dụng'], 400);
+        // Check for blocking orders (Active or Pending End)
+        $blockingOrder = Order::where('table_id', $table->id)
+            ->whereIn('status', ['active', 'pending_end'])
+            ->first();
+
+        if ($blockingOrder) {
+            return response()->json([
+                'message' => 'Bàn đang được sử dụng', 
+                'debug' => ['blocking_order_id' => $blockingOrder->id, 'status' => $blockingOrder->status]
+            ], 400);
         }
 
-        $startTime = Carbon::now();
+        // Check for pending orders (Requests)
+        $pendingOrder = Order::where('table_id', $table->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($pendingOrder) {
+            // Allow staff to override pending requests (Force Open)
+            if ($this->isStaff($request)) {
+                $pendingOrder->update(['status' => 'cancelled']);
+            } else {
+                return response()->json([
+                    'message' => 'Bàn đang có yêu cầu mở chờ xử lý',
+                    'debug' => ['pending_order_id' => $pendingOrder->id]
+                ], 400);
+            }
+        }
+        
+        // If we are here, we can open the table. 
+        // We ignore table->status_id check because we validated against actual Orders.
+
+
+        $startTime = Carbon::now('Asia/Ho_Chi_Minh');
         $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
         if (!$priceRate) {
-            return response()->json(['message' => 'Không tìm thấy bảng giá cho loại bàn này'], 400);
+            return response()->json([
+                'message' => 'Không tìm thấy bảng giá cho loại bàn này',
+                'debug' => [
+                    'table_type_id' => $table->table_type_id,
+                    'time_checked' => $startTime->toDateTimeString(),
+                    'timezone' => $startTime->timezoneName,
+                    'day_of_week' => $startTime->dayOfWeek
+                ]
+            ], 400);
         }
 
         $order = Order::create([

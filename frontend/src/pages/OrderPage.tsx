@@ -11,7 +11,7 @@ import { AdminNavigation } from '../components/AdminNavigation';
 import { BillTemplate } from '../components/BillTemplate';
 
 export function OrderPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
 
   const { user, logout } = useAuthStore();
@@ -33,8 +33,8 @@ export function OrderPage() {
     return () => clearInterval(timer);
   }, []);
   const { data: order, isLoading } = useQuery({
-    queryKey: ['order', id],
-    queryFn: () => ordersApi.getById(Number(id)),
+    queryKey: ['order', id, slug],
+    queryFn: () => ordersApi.getById(Number(id), slug),
     enabled: !!id,
   });
 
@@ -58,6 +58,8 @@ export function OrderPage() {
       queryClient.invalidateQueries({ queryKey: ['tables'] });
     },
   });
+
+
 
   const hasSelected = useMemo(() => Object.keys(selected).length > 0, [selected]);
 
@@ -378,7 +380,7 @@ export function OrderPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="pt-6">
             <button
-              onClick={() => navigate('/staff')}
+              onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
               className="flex items-center text-slate-500 hover:text-slate-700 transition-colors"
             >
               <svg

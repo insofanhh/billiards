@@ -2,20 +2,23 @@ import { apiClient } from './client';
 import type { Table } from '../types';
 
 export const tablesApi = {
-  getAll: async (): Promise<Table[]> => {
-    const response = await apiClient.get('/tables');
+  getAll: async (storeSlug?: string): Promise<Table[]> => {
+    const url = storeSlug ? `/tables?store_slug=${storeSlug}` : '/tables';
+    const response = await apiClient.get(url);
     return response.data.data || response.data;
   },
 
-  getByCode: async (code: string): Promise<Table> => {
-    const response = await apiClient.get(`/tables/${code}`);
+  getByCode: async (code: string, storeSlug?: string): Promise<Table> => {
+    const url = storeSlug ? `/tables/${code}?store_slug=${storeSlug}` : `/tables/${code}`;
+    const response = await apiClient.get(url);
     return response.data.data || response.data;
   },
 
-  requestOpen: async (code: string, name: string): Promise<{ user: any; token?: string; order: { id: number } }> => {
+  requestOpen: async (code: string, name: string, storeSlug?: string): Promise<{ user: any; token?: string; order: { id: number } }> => {
     // Nếu name rỗng (user đã đăng nhập), gửi body rỗng
     const payload = name && name.trim() ? { name: name.trim() } : {};
-    const response = await apiClient.post(`/tables/${code}/request-open`, payload);
+    const url = storeSlug ? `/tables/${code}/request-open?store_slug=${storeSlug}` : `/tables/${code}/request-open`;
+    const response = await apiClient.post(url, payload);
     return response.data;
   },
 };
