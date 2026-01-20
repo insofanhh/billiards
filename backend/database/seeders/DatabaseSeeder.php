@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
         
-        $this->command->info("✓ Default store created/found: {$store->name} ({$store->slug})");
+        $this->command->info("Default store created/found: {$store->name} ({$store->slug})");
         
         // 3. Bind store to context for remaining seeders
         app()->instance('currentStoreId', $store->id);
