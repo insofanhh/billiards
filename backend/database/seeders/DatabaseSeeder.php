@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
         
         // 4. Seed store-specific data
         $this->call([
-            TableStatusSeeder::class,
+            // TableStatusSeeder::class,
             // TableTypeSeeder::class,
             // TableBilliardSeeder::class,
             // ServiceSeeder::class,

@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\TableStatuses\Schemas;
 
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 
@@ -13,10 +13,14 @@ class TableStatusForm
     {
         return $schema
             ->components([
-                TextInput::make('name')
+                Select::make('name')
                     ->label('Tên trạng thái')
-                    ->required()
-                    ->maxLength(255),
+                    ->options([
+                        'Trống' => 'Trống',
+                        'Đang sử dụng' => 'Đang sử dụng',
+                        'Bảo trì' => 'Bảo trì',
+                    ])
+                    ->required(),
                 Textarea::make('description')
                     ->label('Mô tả')
                     ->rows(3)
