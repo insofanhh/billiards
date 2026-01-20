@@ -55,6 +55,7 @@ class DiscountCode extends Model
     public function savedByUsers()
     {
         return $this->belongsToMany(User::class, 'user_saved_discounts')
+            ->withPivot('store_id')
             ->withTimestamps();
     }
 }

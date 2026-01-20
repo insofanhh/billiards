@@ -76,6 +76,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     public function savedDiscounts()
     {
         return $this->belongsToMany(DiscountCode::class, 'user_saved_discounts')
+            ->withPivot('store_id')
             ->withTimestamps();
     }
 
