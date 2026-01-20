@@ -31,9 +31,9 @@ class DatabaseSeeder extends Seeder
         // 4. Seed store-specific data
         $this->call([
             TableStatusSeeder::class,
-            TableTypeSeeder::class,
-            TableBilliardSeeder::class,
-            ServiceSeeder::class,
+            // TableTypeSeeder::class,
+            // TableBilliardSeeder::class,
+            // ServiceSeeder::class,
             UserSeeder::class,
         ]);
         
@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
         if ($admin && !$store->owner_id) {
             $store->owner_id = $admin->id;
             $store->save();
-            $this->command->info("✓ Store owner updated to: {$admin->name}");
+            $this->command->info("Store owner updated to: {$admin->name}");
         }
         
         $this->command->info("\n=== Seeding completed ===");
