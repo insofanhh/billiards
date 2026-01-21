@@ -36,8 +36,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const user = await checkSession();
           get().setAuth(user, 'session-active'); 
       } catch (error) {
-          // Silent failure is acceptable for initial session check
-          console.warn("Session check failed, user might be guest");
+          // If session check fails (and we thought we were logged in or not), ensure clean state
+          // asking specifically for 401/419 might be better but for now safety first
+          get().logout();
+          console.warn("Session check failed, user treated as guest");
       }
   },
 

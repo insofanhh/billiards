@@ -6,8 +6,14 @@ import { router } from './router';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useAuthStore } from './store/authStore';
+import { registerLogoutCallback } from './api/client';
 import './index.css';
 import './echo';
+
+// Sync 401/419 responses to store logout
+registerLogoutCallback(() => {
+  useAuthStore.getState().logout();
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
