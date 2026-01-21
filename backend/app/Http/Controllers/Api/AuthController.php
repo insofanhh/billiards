@@ -120,17 +120,27 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        // Logout web session
-        \Illuminate\Support\Facades\Auth::guard('web')->logout();
-        
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        try {
+            // Logout web session
+            \Illuminate\Support\Facades\Auth::guard('web')->logout();
+            
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-        // Also delete tokens if any
-        if ($request->user()) {
-            $request->user()->tokens()->delete();
+            // Also delete tokens if any
+            if ($request->user()) {
+                $request->user()->tokens()->delete();
+            }
+        } catch (\Throwable $e) {
+            // Ignore errors during logout (e.g. if already logged out)
         }
 
-        return response()->json(['message' => 'Logged out successfully']);
+        // Return response that clears cookies
+        $cookie = \Cookie::forget('laravel_session');
+        $xsrf = \Cookie::forget('XSRF-TOKEN');
+
+        return response()->json(['message' => 'Logged out successfully'])
+            ->withCookie($cookie)
+            ->withCookie($xsrf);
     }
 }
