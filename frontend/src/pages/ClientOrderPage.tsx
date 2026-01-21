@@ -320,11 +320,13 @@ export function ClientOrderPage() {
           <>
              <button
                type="button"
-               onClick={() => navigate('/client')}
-               className="mb-4 inline-flex items-center text-blue-600 transition hover:text-blue-800"
+               onClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+               className="mb-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center"
              >
-               <span className="mr-2 text-lg">←</span>
-               Quay lại
+                <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+               <span className="font-medium">Quay lại</span>
              </button>
              <ClientOrderBill order={order} />
           </>
