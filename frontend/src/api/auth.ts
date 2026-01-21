@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, getCsrfToken } from './client';
 import type { User } from '../types';
 
 export interface LoginRequest {
@@ -21,23 +21,29 @@ export interface AuthResponse {
 
 export const authApi = {
   getCsrfToken: async (): Promise<void> => {
-    await apiClient.get('/sanctum/csrf-cookie');
+    await getCsrfToken();
   },
 
   checkSession: async (): Promise<User> => {
-    await apiClient.get('/sanctum/csrf-cookie'); // Ensure we have a token first
+    // We try to fetch the user directly. If it fails with 401/419, the interceptor or caller handles it.
+    // However, for checkSession, we might want to ensure CSRF cookie is set if not present?
+    // Actually, simply getting /user should be enough if the cookie is there.
+    // If we are strictly doing SPA auth, we might need to hit csrf-cookie first if we haven't.
+    // But usually the browser handles the cookie.
+    // Let's just try to get user. If we explicitly need to refresh CSRF, we can.
+    await getCsrfToken(); 
     const response = await apiClient.get('/user');
     return response.data;
   },
 
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    await apiClient.get('/sanctum/csrf-cookie');
+    await getCsrfToken();
     const response = await apiClient.post('/login', data);
     return response.data;
   },
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    await apiClient.get('/sanctum/csrf-cookie');
+    await getCsrfToken();
     const response = await apiClient.post('/register', data);
     return response.data;
   },

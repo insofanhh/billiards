@@ -19,8 +19,20 @@ export const apiClient = axios.create({
   },
 });
 
+// Create a separate client for root-level requests like Sanctum CSRF
+const rootUrl = isProd ? 'https://billiardscms.io.vn' : 'http://localhost:8000';
+export const rootClient = axios.create({
+  baseURL: rootUrl,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  },
+});
+
 export const getCsrfToken = async () => {
-  await apiClient.get('/sanctum/csrf-cookie');
+  await rootClient.get('/sanctum/csrf-cookie');
 };
 
 apiClient.interceptors.request.use((config) => {
