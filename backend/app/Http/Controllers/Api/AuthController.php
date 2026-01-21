@@ -26,6 +26,17 @@ class AuthController extends Controller
             ]);
         }
 
+        // Attempt to login to web session for sync
+        try {
+            \Illuminate\Support\Facades\Auth::guard('web')->login($user, $request->boolean('remember'));
+            $request->session()->regenerate();
+        } catch (\Throwable $e) {
+            // Silently fail session login if something is wrong with configuration
+            // forcing token auth to still work
+            \Illuminate\Support\Facades\Log::error('Session login failed: ' . $e->getMessage());
+        }
+
+        // Still issue a token for API clients that might need it (hybrid approach)
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $user->load('roles');
@@ -70,6 +81,10 @@ class AuthController extends Controller
             $user->assignRole($customerRole);
         }
 
+        // Auto login after register
+        \Illuminate\Support\Facades\Auth::login($user);
+        $request->session()->regenerate();
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $user->load('roles');
@@ -105,7 +120,16 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        // Logout web session
+        \Illuminate\Support\Facades\Auth::guard('web')->logout();
+        
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        // Also delete tokens if any
+        if ($request->user()) {
+            $request->user()->tokens()->delete();
+        }
 
         return response()->json(['message' => 'Logged out successfully']);
     }
