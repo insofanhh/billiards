@@ -21,7 +21,7 @@ export function BannerSlider({ onScanClick }: Props) {
     staleTime: 5 * 60_000,
   });
 
-  const bannerImages = bannersData?.images ?? [];
+  const bannerImages = (Array.isArray(bannersData?.images) ? bannersData.images : []) || [];
   const bannerVideoUrl = bannersData?.videoUrl ?? null;
   const youtubeId = extractYoutubeId(bannerVideoUrl);
 

@@ -73,7 +73,7 @@ export function PromoList() {
         );
     }
 
-    if (!publicDiscounts || publicDiscounts.length === 0) {
+    if (!publicDiscounts || !Array.isArray(publicDiscounts) || publicDiscounts.length === 0) {
         return emptyStateCard('Chưa có ưu đãi nào được thêm.');
     }
 
