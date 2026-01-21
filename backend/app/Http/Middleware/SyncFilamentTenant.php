@@ -19,11 +19,12 @@ class SyncFilamentTenant
             $path = parse_url($referer, PHP_URL_PATH);
             
             // Regex to find /admin/{slug}/...
-            if ($path && ctype_alnum(str_replace(['-', '_'], '', 'test'))) { // Check regex safety or just use regex
-                if (preg_match('/\/admin\/([^\/]+)/', $path, $matches)) {
-                   $slug = $matches[1];
+            // Extract slug from path if possible
+            if ($path && preg_match('/\/admin\/([^\/]+)/', $path, $matches)) {
+               $slug = $matches[1];
+               if ($slug !== 'login') {
                    $tenant = \App\Models\Store::where('slug', $slug)->first();
-                }
+               }
             }
         }
 
