@@ -13,6 +13,24 @@ class SyncFilamentTenant
     {
         $tenant = Filament::getTenant();
 
+        // Fallback: If no tenant resolved (e.g., Livewire update), try to resolve from Referer
+        if (!$tenant && $request->headers->has('referer')) {
+            $referer = $request->headers->get('referer');
+            $path = parse_url($referer, PHP_URL_PATH);
+            
+            // Assuming URL structure: /admin/{slug}
+            if ($path && \Illuminate\Support\Str::contains($path, '/admin/')) {
+                $segments = explode('/', trim($path, '/'));
+                // admin is likely index 0, slug index 1
+                $adminIndex = array_search('admin', $segments);
+                
+                if ($adminIndex !== false && isset($segments[$adminIndex + 1])) {
+                    $slug = $segments[$adminIndex + 1];
+                    $tenant = \App\Models\Store::where('slug', $slug)->first();
+                }
+            }
+        }
+
         if ($tenant) {
             app()->instance('currentStore', $tenant);
             app()->instance('currentStoreId', $tenant->id);
