@@ -11,11 +11,17 @@ console.log('Current API configuration:', {
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
 });
+
+export const getCsrfToken = async () => {
+  await apiClient.get('/sanctum/csrf-cookie');
+};
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
