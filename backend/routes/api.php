@@ -36,6 +36,7 @@ Route::prefix('platform')->group(function () {
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/logout', [AuthController::class, 'logout']);
 
 // Public endpoints for guests
 Route::get('/tables', [TableController::class, 'index']);
@@ -50,7 +51,7 @@ Route::get('/public/categories', [CategoryController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::post('/logout', [AuthController::class, 'logout']); // Moved outside for robust cleanup
     
     
     Route::get('/services', [ServiceController::class, 'index']);
