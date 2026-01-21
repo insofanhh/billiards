@@ -50,12 +50,19 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+let logoutCallback: (() => void) | null = null;
+export const registerLogoutCallback = (cb: () => void) => {
+  logoutCallback = cb;
+};
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 419) {
       localStorage.removeItem('auth_token');
-      // window.location.href = '/login'; // Removed to prevent forced login on public pages
+      if (logoutCallback) {
+        logoutCallback();
+      }
     }
     return Promise.reject(error);
   }
