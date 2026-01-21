@@ -30,6 +30,14 @@ class IdentifyTenant
                 // Bind to container
                 app()->instance('currentStore', $store);
                 app()->instance('currentStoreId', $store->id);
+                
+                // Scope settings cache to this store to prevent collision
+                config(['settings.cache.prefix' => 'store_' . $store->id]);
+
+                // Scope permission cache to this store
+                config(['permission.cache.key' => 'spatie.permission.cache.store_' . $store->id]);
+                // Reset permission loader to use new cache key
+                app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
             }
         }
 
