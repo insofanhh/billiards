@@ -15,23 +15,23 @@ export function TableInfo({ table, onDownloadQr, qrCanvasRef }: Props) {
     <>
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div>
-          <p className="text-sm text-gray-500">Loại bàn</p>
-          <p className="text-lg font-semibold">{table.table_type.name}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loại bàn</p>
+          <p className="text-lg font-semibold dark:text-white">{table.table_type.name}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Số ghế</p>
-          <p className="text-lg font-semibold">{table.seats}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Số ghế</p>
+          <p className="text-lg font-semibold dark:text-white">{table.seats}</p>
         </div>
         {table.location && (
           <div>
-            <p className="text-sm text-gray-500">Vị trí</p>
-            <p className="text-lg font-semibold">{table.location}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Vị trí</p>
+            <p className="text-lg font-semibold dark:text-white">{table.location}</p>
           </div>
         )}
         {activePriceRate && (
           <div>
-            <p className="text-sm text-gray-500">Giá mỗi giờ</p>
-            <p className="text-lg font-semibold">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Giá mỗi giờ</p>
+            <p className="text-lg font-semibold dark:text-white">
               {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activePriceRate.price_per_hour)}
             </p>
           </div>
@@ -39,8 +39,8 @@ export function TableInfo({ table, onDownloadQr, qrCanvasRef }: Props) {
       </div>
 
       {table.qr_code && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-500 mb-3">Mã QR của bàn:</p>
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Mã QR của bàn:</p>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="bg-white border rounded-lg p-4 w-fit">
               <QRCodeCanvas
@@ -52,7 +52,7 @@ export function TableInfo({ table, onDownloadQr, qrCanvasRef }: Props) {
               />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-gray-600 break-all mb-3">{table.qr_code}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-300 break-all mb-3">{table.qr_code}</p>
               <button
                 onClick={onDownloadQr}
                 className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"

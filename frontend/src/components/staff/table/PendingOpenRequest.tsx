@@ -10,11 +10,11 @@ interface Props {
 
 export function PendingOpenRequest({ pendingOrder, onApprove, onReject, isApproving, isRejecting }: Props) {
   return (
-    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-900/30 rounded-lg">
       <div className="mb-4">
-        <p className="text-sm text-yellow-800 font-medium">Có yêu cầu mở bàn từ khách</p>
+        <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">Có yêu cầu mở bàn từ khách</p>
         {pendingOrder.user_name && (
-          <p className="text-xs text-yellow-700 mt-1">Khách: {pendingOrder.user_name}</p>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Khách: {pendingOrder.user_name}</p>
         )}
       </div>
       <div className="flex space-x-4">

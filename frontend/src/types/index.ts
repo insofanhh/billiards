@@ -120,6 +120,7 @@ export interface Order {
   total_before_discount: number;
   total_discount: number;
   total_paid: number;
+  total_amount?: number; // Added for UI compatibility
   cashier?: string | null;
   items: Array<OrderItem>;
   applied_discount?: {

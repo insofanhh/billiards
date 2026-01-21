@@ -98,7 +98,7 @@ export function StaffServiceList({ orderId, services }: Props) {
   if (!services || categories.length === 0) return null;
 
   return (
-    <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
+    <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
       <div className="mb-6">
         <div className="flex items-center space-x-4 mb-4 overflow-x-auto pb-2 no-scrollbar">
           {categories.map((cat) => (
@@ -107,7 +107,7 @@ export function StaffServiceList({ orderId, services }: Props) {
               onClick={() => setSelectedCategory(cat.id)}
               className={`px-4 py-2 font-semibold rounded-lg whitespace-nowrap transition-colors ${selectedCategory === cat.id
                 ? 'bg-[#13ec6d] text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-600'
                 }`}
             >
               {cat.name}
@@ -123,13 +123,13 @@ export function StaffServiceList({ orderId, services }: Props) {
           const isOutOfStock = availableQuantity <= 0;
 
           return (
-            <div key={service.id} className="border border-slate-200 rounded-lg p-4 flex flex-col items-center text-center">
+            <div key={service.id} className="border border-slate-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center bg-white dark:bg-gray-800">
               {service.image && (
                 <img src={service.image} alt={service.name} className="w-32 h-32 object-cover mb-4 rounded-md" />
               )}
-              <h3 className="font-bold text-slate-900">{service.name}</h3>
-              <p className="text-sm text-slate-500 mb-2">{service.description}</p>
-              <p className="text-blue-600 font-bold mb-4">
+              <h3 className="font-bold text-slate-900 dark:text-white">{service.name}</h3>
+              <p className="text-sm text-slate-500 dark:text-gray-400 mb-2">{service.description}</p>
+              <p className="text-blue-600 dark:text-blue-400 font-bold mb-4">
                 {formatCurrency(service.price)}
               </p>
               <div className="flex items-center space-x-3">
@@ -144,11 +144,11 @@ export function StaffServiceList({ orderId, services }: Props) {
                       return copy;
                     });
                   }}
-                  className="w-8 h-8 rounded-full bg-slate-200 text-slate-900 flex justify-center items-center font-bold text-xl hover:bg-slate-300"
+                  className="w-8 h-8 rounded-full bg-slate-200 dark:bg-gray-700 text-slate-900 dark:text-white flex justify-center items-center font-bold text-xl hover:bg-slate-300 dark:hover:bg-gray-600"
                 >
                   -
                 </button>
-                <span className="font-bold text-lg">{qty}</span>
+                <span className="font-bold text-lg text-slate-900 dark:text-white">{qty}</span>
                 <button
                   onClick={() => {
                     if (isOutOfStock || qty >= availableQuantity) {
@@ -169,16 +169,16 @@ export function StaffServiceList({ orderId, services }: Props) {
       </div>
 
       {hasSelected && (
-        <div className="mt-8 border-t border-slate-200 pt-4">
-          <h3 className="font-bold text-lg text-slate-900 mb-3">Món đang chọn (Chưa lưu)</h3>
+        <div className="mt-8 border-t border-slate-200 dark:border-gray-700 pt-4">
+          <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3">Món đang chọn (Chưa lưu)</h3>
           <div className="space-y-2">
             {Object.entries(selected).map(([id, qty]) => {
               const service = services.find((s) => s.id === Number(id));
               if (!service) return null;
               return (
-                <div key={id} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
-                   <span className="font-medium text-blue-900">{service.name} (x{qty})</span>
-                   <span className="text-blue-700 font-bold">{formatCurrency(service.price * qty)}</span>
+                <div key={id} className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                   <span className="font-medium text-blue-900 dark:text-blue-200">{service.name} (x{qty})</span>
+                   <span className="text-blue-700 dark:text-blue-300 font-bold">{formatCurrency(service.price * qty)}</span>
                 </div>
               );
             })}

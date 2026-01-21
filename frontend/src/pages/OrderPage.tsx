@@ -2,8 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
-import { useAuthStore } from '../store/authStore';
-import { AdminNavigation } from '../components/AdminNavigation';
 import { BillTemplate } from '../components/BillTemplate';
 
 // Hooks
@@ -16,8 +14,6 @@ import { StaffOrderBill } from '../components/staff/StaffOrderBill';
 export function OrderPage() {
   const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
-
-  const { user, logout } = useAuthStore();
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id, slug],
@@ -35,14 +31,14 @@ export function OrderPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center dark:text-white">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!order) {
-    return <div>Không tìm thấy đơn hàng</div>;
+    return <div className="dark:text-white">Không tìm thấy đơn hàng</div>;
   }
 
   const isActive = order.status === 'active';
@@ -53,14 +49,13 @@ export function OrderPage() {
   const currentTotalBeforeDiscount = order.total_before_discount > 0 ? order.total_before_discount : servicesTotal;
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
+    <div className="font-sans text-slate-800 dark:text-gray-200">
       <div className="print:hidden">
-        <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="pt-6">
             <button
               onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
-              className="flex items-center text-slate-500 hover:text-slate-700 transition-colors"
+              className="flex items-center text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
