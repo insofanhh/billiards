@@ -296,7 +296,7 @@ export function HomePage() {
 
     return (
         <div className="min-h-screen bg-background-light dark:bg-background-dark">
-            <AdminNavigation userName={user?.name} onLogout={logout} />
+            <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
 
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div className="px-4 py-6 sm:px-0">

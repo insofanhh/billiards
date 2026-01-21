@@ -3,20 +3,26 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 type AdminNavigationProps = {
   userName?: string;
+  userRoles?: string[];
   onLogout: () => void;
 };
 
-export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
+export function AdminNavigation({ userName, userRoles, onLogout }: AdminNavigationProps) {
   const navigate = useNavigate();
+  // ... existing hooks
   const { slug } = useParams<{ slug?: string }>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
   const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const isAdmin = userRoles?.some(role => ['super_admin', 'admin'].includes(role));
+
   const getPath = (path: string) => {
       if (!slug) return path;
       return `/s/${slug}${path}`;
   };
+
+  // ... (keep useEffects and helper functions same)
 
   useEffect(() => {
     return () => {
@@ -74,6 +80,11 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     ),
+    lock: (
+      <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+      </svg>
+    ),
   };
 
   const handleNavigate = (path: string) => {
@@ -116,6 +127,16 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
           description: 'Người đang đăng nhập',
           icon: icons.user,
         },
+        ...(isAdmin ? [{
+          key: 'admin',
+          label: 'Trang quản trị',
+          description: 'Truy cập Admin Panel',
+          icon: icons.lock,
+          action: () => {
+             // Force full reload to backend admin
+             window.location.href = '/admin'; 
+          }
+        }] : []),
         {
           key: 'logout',
           label: 'Đăng xuất',
@@ -174,17 +195,30 @@ export function AdminNavigation({ userName, onLogout }: AdminNavigationProps) {
               </button>
               {showLogoutDesktop && (
                 <div
-                  className="absolute right-0 mt-2 w-36 rounded-2xl border border-white/10 bg-gray-800/95 shadow-xl"
+                  className="absolute right-0 mt-2 w-48 rounded-2xl border border-white/10 bg-gray-800/95 shadow-xl"
                   onMouseEnter={clearHideTimeout}
                   onMouseLeave={scheduleHide}
                 >
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full rounded-2xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
-                  >
-                    Đăng xuất
-                  </button>
+                  <div className="p-2 space-y-1">
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => window.location.href = '/admin'}
+                        className="w-full rounded-xl px-4 py-2 text-left text-sm font-semibold text-gray-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 flex items-center gap-2"
+                      >
+                         {icons.lock}
+                         Trang quản trị
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full rounded-xl border border-red-300/20 bg-red-500/10 px-4 py-2 text-left text-sm font-semibold text-red-200 transition hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 flex items-center gap-2"
+                    >
+                      {icons.logout}
+                      Đăng xuất
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

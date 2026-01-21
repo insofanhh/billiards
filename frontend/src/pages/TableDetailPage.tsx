@@ -90,7 +90,7 @@ export function TableDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNavigation userName={user?.name} onLogout={logout} />
+      <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
       <div className="max-w-7xl mx-auto py-8 px-4 lg:px-8">
         <button
           onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
