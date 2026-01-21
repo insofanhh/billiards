@@ -13,7 +13,16 @@ export function NotificationPopup({ message, onClose }: NotificationPopupProps) 
       }
     };
     document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    
+    // Auto close after 2 seconds
+    const timer = setTimeout(() => {
+        onClose();
+    }, 1000);
+
+    return () => {
+        document.removeEventListener('keydown', handleEscape);
+        clearTimeout(timer);
+    };
   }, [onClose]);
 
   return (

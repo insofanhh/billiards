@@ -10,12 +10,12 @@ interface Props {
 
 export function PendingEndRequest({ pendingEndOrder, onApprove, onReject, isApproving, isRejecting }: Props) {
   return (
-    <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+    <div className="mb-6 p-4 bg-orange-50 border border-orange-200 dark:bg-orange-900/10 dark:border-orange-900/30 rounded-lg">
       <div className="mb-4">
-        <p className="text-sm text-orange-800 font-medium">Khách hàng đã yêu cầu kết thúc giờ chơi</p>
-        <p className="text-sm text-orange-700 mt-1">Đơn hàng: {pendingEndOrder.order_code}</p>
+        <p className="text-sm text-orange-800 dark:text-orange-200 font-medium">Khách hàng đã yêu cầu kết thúc giờ chơi</p>
+        <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">Đơn hàng: {pendingEndOrder.order_code}</p>
         {pendingEndOrder.user_name && (
-          <p className="text-xs text-orange-600 mt-1">Khách: {pendingEndOrder.user_name}</p>
+          <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Khách: {pendingEndOrder.user_name}</p>
         )}
       </div>
       <div className="flex space-x-4">

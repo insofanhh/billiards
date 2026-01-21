@@ -2,9 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { ordersApi } from '../api/orders';
-import { useAuthStore } from '../store/authStore';
 import type { Order } from '../types';
-import { AdminNavigation } from '../components/AdminNavigation';
 
 const getTodayDateString = () => {
   const today = new Date();
@@ -15,7 +13,8 @@ const getTodayDateString = () => {
 
 export function OrdersHistoryPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  // useAuthStore is likely handled in layout, but if we need access to user here we can keep it.
+  // const { user } = useAuthStore(); 
   const [filterDate, setFilterDate] = useState<string>(getTodayDateString);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -62,10 +61,10 @@ export function OrdersHistoryPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 
@@ -79,17 +78,15 @@ export function OrdersHistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
-
+    <>
       <div className="max-w-7xl mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Lịch sử giao dịch</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lịch sử giao dịch</h1>
         </div>
 
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-6">
           <div className="w-full md:w-auto">
-            <label htmlFor="filter-date" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="filter-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Lọc theo ngày:
             </label>
             <div className="flex items-center gap-2">
@@ -98,12 +95,12 @@ export function OrdersHistoryPage() {
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               />
               {filterDate && (
                 <button
                   onClick={() => setFilterDate('')}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   Xóa bộ lọc
                 </button>
@@ -112,7 +109,7 @@ export function OrdersHistoryPage() {
           </div>
 
           <div className="w-full md:flex-1 md:max-w-md">
-            <label htmlFor="filter-search" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="filter-search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tìm kiếm:
             </label>
             <input
@@ -121,7 +118,7 @@ export function OrdersHistoryPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Nhập tên người chơi hoặc mã đơn hàng..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
         </div>
@@ -136,14 +133,14 @@ export function OrdersHistoryPage() {
               <div
                 key={order.id}
                 onClick={() => navigate(`/order/${order.id}`)}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg cursor-pointer transition-shadow"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg cursor-pointer transition-shadow"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">{order.order_code}</h3>
-                    <p className="text-gray-600 mt-1">Bàn: {order.table.name}</p>
-                    <p className="text-sm text-gray-500">
-                      Khách hàng: <span className="font-medium text-gray-900">{order.customer_name || (order.user?.name === 'Staff' ? 'Khách lẻ' : (order.user?.name || 'Không xác định'))}</span>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{order.order_code}</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Bàn: {order.table.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">
+                      Khách hàng: <span className="font-medium text-gray-900 dark:text-gray-300">{order.customer_name || (order.user?.name === 'Staff' ? 'Khách lẻ' : (order.user?.name || 'Không xác định'))}</span>
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
@@ -153,25 +150,25 @@ export function OrdersHistoryPage() {
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">Bắt đầu</p>
-                    <p className="font-medium">
+                    <p className="text-gray-500 dark:text-gray-400">Bắt đầu</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-200">
                       {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
                     </p>
                   </div>
                   {order.end_at && (
                     <div>
-                      <p className="text-gray-500">Kết thúc</p>
-                      <p className="font-medium">
+                      <p className="text-gray-500 dark:text-gray-400">Kết thúc</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-200">
                         {new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                       </p>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Tổng tiền:</span>
-                    <span className="text-lg font-bold">
+                    <span className="text-gray-600 dark:text-gray-400">Tổng tiền:</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_paid)}
                     </span>
                   </div>
@@ -181,7 +178,7 @@ export function OrdersHistoryPage() {
 
             {filteredOrders.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   {filterDate ? 'Không có giao dịch nào trong ngày đã chọn' : 'Chưa có giao dịch nào'}
                 </p>
               </div>
@@ -189,7 +186,7 @@ export function OrdersHistoryPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 

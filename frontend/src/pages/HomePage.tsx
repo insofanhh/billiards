@@ -1,140 +1,94 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { tablesApi } from '../api/tables';
 import { useAuthStore } from '../store/authStore';
 import type { Table } from '../types';
 import { ordersApi } from '../api/orders';
+import { statsApi } from '../api/stats';
 import { echo } from '../echo';
-import { AdminNavigation } from '../components/AdminNavigation';
 
-const getCurrentPriceRate = (rates: any[] | undefined) => {
-    if (!rates || rates.length === 0) return undefined;
+import { TableCard } from '../components/staff/table/TableCard';
+import { TableDetailModal } from '../components/staff/table/TableDetailModal';
 
-    const now = new Date();
-    const currentDay = now.getDay(); // 0 (Sun) - 6 (Sat)
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}:00`;
+// Helper to calculate duration 
 
-    // Filter active rates
-    const activeRates = rates.filter(rate => rate.active);
 
-    // Filter by validity
-    const validRates = activeRates.filter(rate => {
-        const hasDayConstraint = rate.day_of_week && rate.day_of_week.length > 0;
-        const hasTimeConstraint = !!(rate.start_time && rate.end_time);
 
-        if (!hasTimeConstraint) {
-            if (hasDayConstraint) {
-                return rate.day_of_week!.includes(currentDay.toString());
-            }
-            return true;
-        }
-
-        const start = rate.start_time!;
-        const end = rate.end_time!;
-
-        if (start <= end) {
-            if (hasDayConstraint && !rate.day_of_week!.includes(currentDay.toString())) return false;
-            return currentTimeStr >= start && currentTimeStr <= end;
-        } else {
-            const matchesStart = currentTimeStr >= start;
-            const matchesEnd = currentTimeStr <= end;
-
-            if (matchesStart) {
-                if (hasDayConstraint && !rate.day_of_week!.includes(currentDay.toString())) return false;
-                return true;
-            }
-            if (matchesEnd) {
-                if (hasDayConstraint) {
-                    const prevDay = (currentDay + 6) % 7;
-                    if (!rate.day_of_week!.includes(prevDay.toString())) return false;
-                }
-                return true;
-            }
-            return false;
-        }
-    });
-
-    validRates.sort((a, b) => {
-        const priorityA = a.priority || 0;
-        const priorityB = b.priority || 0;
-        if (priorityB !== priorityA) return priorityB - priorityA;
-        
-        const idA = a.id || 0;
-        const idB = b.id || 0;
-        return idA - idB;
-    });
-
-    return validRates[0];
-};
 
 export function HomePage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, logout } = useAuthStore();
+    const { user } = useAuthStore();
     const { slug } = useParams();
 
-    // Redirect to store-specific staff page if accessing generic /staff
     useEffect(() => {
         if (!slug && user?.store?.slug) {
             navigate(`/s/${user.store.slug}/staff`, { replace: true });
         }
     }, [slug, user, navigate]);
 
+
+
     const queryClient = useQueryClient();
     const [tablesWithNotifications, setTablesWithNotifications] = useState<Set<number>>(new Set());
     const [hasInitialized, setHasInitialized] = useState(false);
-    const [paymentSuccessNotifications, setPaymentSuccessNotifications] = useState<Map<number, boolean>>(new Map());
+    const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+
+    
+    // Filters
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [floorFilter, setFloorFilter] = useState('all');
 
     const { data: tables = [], isLoading } = useQuery({
         queryKey: ['tables', slug],
         queryFn: () => tablesApi.getAll(slug),
     });
 
-    // ... (rest of mutations same as before, skipping purely for brevity in this tool call, but I need to be careful not to delete them. 
-    // Wait, replacing lines 11-32 covers the helper and start of function.
-    // I need to use `multi_replace` or be precise.
-    // The previous tool replaced lines 29-32.
-    // I will insert `getCurrentPriceRate` BEFORE `export function HomePage`.
-    // And update `handleTableClick` inside.
-    // And update the Card JSX.
-    
-    // Let's stick to updating `handleTableClick` and Card JSX first, and insert helper separately?
-    // Or replace `export function HomePage` line to include helper before it?
-    
-    // I will use `replace_file_content` to insert helper before line 11.
-
-
-    const approveMutation = useMutation({
-        mutationFn: (orderId: number) => ordersApi.approve(orderId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tables'] });
-        },
+    const { data: dailyRevenueData } = useQuery({
+        queryKey: ['dailyRevenue', slug],
+        queryFn: () => statsApi.getDailyRevenue(),
+        refetchInterval: 60000, // Refetch every minute
     });
 
-    const rejectMutation = useMutation({
-        mutationFn: (orderId: number) => ordersApi.reject(orderId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tables'] });
-        },
-    });
+    // Stats Calculation
+    const stats = useMemo(() => {
+        const total = tables.length;
+        const active = tables.filter((t: Table) => t.status.name === 'Đang sử dụng').length;
+        const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
+        
+        // Calculate estimated revenue from active tables
+        // Use fetched daily revenue or fallback to 0
+        const currentRevenue = dailyRevenueData?.revenue || 0;
 
-    const approveEndMutation = useMutation({
-        mutationFn: (orderId: number) => ordersApi.approveEnd(orderId),
-        onSuccess: (_data, orderId) => {
-            queryClient.invalidateQueries({ queryKey: ['tables'] });
-            navigate(`/order/${orderId}`);
-        },
-    });
+        return { total, active, activePercentage, currentRevenue };
+    }, [tables]);
 
-    const rejectEndMutation = useMutation({
-        mutationFn: (orderId: number) => ordersApi.rejectEnd(orderId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tables'] });
-        },
-    });
+    // Filtered Tables
+    const filteredTables = useMemo(() => {
+        return tables.filter((table: Table) => {
+            const matchesSearch = table.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                  table.code.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || table.status.name === statusFilter;
+            const matchesFloor = floorFilter === 'all' || table.location === floorFilter;
+            
+            return matchesSearch && matchesStatus && matchesFloor;
+        });
+    }, [tables, searchTerm, statusFilter, floorFilter]);
+
+    // Unique locations for filter
+    const locations = useMemo(() => {
+        const uniqueLocations = new Set<string>();
+        tables.forEach((t: Table) => {
+            if (t.location) {
+                uniqueLocations.add(t.location);
+            }
+        });
+        return Array.from(uniqueLocations).sort();
+    }, [tables]);
+
+
 
     // Logic khởi tạo notification ban đầu
     useEffect(() => {
@@ -154,8 +108,7 @@ export function HomePage() {
                     return newSet;
                 });
             } catch (error) {
-                // Keep minimal error logging for production issues if needed, or remove if strictly required
-                // console.error('Error checking order:', error);
+                // Keep minimal error logging
             }
         };
 
@@ -172,7 +125,6 @@ export function HomePage() {
                 }
                 setHasInitialized(true);
             } catch (error) {
-                // console.error('Error initializing notifications:', error);
             }
         };
 
@@ -185,7 +137,6 @@ export function HomePage() {
 
         const ordersChannel = echo.channel('orders');
 
-        // Hàm check notification dùng chung
         const checkOrderHasUnconfirmedItems = async (orderId: number, tableId: number) => {
             try {
                 const order = await ordersApi.getById(orderId);
@@ -200,17 +151,14 @@ export function HomePage() {
                     return newSet;
                 });
             } catch (error) {
-                // console.error('Error checking order:', error);
             }
         };
 
-        // Hàm xử lý reload dữ liệu
         const handleRefetch = () => {
             queryClient.invalidateQueries({ queryKey: ['tables'] });
             queryClient.refetchQueries({ queryKey: ['tables'] });
         };
 
-        // Danh sách các sự kiện cần bắt
         const events = [
             '.order.requested',
             '.order.approved',
@@ -229,29 +177,17 @@ export function HomePage() {
             ordersChannel.listen(event, (data: any) => {
                 handleRefetch();
 
-                // Logic hiển thị thông báo thanh toán thành công
                 if (event === '.transaction.confirmed') {
                     const orderId = data.order?.id;
                     if (orderId) {
                         const currentTables = queryClient.getQueryData<Table[]>(['tables']);
                         const table = currentTables?.find((t: Table) => t.active_order?.id === orderId);
                         if (table) {
-                            // Hiển thị thông báo thanh toán thành công
-                            setPaymentSuccessNotifications(prev => new Map(prev).set(table.id, true));
 
-                            // Tự động ẩn sau 5 giây
-                            setTimeout(() => {
-                                setPaymentSuccessNotifications(prev => {
-                                    const newMap = new Map(prev);
-                                    newMap.delete(table.id);
-                                    return newMap;
-                                });
-                            }, 5000);
                         }
                     }
                 }
 
-                // Logic cập nhật notification chấm đỏ cho dịch vụ
                 if (event.includes('service')) {
                     const orderId = data.order?.id;
                     if (orderId) {
@@ -269,141 +205,153 @@ export function HomePage() {
             });
         });
 
-        // Cleanup
         return () => {
             ordersChannel.stopListeningToAll();
             echo.leave('orders');
         };
     }, [user, queryClient]);
 
-    // --- CÁC HÀM XỬ LÝ CLICK ---
-    const handleTableClick = (code: string) => {
-        if (slug) {
-            navigate(`/s/${slug}/staff/table/${code}`);
-        } else {
-            navigate(`/table/${code}`);
-        }
-    };
 
-    const getStatusColor = (statusName: string) => {
-        switch (statusName) {
-            case 'Trống': return 'bg-green-100 text-green-800';
-            case 'Đang sử dụng': return 'bg-red-100 text-red-800';
-            case 'Bảo trì': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
+
+
 
     return (
-        <div className="min-h-screen bg-background-light dark:bg-background-dark">
-            <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
+        <>
+            <main className="max-w-7xl mx-auto py-8">
+                {/* Stats Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 px-4 sm:px-0">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center space-x-4">
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Tổng bàn</p>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</h3>
+                        </div>
+                    </div>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Danh sách bàn</h2>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center space-x-4">
+                        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                            <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Đang chơi</p>
+                            <div className="flex items-baseline space-x-2">
+                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stats.active}/{stats.total}</h3>
+                                <span className="text-sm text-gray-500">({stats.activePercentage}% Công suất)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center space-x-4">
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Doanh thu tạm tính (Ca hiện tại)</p>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.currentRevenue)}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filter & List Header */}
+                <div className="px-4 sm:px-0">
+                    <div className="mb-6">
+                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Danh sách bàn</h2>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                        <div className="relative flex-1">
+                            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input 
+                                type="text"
+                                placeholder="Tìm kiếm bàn..." 
+                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="relative min-w-[150px]">
+                                <select 
+                                    className="w-full appearance-none pl-4 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                                    value={floorFilter}
+                                    onChange={(e) => setFloorFilter(e.target.value)}
+                                >
+                                    <option value="all">Khu vực</option>
+                                    {locations.map(location => (
+                                        <option key={location} value={location}>{location}</option>
+                                    ))}
+                                </select>
+                                <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                </svg>
+                            </div>
+                            <div className="relative min-w-[150px]">
+                                <select 
+                                    className="w-full appearance-none pl-4 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="all">Trạng thái</option>
+                                    <option value="Trống">Trống</option>
+                                    <option value="Đang sử dụng">Đang sử dụng</option>
+                                    <option value="Bảo trì">Bảo trì</option>
+                                </select>
+                                <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
 
                     {isLoading ? (
                         <div className="text-center py-12">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            <p className="mt-4 text-gray-600">Đang tải...</p>
+                            <p className="mt-4 text-gray-600 dark:text-gray-400">Đang tải...</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {tables?.map((table: Table) => {
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {filteredTables.map((table: Table) => {
                                 const hasNotification = tablesWithNotifications.has(table.id);
                                 const currentPath = location.pathname;
                                 const isViewingOrderDetail = table.active_order?.id && currentPath === `/order/${table.active_order.id}`;
-                                const showNotification = hasNotification && !isViewingOrderDetail && table.active_order;
-                                const isPendingPayment = table.active_order?.status === 'completed';
-                                const showPaymentSuccess = paymentSuccessNotifications.get(table.id);
-                                const activePriceRate = table.table_type.current_price_rate || getCurrentPriceRate(table.table_type.price_rates);
+                                const showNotification = !!(hasNotification && !isViewingOrderDetail && table.active_order);
 
                                 return (
-                                    <div
+                                    <TableCard 
                                         key={table.id}
-                                        onClick={() => handleTableClick(table.code)}
-                                        className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg cursor-pointer transition-shadow relative"
-                                    >
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-lg font-bold text-gray-900">{table.code}</h3>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(table.status.name)}`}>
-                                                {table.status.name}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-600 mb-2">{table.name}</p>
-                                        <p className="text-sm text-gray-500">Loại: {table.table_type.name}</p>
-                                        <p className="text-sm text-gray-500">Số ghế: {table.seats}</p>
-                                        {table.location && (
-                                            <p className="text-sm text-gray-500">Vị trí: {table.location}</p>
-                                        )}
-                                        {activePriceRate && (
-                                            <p className="text-sm text-gray-500">
-                                                Giá: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activePriceRate.price_per_hour)}/h
-                                            </p>
-                                        )}
-                                        {showNotification && (
-                                            <div className="absolute bottom-2 right-2">
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 animate-pulse">
-                                                    Có dịch vụ mới
-                                                </span>
-                                            </div>
-                                        )}
-                                        {showPaymentSuccess && (
-                                            <div className="mt-4 px-3 py-2 text-xs font-semibold text-green-800 bg-green-50 border border-green-200 rounded animate-pulse flex items-center justify-center">
-                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                </svg>
-                                                Thanh toán thành công!
-                                            </div>
-                                        )}
-                                        {isPendingPayment && !showPaymentSuccess && (
-                                            <p className="mt-4 px-3 py-2 text-xs font-semibold text-yellow-800 bg-yellow-50 border border-yellow-200 rounded">
-                                                Đang chờ xác nhận thanh toán
-                                            </p>
-                                        )}
-                                        {table.pending_order?.id && !approveMutation.isPending && !rejectMutation.isPending && (
-                                            <div className="mt-4 flex justify-end space-x-2">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); approveMutation.mutate(table.pending_order!.id); }}
-                                                    title={`Duyệt yêu cầu của ${table.pending_order?.user_name || ''}`}
-                                                    className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                                                >
-                                                    Duyệt
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(table.pending_order!.id); }}
-                                                    title="Hủy yêu cầu"
-                                                    className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                                                >
-                                                    Hủy
-                                                </button>
-                                            </div>
-                                        )}
-                                        {table.pending_end_order?.id && !approveEndMutation.isPending && !rejectEndMutation.isPending && (
-                                            <div className="mt-4 flex justify-end space-x-2">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); approveEndMutation.mutate(table.pending_end_order!.id); }}
-                                                    title={`Duyệt kết thúc của ${table.pending_end_order?.user_name || ''}`}
-                                                    className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
-                                                >
-                                                    Duyệt kết thúc
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); rejectEndMutation.mutate(table.pending_end_order!.id); }}
-                                                    title="Từ chối kết thúc"
-                                                    className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                                                >
-                                                    Từ chối
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                                        table={table}
+                                        slug={slug}
+                                        hasNotification={showNotification}
+                                        onClick={() => setSelectedTable(table)}
+                                    />
                                 );
                             })}
                         </div>
                     )}
+
+                {selectedTable && (
+                    <TableDetailModal
+                        table={selectedTable}
+                        isOpen={!!selectedTable}
+                        onClose={() => setSelectedTable(null)}
+                        slug={slug}
+                    />
+                )}
                 </div>
             </main>
-        </div>
+        </>
     );
 }
+

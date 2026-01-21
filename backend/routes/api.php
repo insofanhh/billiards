@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\SePayWebhookController;
+use App\Http\Controllers\Api\StatsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -57,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/services', [ServiceController::class, 'index']);
     
     Route::get('/discount-codes/{code}', [DiscountCodeController::class, 'check']);
+    Route::get('/stats/daily-revenue', [StatsController::class, 'dailyRevenue']);
     Route::get('/saved-discounts', [DiscountCodeController::class, 'getSavedDiscounts']);
     Route::post('/save-discount/{id}', [DiscountCodeController::class, 'saveDiscount']);
     Route::delete('/save-discount/{id}', [DiscountCodeController::class, 'removeSavedDiscount']);

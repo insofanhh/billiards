@@ -84,22 +84,22 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
 
   return (
 
-    <div className={`sticky top-8 bg-white p-6 rounded-lg shadow-sm w-full`}>
+    <div className={`sticky top-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm w-full border border-gray-100 dark:border-gray-700`}>
       <div className={!isActive ? "lg:grid lg:grid-cols-3 lg:gap-8" : ""}>
         
         {/* Left Column: Info & Services */}
         <div className={!isActive ? "lg:col-span-2" : ""}>
           <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-1 text-slate-900">Đơn hàng {order.order_code}</h2>
-            <p className="text-slate-600 mb-2">
+            <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-white">Đơn hàng {order.order_code}</h2>
+            <p className="text-slate-600 dark:text-gray-400 mb-2">
               Bàn: <span className="font-semibold">{order.table.name}</span>
             </p>
             <span
               className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'active'
-                ? 'bg-green-100 text-green-800'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                 : order.status === 'completed'
-                  ? 'bg-gray-100 text-gray-800'
-                  : 'bg-orange-100 text-orange-800'
+                  ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
                 }`}
             >
               {order.status === 'active'
@@ -139,15 +139,15 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <p className="text-sm text-slate-500">Bắt đầu</p>
-              <p className="font-semibold text-slate-800">
+              <p className="text-sm text-slate-500 dark:text-gray-400">Bắt đầu</p>
+              <p className="font-semibold text-slate-800 dark:text-gray-200">
                 {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
               </p>
             </div>
 
             {isActive && order.start_at && (
               <div>
-                <p className="text-sm text-slate-500">Đang chơi</p>
+                <p className="text-sm text-slate-500 dark:text-gray-400">Đang chơi</p>
                 <p className="font-semibold text-green-600 animate-pulse">
                   {(() => {
                     const start = new Date(order.start_at).getTime();
@@ -163,16 +163,16 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
             )}
             {order.end_at && (
               <div>
-                <p className="text-sm text-slate-500">Kết thúc</p>
-                <p className="font-semibold text-slate-800">
+                <p className="text-sm text-slate-500 dark:text-gray-400">Kết thúc</p>
+                <p className="font-semibold text-slate-800 dark:text-gray-200">
                   {new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                 </p>
               </div>
             )}
             {order.total_play_time_minutes && (
               <div className="col-span-2">
-                <p className="text-sm text-slate-500">Thời gian chơi</p>
-                <p className="font-semibold text-slate-800">
+                <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian chơi</p>
+                <p className="font-semibold text-slate-800 dark:text-gray-200">
                   {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
                 </p>
               </div>
@@ -180,31 +180,31 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
           </div>
 
           {(orderCustomerName || order.cashier) && (
-            <div className="mb-4 text-sm border-t border-slate-200 pt-4">
+            <div className="mb-4 text-sm border-t border-slate-200 dark:border-gray-700 pt-4">
               {orderCustomerName && (
-                <p className="text-slate-600">
-                  Khách hàng: <span className="font-semibold text-slate-900">{orderCustomerName}</span>
+                <p className="text-slate-600 dark:text-gray-400">
+                  Khách hàng: <span className="font-semibold text-slate-900 dark:text-white">{orderCustomerName}</span>
                 </p>
               )}
               {order.cashier && (
-                <p className="text-slate-600 pt-2">
-                  Thu ngân: <span className="font-semibold text-slate-900">{order.cashier}</span>
+                <p className="text-slate-600 dark:text-gray-400 pt-2">
+                  Thu ngân: <span className="font-semibold text-slate-900 dark:text-white">{order.cashier}</span>
                 </p>
               )}
             </div>
           )}
 
-          <div className="border-t border-slate-200 pt-4">
-            <h3 className="font-bold text-lg mb-4 text-slate-900">Dịch vụ đã chọn</h3>
+          <div className="border-t border-slate-200 dark:border-gray-700 pt-4">
+            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Dịch vụ đã chọn</h3>
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {groupedItems.map(({ time, items }, index) => {
                 const isAllConfirmed = (items as any[]).every((i) => i.is_confirmed);
                 const unconfirmedIds = (items as any[]).filter((i) => !i.is_confirmed).map((i) => i.id);
 
                 return (
-                  <div key={time} className="mb-6 last:mb-0 border border-slate-200 rounded-lg overflow-hidden">
+                  <div key={time} className="mb-6 last:mb-0 border border-slate-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     <div
-                      className={`px-4 py-3 flex items-center justify-between ${isAllConfirmed ? 'bg-green-100 border-b border-green-200' : 'bg-slate-50 border-b border-slate-200'
+                      className={`px-4 py-3 flex items-center justify-between ${isAllConfirmed ? 'bg-green-100 dark:bg-green-900/10 border-b border-green-200 dark:border-green-900/30' : 'bg-slate-50 dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700'
                         }`}
                     >
                       <div className="flex items-center gap-3">
@@ -225,16 +225,16 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                             </svg>
                           </div>
                         )}
-                        <span className={`font-bold ${isAllConfirmed ? 'text-green-800' : 'text-slate-800'}`}>Order {index + 1}</span>
+                        <span className={`font-bold ${isAllConfirmed ? 'text-green-800 dark:text-green-400' : 'text-slate-800 dark:text-gray-200'}`}>Order {index + 1}</span>
                       </div>
                       {isAllConfirmed && (
-                        <span className="text-xs font-semibold text-green-700 bg-green-200 px-2 py-1 rounded-full">
+                        <span className="text-xs font-semibold text-green-700 bg-green-200 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full">
                           Đã xác nhận
                         </span>
                       )}
                     </div>
 
-                    <div className="p-4 space-y-4 bg-white">
+                    <div className="p-4 space-y-4 bg-white dark:bg-gray-800">
                       {(() => {
                         const aggregatedItems = (items as any[]).reduce((acc: any[], item) => {
                           const existing = acc.find((i) => i.service.id === item.service.id);
@@ -250,20 +250,20 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                         return aggregatedItems.map((item) => (
                           <div key={item.service.id} className="flex justify-between items-center">
                             <div>
-                              <p className="font-semibold text-slate-800">{item.service.name}</p>
+                              <p className="font-semibold text-slate-800 dark:text-white">{item.service.name}</p>
                               <div className="flex items-center gap-2">
-                                <p className="text-sm text-slate-500">Số lượng: {item.qty}</p>
+                                <p className="text-sm text-slate-500 dark:text-gray-400">Số lượng: {item.qty}</p>
                                 {isActive && (
                                   <button
                                     onClick={() => removeServiceMutation.mutate(item.id)}
-                                    className="text-red-500 text-xs hover:underline bg-red-50 px-2 py-1 rounded"
+                                    className="text-red-500 text-xs hover:underline bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded"
                                   >
                                     Xóa
                                   </button>
                                 )}
                               </div>
                             </div>
-                            <p className="font-semibold text-slate-800">
+                            <p className="font-semibold text-slate-800 dark:text-white">
                               {formatCurrency(item.total_price)}
                             </p>
                           </div>
@@ -278,10 +278,10 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
         </div>
 
         {/* Right Column: Total & Payment */}
-        <div className={!isActive ? "lg:col-span-1" : "mt-6 border-t border-slate-200 pt-6"}>
+        <div className={!isActive ? "lg:col-span-1" : "mt-6 border-t border-slate-200 dark:border-gray-700 pt-6"}>
           <div className="flex justify-between items-center mb-6">
-            <p className="font-bold text-lg text-slate-900">Tổng cộng</p>
-            <p className="font-bold text-xl text-blue-600">
+            <p className="font-bold text-lg text-slate-900 dark:text-white">Tổng cộng</p>
+            <p className="font-bold text-xl text-blue-600 dark:text-blue-400">
               {formatCurrency(
                 (currentTotalBeforeDiscount - (order.total_discount || 0))
               )}
@@ -298,31 +298,31 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                       value={discountCodeInput}
                       onChange={(e) => setDiscountCodeInput(e.target.value.toUpperCase())}
                       placeholder="Mã giảm giá"
-                      className="flex-1 px-3 py-2 border rounded-lg"
+                      className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
                     <button
                       onClick={handlApplyDiscount}
-                      className="px-4 py-2 bg-slate-200 rounded-lg text-slate-800"
+                      className="px-4 py-2 bg-slate-200 rounded-lg text-slate-800 dark:bg-gray-700 dark:text-white hover:bg-slate-300 dark:hover:bg-gray-600"
                     >
                       Áp dụng
                     </button>
                   </div>
                   {discountFeedback && (
-                    <p className={`text-sm mt-2 ${discountFeedback.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                    <p className={`text-sm mt-2 ${discountFeedback.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                       {discountFeedback.message}
                     </p>
                   )}
                   {order.applied_discount && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      Đang áp dụng: <span className="font-semibold text-gray-900">{order.applied_discount.code}</span>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      Đang áp dụng: <span className="font-semibold text-gray-900 dark:text-white">{order.applied_discount.code}</span>
                     </p>
                   )}
                 </div>
               )}
 
               {!hasSuccessfulTransaction && pendingTransaction && (
-                <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-center text-yellow-800 font-bold mb-2">
+                <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-900/30">
+                  <p className="text-center text-yellow-800 dark:text-yellow-200 font-bold mb-2">
                     Đang chờ xác nhận thanh toán ({pendingTransaction.status === 'pending' ? 'Đang chờ' : pendingTransaction.status})
                   </p>
                   <button
@@ -340,9 +340,9 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                     <button
                       key={method}
                       onClick={() => setSelectedPaymentMethod(method)}
-                      className={`py-2 rounded-lg border ${selectedPaymentMethod === method
-                        ? 'border-blue-600 bg-blue-50 text-blue-600'
-                        : 'border-slate-200 text-slate-600'
+                      className={`py-2 rounded-lg border transition-colors ${selectedPaymentMethod === method
+                        ? 'border-blue-600 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-500'
+                        : 'border-slate-200 text-slate-600 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                         }`}
                     >
                       {method === 'cash' ? 'Tiền mặt' : method === 'card' ? 'Thẻ' : 'Chuyển khoản'}

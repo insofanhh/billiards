@@ -113,6 +113,17 @@ export function TenantRegistrationForm() {
             {loading ? 'Đang xử lý...' : 'Đăng ký ngay'}
           </button>
         </div>
+
+        <div className="text-center mt-4 space-x-1">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Đã có tài khoản?</span>
+          <button 
+            type="button"
+            onClick={() => navigate('/login')}
+            className="text-sm font-semibold text-blue-600 dark:text-[#13ec6d] hover:underline focus:outline-none"
+          >
+            Đăng nhập
+          </button>
+        </div>
       </form>
     </div>
   );

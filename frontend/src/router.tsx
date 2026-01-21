@@ -6,6 +6,7 @@ import { TableDetailPage } from './pages/TableDetailPage';
 import { OrderPage } from './pages/OrderPage';
 import { OrdersHistoryPage } from './pages/OrdersHistoryPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { StaffLayout } from './layouts/StaffLayout';
 import { ClientTablePage } from './pages/ClientTablePage';
 import { ClientOrderPage } from './pages/ClientOrderPage';
 import { ClientHistoryPage } from './pages/ClientHistoryPage';
@@ -35,20 +36,25 @@ export const router = createBrowserRouter([
     element: <ClientHomePage />,
   },
   {
-    path: '/staff',
-    element: <ProtectedRoute><HomePage /></ProtectedRoute>,
-  },
-  {
-    path: '/table/:code',
-    element: <ProtectedRoute><TableDetailPage /></ProtectedRoute>,
-  },
-  {
-    path: '/order/:id',
-    element: <ProtectedRoute><OrderPage /></ProtectedRoute>,
-  },
-  {
-    path: '/orders',
-    element: <ProtectedRoute><OrdersHistoryPage /></ProtectedRoute>,
+    element: <ProtectedRoute><StaffLayout /></ProtectedRoute>,
+    children: [
+      {
+        path: '/staff',
+        element: <HomePage />,
+      },
+      {
+        path: '/table/:code',
+        element: <TableDetailPage />,
+      },
+      {
+        path: '/order/:id',
+        element: <OrderPage />,
+      },
+      {
+        path: '/orders',
+        element: <OrdersHistoryPage />,
+      },
+    ]
   },
   // Public client routes
   {
@@ -110,20 +116,25 @@ export const router = createBrowserRouter([
     element: <BlogPostPage />,
   },
   {
-    path: '/s/:slug/staff',
-    element: <ProtectedRoute><HomePage /></ProtectedRoute>,
-  },
-  {
-    path: '/s/:slug/staff/table/:code',
-    element: <ProtectedRoute><TableDetailPage /></ProtectedRoute>,
-  },
-  {
-    path: '/s/:slug/staff/order/:id',
-    element: <ProtectedRoute><OrderPage /></ProtectedRoute>,
-  },
-  {
-    path: '/s/:slug/orders',
-    element: <ProtectedRoute><OrdersHistoryPage /></ProtectedRoute>,
+    element: <ProtectedRoute><StaffLayout /></ProtectedRoute>,
+    children: [
+      {
+        path: '/s/:slug/staff',
+        element: <HomePage />,
+      },
+      {
+        path: '/s/:slug/staff/table/:code',
+        element: <TableDetailPage />,
+      },
+      {
+        path: '/s/:slug/staff/order/:id',
+        element: <OrderPage />,
+      },
+      {
+        path: '/s/:slug/orders',
+        element: <OrdersHistoryPage />,
+      },
+    ]
   },
 
   // Platform Admin Routes

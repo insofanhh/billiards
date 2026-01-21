@@ -2,8 +2,6 @@ import { useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { tablesApi } from '../api/tables';
-import { useAuthStore } from '../store/authStore';
-import { AdminNavigation } from '../components/AdminNavigation';
 import { useTableActions } from '../hooks/useTableActions';
 
 // Components
@@ -15,7 +13,8 @@ import { ActiveOrderCard } from '../components/staff/table/ActiveOrderCard';
 export function TableDetailPage() {
   const { code, slug } = useParams<{ code: string; slug: string }>();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  // useAuthStore not strictly needed if layout handles it, but maybe used later?
+  // const { user } = useAuthStore(); 
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
   const { data: table, isLoading } = useQuery({
@@ -60,7 +59,7 @@ export function TableDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center dark:text-gray-200">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -68,12 +67,12 @@ export function TableDetailPage() {
 
   if (!table) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center dark:text-gray-200">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy bàn</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Không tìm thấy bàn</h2>
           <button
             onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
           >
             Quay lại trang chủ
           </button>
@@ -89,12 +88,11 @@ export function TableDetailPage() {
   const hasPendingOpenOrder = !!table.pending_order;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
+    <>
       <div className="max-w-7xl mx-auto py-8 px-4 lg:px-8">
         <button
           onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
-          className="mb-8 text-gray-500 hover:text-gray-700 flex items-center"
+          className="mb-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center"
         >
           <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -102,15 +100,15 @@ export function TableDetailPage() {
           <span className="font-medium">Quay lại</span>
         </button>
 
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 border border-gray-100 dark:border-gray-700">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{table.code}</h1>
-              <p className="text-xl text-gray-600 mt-2">{table.name}</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{table.code}</h1>
+              <p className="text-xl text-gray-600 dark:text-gray-300 mt-2">{table.name}</p>
             </div>
-            <span className={`px-4 py-2 rounded-full text-sm font-medium ${table.status.name === 'Trống' ? 'bg-green-100 text-green-800' :
-              table.status.name === 'Đang sử dụng' ? 'bg-red-100 text-red-800' :
-                'bg-yellow-100 text-yellow-800'
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${table.status.name === 'Trống' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+              table.status.name === 'Đang sử dụng' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
               }`}>
               {table.status.name}
             </span>
@@ -160,7 +158,7 @@ export function TableDetailPage() {
                 disabled={!isAvailable || isCreating}
                 className={`flex-1 py-3 px-6 rounded-md font-medium ${isAvailable
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                   }`}
               >
                 {isCreating ? 'Đang mở bàn...' : 'Mở bàn'}
@@ -169,12 +167,12 @@ export function TableDetailPage() {
           </div>
 
           {!isAvailable && !hasActiveOrder && (
-            <p className="mt-4 text-sm text-red-600 text-center">
+            <p className="mt-4 text-sm text-red-600 dark:text-red-400 text-center">
               Bàn đang được sử dụng hoặc bảo trì
             </p>
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
