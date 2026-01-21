@@ -1,16 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { IDetectedBarcode } from '@yudiel/react-qr-scanner';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { useQuery } from '@tanstack/react-query';
+import { type IDetectedBarcode, Scanner } from '@yudiel/react-qr-scanner';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { TenantRegistrationForm } from '../components/TenantRegistrationForm';
-import { getTemporaryUserName, isGuestUser } from '../utils/temporaryUser';
-import { discountCodesApi } from '../api/discountCodes';
-import type { BannerSettings } from '../api/settings';
-import { settingsApi } from '../api/settings';
-import type { DiscountCode } from '../types';
-import { useNotification } from '../contexts/NotificationContext';
+import { getTemporaryUserName } from '../utils/temporaryUser';
 import { ordersApi } from '../api/orders';
 import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
 import {
@@ -19,130 +13,21 @@ import {
   isClientOrderContinuable,
   persistClientActiveOrderFromOrder,
 } from '../utils/clientActiveOrder';
-import { blogApi } from '../api/blog';
 import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
 
-function LatestPosts() {
-  const navigate = useNavigate();
-  const { data: postsData, isLoading } = useQuery({
-    queryKey: ['latest-posts'],
-    queryFn: () => blogApi.getPosts({ status: 'published', limit: 3 }),
-  });
-
-  const getImageUrl = (path: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-    return `${baseUrl}/storage/${path}`;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="grid gap-4 md:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-4 shadow-sm">
-            <div className="h-40 bg-gray-200 dark:bg-white/10 rounded-xl mb-4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-1/2"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (!postsData?.data?.length) {
-    return (
-      <div className="rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 p-6 text-center text-sm text-gray-500 dark:text-white/50">
-        <p>Chưa có tin tức nào.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-6 md:grid-cols-3">
-      {postsData.data.slice(0, 3).map((post: any) => (
-        <div
-          key={post.id}
-          className="group cursor-pointer rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden shadow-sm dark:shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-md dark:hover:shadow-green-900/20 hover:scale-[1.02] dark:hover:bg-white/10"
-          onClick={() => navigate(`/blog/${post.id}`)}
-        >
-          <div className="aspect-[16/9] w-full overflow-hidden bg-gray-100 dark:bg-white/5">
-            {post.thumbnail ? (
-              <img
-                src={getImageUrl(post.thumbnail)}
-                alt={post.title}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-gray-400 dark:text-white/20">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                </svg>
-              </div>
-            )}
-          </div>
-          <div className="p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-white/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-[#13ec6d]">
-                {post.category?.name || 'Tin tức'}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date(post.published_at).toLocaleDateString('vi-VN')}
-              </span>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-[#13ec6d] transition-colors">
-              {post.title}
-            </h3>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-              {post.summary}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-type Highlight = {
-  title: string;
-  description: string;
-};
-
-const highlightCards: Highlight[] = [
-  {
-    title: 'Quét mã để bắt đầu',
-    description: 'Đưa camera tới mã QR trên bàn để mở bàn và tạo yêu cầu phục vụ trong vài giây.',
-  },
-  {
-    title: 'Theo dõi thông báo',
-    description: 'Khi quản trị viên đăng thông báo mới, nội dung sẽ xuất hiện tự động tại khu vực bên dưới.',
-  },
-  {
-    title: 'Săn khuyến mãi',
-    description: 'Các gói ưu đãi, happy hour hoặc mã giảm giá sẽ được CMS đồng bộ để bạn xem nhanh.',
-  },
-];
-
-// Helper to extract ID
-function extractYoutubeId(url: string | null): string | null {
-  if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2]?.length === 11) ? match[2] : null;
-}
+// New Components
+import { LatestPosts } from '../components/blog/LatestPosts';
+import { BannerSlider } from '../components/client/home/BannerSlider';
+import { PromoList } from '../components/client/home/PromoList';
+import { InfoSection } from '../components/client/home/InfoSection';
 
 export function TenantHomePage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { showNotification } = useNotification();
   const [guestName] = useState(getTemporaryUserName);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [isHandlingScan, setIsHandlingScan] = useState(false);
   const isAuthenticated = !!localStorage.getItem('auth_token');
-  const isGuest = isGuestUser();
-  const [savingDiscountId, setSavingDiscountId] = useState<number | null>(null);
   const activeOrderSnapshot = useClientActiveOrder();
 
   useEffect(() => {
@@ -156,96 +41,6 @@ export function TenantHomePage() {
       window.removeEventListener('openScanner', handleOpenScanner);
     };
   }, []);
-
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const { data: publicDiscounts, isLoading: isLoadingDiscounts } = useQuery({
-    queryKey: ['public-discounts'],
-    queryFn: discountCodesApi.getPublicDiscounts,
-  });
-
-  const { data: bannersData } = useQuery<BannerSettings>({
-    queryKey: ['client-banner-settings'],
-    queryFn: settingsApi.getBanners,
-    staleTime: 5 * 60_000,
-  });
-
-  const bannerImages = bannersData?.images ?? [];
-  const bannerVideoUrl = bannersData?.videoUrl ?? null;
-  const youtubeId = extractYoutubeId(bannerVideoUrl);
-
-  useEffect(() => {
-    if (!bannerImages.length || youtubeId) {
-      setCurrentBannerIndex(0);
-      return;
-    }
-    const timer = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % bannerImages.length);
-    }, 5000);
-
-    return () => clearInterval(timer);
-  }, [bannerImages.length, youtubeId]);
-
-  const showNextBanner = () => {
-    if (!bannerImages.length || youtubeId) return;
-    setCurrentBannerIndex((prev) => (prev + 1) % bannerImages.length);
-  };
-
-  const showPrevBanner = () => {
-    if (!bannerImages.length || youtubeId) return;
-    setCurrentBannerIndex((prev) => (prev - 1 + bannerImages.length) % bannerImages.length);
-  };
- 
-  const goToBanner = (index: number) => {
-    if (!bannerImages.length || youtubeId) return;
-    setCurrentBannerIndex((index + bannerImages.length) % bannerImages.length);
-  };
-
-  const handleDragStart = (clientX: number) => {
-    if (youtubeId) return;
-    setDragStartX(clientX);
-    setIsDragging(true);
-  };
-
-  const handleDragEnd = (clientX: number | null) => {
-    if (youtubeId || dragStartX === null) {
-      if (isDragging) setIsDragging(false);
-      return;
-    }
-    if (clientX !== null) {
-      const delta = clientX - dragStartX;
-      if (Math.abs(delta) > 40) {
-        delta > 0 ? showPrevBanner() : showNextBanner();
-      }
-    }
-    setDragStartX(null);
-    setIsDragging(false);
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: (discountId: number) => discountCodesApi.saveDiscount(discountId),
-    onMutate: (discountId: number) => {
-      setSavingDiscountId(discountId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['public-discounts'] });
-      queryClient.invalidateQueries({ queryKey: ['saved-discounts'] });
-      showNotification('Đã lưu voucher vào ví');
-    },
-    onError: (error: any) => {
-      if (error?.response?.data?.requires_registration) {
-        showNotification('Vui lòng đăng ký thành viên để lưu voucher vào ví');
-        navigate('/register');
-      } else {
-        showNotification(error?.response?.data?.message || 'Không thể lưu voucher');
-      }
-    },
-    onSettled: () => {
-      setSavingDiscountId(null);
-    },
-  });
 
   const parseTableCode = (rawValue: string) => {
     if (!rawValue) return null;
@@ -317,22 +112,6 @@ export function TenantHomePage() {
     setScanError('Không thể truy cập camera. Vui lòng kiểm tra quyền hoặc thử lại.');
   };
 
-  const infoSteps = useMemo(
-    () => [
-      { title: 'Bước 1', description: 'Chọn nút Quét mã QR và cấp quyền camera.' },
-      { title: 'Bước 2', description: 'Giữ camera ổn định trước mã QR được dán trên bàn.' },
-      { title: 'Bước 3', description: 'Hệ thống sẽ mở trang bàn để bạn yêu cầu mở bàn hoặc gọi thêm dịch vụ.' },
-    ],
-    []
-  );
-
-  const emptyStateCard = (label: string) => (
-    <div className="rounded-2xl border border-dashed border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 p-6 text-center text-sm text-gray-500 dark:text-white/50">
-      <p>{label}</p>
-      <p className="mt-1 text-xs text-gray-400 dark:text-white/30">Chờ quản trị viên cập nhật trên CMS.</p>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white transition-colors duration-300">
       <ClientNavigation
@@ -343,106 +122,7 @@ export function TenantHomePage() {
         isOverBanner={true}
       />
 
-      <div className="relative h-screen w-full overflow-hidden bg-gray-900">
-        {youtubeId ? (
-          <div className="absolute inset-0 h-full w-full bg-black">
-            <iframe
-              className="h-full w-full object-cover pointer-events-none scale-[4] md:scale-150" 
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&playsinline=1`}
-              title="Youtube Banner"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              style={{ pointerEvents: 'none' }}
-            />
-            <div className="absolute inset-0 bg-black/40" />
-          </div>
-        ) : bannerImages.length > 0 ? (
-          <div
-            className="absolute inset-0 h-full w-full"
-            onTouchStart={(event) => handleDragStart(event.touches[0].clientX)}
-            onTouchEnd={(event) => handleDragEnd(event.changedTouches[0]?.clientX ?? null)}
-            onMouseDown={(event) => handleDragStart(event.clientX)}
-            onMouseUp={(event) => handleDragEnd(event.clientX)}
-            onMouseLeave={() => isDragging && handleDragEnd(null)}
-          >
-            {bannerImages.map((src, index) => (
-              <div
-                key={src}
-                className={`absolute inset-0 h-full w-full transition-opacity duration-1000 ${
-                  index === currentBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                }`}
-              >
-                <img
-                  src={src}
-                  alt={`Banner ${index + 1}`}
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                  className="h-full w-full object-cover"
-                  draggable={false}
-                />
-                <div className="absolute inset-0 bg-black/50" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-             <div className="text-white/50">Chưa có banner</div>
-          </div>
-        )}
-
-        <div className="absolute inset-0 z-20 flex items-center">
-            <div className="mx-auto max-w-7xl px-4 w-full lg:px-8">
-               <div className="max-w-2xl space-y-8 animate-fade-in-up">
-                  <div>
-                    <p className="text-base uppercase tracking-widest text-[#13ec6d] font-semibold mb-4">Trang khách hàng</p>
-                    <h1 className="text-4xl font-bold sm:text-5xl md:text-6xl text-white leading-tight">
-                      Quét mã QR để mở bàn <br className="hidden sm:block"/>và nhận thông báo mới
-                    </h1>
-                    <p className="mt-6 text-lg text-gray-200 max-w-xl leading-relaxed">
-                      Mọi thông điệp, thông báo hoặc ưu đãi từ quản trị viên sẽ xuất hiện tại đây. Bạn chỉ cần một lần quét để bắt đầu trải nghiệm.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setScanError(null);
-                        setIsScannerOpen(true);
-                      }}
-                      className="rounded-full bg-[#13ec6d] px-8 py-4 text-center text-lg font-bold text-zinc-900 shadow-lg shadow-green-500/30 transition hover:bg-[#10d863] hover:scale-105 active:scale-95"
-                    >
-                      Quét mã QR bàn
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/client/history')}
-                      className="rounded-full border border-white/30 bg-white/10 px-8 py-4 text-center text-lg font-bold text-white transition hover:bg-white/20 backdrop-blur-sm"
-                    >
-                      Lịch sử của tôi
-                    </button>
-                  </div>
-               </div>
-            </div>
-        </div>
-
-        {/* Dots Navigation */}
-        {bannerImages.length > 0 && (
-          <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center gap-3">
-            {bannerImages.map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => goToBanner(index)}
-                className={`h-3 w-3 rounded-full transition-all duration-300 ${
-                  index === currentBannerIndex 
-                    ? 'bg-[#13ec6d] w-10' 
-                    : 'bg-white/40 hover:bg-white/80'
-                }`}
-                aria-label={`Chọn banner ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <BannerSlider onScanClick={() => setIsScannerOpen(true)} />
 
       <main className="mx-auto max-w-7xl px-4 py-10 lg:px-8 space-y-10">
 
@@ -474,15 +154,7 @@ export function TenantHomePage() {
           </div>
         )}
 
-        <section className="grid gap-6 md:grid-cols-3">
-          {highlightCards.map((item) => (
-            <div key={item.title} className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm backdrop-blur-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-[#13ec6d]">Thông tin</p>
-              <h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white">{item.title}</h2>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{item.description}</p>
-            </div>
-          ))}
-        </section>
+        <InfoSection />
 
         <section className="space-y-6">
           <div className="flex items-start justify-between">
@@ -515,102 +187,9 @@ export function TenantHomePage() {
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Ưu đãi dành cho bạn</h2>
             </div>
           </div>
-          {isLoadingDiscounts ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm">
-                  <div className="flex justify-between">
-                    <div className="flex-1 space-y-3">
-                      <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded"></div>
-                      <div className="h-6 w-32 bg-gray-200 dark:bg-white/10 rounded"></div>
-                      <div className="h-4 w-48 bg-gray-200 dark:bg-white/10 rounded"></div>
-                      <div className="pt-2 space-y-2">
-                        <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded"></div>
-                        <div className="h-6 w-24 bg-gray-200 dark:bg-white/10 rounded"></div>
-                      </div>
-                    </div>
-                    <div className="h-8 w-16 bg-gray-200 dark:bg-white/10 rounded-lg"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : !publicDiscounts || publicDiscounts.length === 0
-            ? emptyStateCard('Chưa có ưu đãi nào được thêm.')
-            : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {publicDiscounts.map((discount: DiscountCode) => {
-                  const formatDiscountValue = () => {
-                    if (discount.discount_type === 'percent') {
-                      return `${discount.discount_value}%`;
-                    }
-                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.discount_value);
-                  };
-                  const isSaved = discount.is_saved || false;
-                  return (
-                    <div key={discount.id} className="group rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-md dark:hover:shadow-green-900/20 hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-white/10">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-blue-600 dark:text-[#13ec6d]">VOUCHER</p>
-                          {/* <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-[#13ec6d] transition-colors">{discount.code}</h3> */}
-                          {discount.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{discount.description}</p>}
-                          <div className="mt-3">
-                            <p className="text-sm text-gray-500">Giảm giá</p>
-                            <p className="text-xl font-bold text-blue-600 dark:text-[#13ec6d]">{formatDiscountValue()}</p>
-                            {discount.min_spend && (
-                              <p className="mt-1 text-xs text-gray-500">
-                                Đơn tối thiểu: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount.min_spend)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {!isSaved && (
-                          <div className="ml-4">
-                            <button
-                              onClick={() => {
-                                if (!isAuthenticated) {
-                                  showNotification('Vui lòng đăng nhập để lưu voucher');
-                                  navigate('/login');
-                                } else if (isGuest) {
-                                  showNotification('Vui lòng đăng ký thành viên để lưu voucher');
-                                  navigate('/register');
-                                } else {
-                                  saveMutation.mutate(discount.id);
-                                }
-                              }}
-                              disabled={saveMutation.isPending}
-                              className="rounded-lg bg-blue-600 dark:bg-[#13ec6d] px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 transition hover:bg-blue-700 dark:hover:bg-[#10d863] disabled:opacity-50"
-                            >
-                              {saveMutation.isPending && savingDiscountId === discount.id ? 'Đang lưu...' : 'Lưu'}
-                            </button>
-                          </div>
-                        )}
-                        {isSaved && (
-                          <div className="ml-4">
-                            <span className="rounded-lg border border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-700 dark:text-[#13ec6d]">
-                              Đã lưu
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )
-          }
+          <PromoList />
         </section>
 
-        <section className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-8 shadow-sm backdrop-blur-sm">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Hướng dẫn nhanh</h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {infoSteps.map((step) => (
-              <div key={step.title} className="rounded-2xl bg-gray-50 dark:bg-white/5 p-4 border border-gray-100 dark:border-white/5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-[#13ec6d]">{step.title}</p>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
 
       {isScannerOpen && (
@@ -716,5 +295,3 @@ export function ClientHomePage() {
 
   return <TenantHomePage />;
 }
-
-

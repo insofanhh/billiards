@@ -107,4 +107,10 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     {
         return $this->store_id === $tenant->id;
     }
+
+    public function isGuestAccount(): bool
+    {
+        return $this->is_temporary || 
+               preg_match('/^guest_\d+_[a-z0-9]+@temp\.billiards\.local$/i', $this->email);
+    }
 }
