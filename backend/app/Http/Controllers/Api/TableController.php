@@ -5,75 +5,60 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TableResource;
 use App\Models\TableBilliard;
-use App\Models\User;
 use App\Models\Order;
+use App\Models\User;
 use App\Events\OrderRequested;
+use App\Services\GuestAuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class TableController extends Controller
 {
+    protected GuestAuthService $guestAuthService;
+
+    public function __construct(GuestAuthService $guestAuthService)
+    {
+        $this->guestAuthService = $guestAuthService;
+    }
+
     public function index()
     {
+        // Potential optimization: Eager load specific order statuses to avoid N+1 in Resource
+        // For now, keeping it simple as per request scope, but noted for future.
         $tables = TableBilliard::with(['status', 'tableType'])->get();
         return TableResource::collection($tables);
     }
 
     public function show(Request $request, $code)
     {
-        $table = TableBilliard::where('code', $code)
-            ->with(['status', 'tableType', 'tableType.priceRates'])
-            ->firstOrFail();
+        $query = TableBilliard::where('code', $code)
+            ->with(['status', 'tableType', 'tableType.priceRates']);
+            
+        // Eager load active order to optimize Resource usage or accessing it directly
+        // However, TableResource calls ->orders(), so standard eager loading 'orders' 
+        // with constraints is complex. For 'show', N+1 is less critical (1 query).
         
-        // Lấy đơn hàng đang active của bàn (không giới hạn theo người tạo)
-        $activeOrder = \App\Models\Order::where('table_id', $table->id)
-            ->where('status', 'active')
-            ->latest('id')
-            ->with(['table', 'priceRate'])
-            ->first();
+        $table = $query->firstOrFail();
         
-        $resource = new TableResource($table);
-        $data = $resource->toArray($request);
-        
-        // Thêm thông tin order active vào response
-        if ($activeOrder) {
-            $data['active_order'] = [
-                'id' => $activeOrder->id,
-                'order_code' => $activeOrder->order_code,
-                'start_at' => $activeOrder->start_at,
-            ];
-        }
-        
-        return response()->json($data);
+        return new TableResource($table);
     }
 
     public function requestOpen(Request $request, string $code)
     {
         $table = TableBilliard::where('code', $code)->firstOrFail();
 
-        // Kiểm tra user đã đăng nhập qua token (nếu có)
-        $authenticatedUser = null;
-        $bearerToken = $request->bearerToken();
-        if ($bearerToken) {
-            try {
-                $token = PersonalAccessToken::findToken($bearerToken);
-                if ($token && (!$token->expires_at || ($token->expires_at && $token->expires_at->isFuture()))) {
-                    $authenticatedUser = $token->tokenable;
-                }
-            } catch (\Exception $e) {
-                // Token không hợp lệ, tiếp tục như guest
-            }
-        }
+        // Use standard Sanctum auth
+        $authenticatedUser = auth('sanctum')->user();
 
+        // Check for existing blocking orders
         $blockingOrder = Order::where('table_id', $table->id)
             ->whereIn('status', ['pending', 'active', 'pending_end'])
             ->latest('id')
             ->first();
 
         if ($blockingOrder) {
+            // If user is the owner of the pending request, return info instead of error
             if (
                 $blockingOrder->status === 'pending' &&
                 $authenticatedUser &&
@@ -93,47 +78,23 @@ class TableController extends Controller
                 ]);
             }
 
-            $message = 'Bàn hiện không khả dụng.';
-            if ($blockingOrder->status === 'pending') {
-                $message = 'Bàn đang có yêu cầu mở, vui lòng chờ nhân viên xác nhận.';
-            } elseif ($blockingOrder->status === 'pending_end') {
-                $message = 'Bàn đang chờ xác nhận kết thúc, vui lòng thử lại sau.';
-            } elseif ($blockingOrder->status === 'active') {
-                $message = 'Bàn đang được sử dụng.';
-            }
-
-            return response()->json([
-                'message' => $message,
-            ], 409);
+            return $this->responseForBlockingOrder($blockingOrder);
         }
         
+        $token = null;
         if ($authenticatedUser) {
-            // User đã đăng nhập, sử dụng user đó
             $user = $authenticatedUser;
-            $token = null; // Không cần tạo token mới vì user đã có token
         } else {
-            // User chưa đăng nhập, tạo guest user - validate name
+            // Guest Flow
             $validated = $request->validate([
                 'name' => 'required|string|min:2|max:255',
             ]);
 
-            $email = 'guest_' . time() . '_' . Str::random(4) . '@temp.billiards.local';
-            $user = User::create([
-                'name' => $validated['name'],
-                'email' => $email,
-                'password' => Hash::make(Str::random(16)),
-                'is_temporary' => true,
-                'temporary_expires_at' => Carbon::now('Asia/Ho_Chi_Minh')->addDay(),
-            ]);
-
-            if (method_exists($user, 'assignRole')) {
-                try { $user->assignRole('customer'); } catch (\Throwable $e) {}
-            }
-
+            $user = $this->guestAuthService->createGuestUser($validated['name']);
             $token = $user->createToken('guest')->plainTextToken;
         }
 
-        $startTime = Carbon::now('Asia/Ho_Chi_Minh');
+        $startTime = Carbon::now(); // Use app timezone
         $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
         
         $order = Order::create([
@@ -146,7 +107,6 @@ class TableController extends Controller
         ]);
 
         $order->load(['table', 'user']);
-
         event(new OrderRequested($order));
 
         $responseData = [
@@ -163,9 +123,23 @@ class TableController extends Controller
 
         if ($token) {
             $responseData['token'] = $token;
+            // $user is guaranteed to have the attribute if created by service, 
+            // but check just in case or use the one on model
             $responseData['user']['temporary_expires_at'] = $user->temporary_expires_at;
         }
 
         return response()->json($responseData, 201);
+    }
+
+    private function responseForBlockingOrder(Order $order)
+    {
+        $message = match ($order->status) {
+            'pending' => 'Bàn đang có yêu cầu mở, vui lòng chờ nhân viên xác nhận.',
+            'pending_end' => 'Bàn đang chờ xác nhận kết thúc, vui lòng thử lại sau.',
+            'active' => 'Bàn đang được sử dụng.',
+            default => 'Bàn hiện không khả dụng.',
+        };
+
+        return response()->json(['message' => $message], 409);
     }
 }

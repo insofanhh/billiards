@@ -42,21 +42,9 @@ export interface Table {
       active: boolean;
     } | null;
   };
-  pending_order?: {
-    id: number;
-    user_name?: string;
-  } | null;
-  pending_end_order?: {
-    id: number;
-    order_code: string;
-    user_name?: string;
-  } | null;
-  active_order?: {
-    id: number;
-    order_code: string;
-    start_at?: string;
-    status?: string;
-  } | null;
+  pending_order?: Order | null;
+  pending_end_order?: Order | null;
+  active_order?: Order | null;
 }
 
 export interface Service {
@@ -76,6 +64,35 @@ export interface Service {
   } | null;
 }
 
+export interface OrderItem {
+  id: number;
+  service: {
+    id: number;
+    name: string;
+    price: number;
+  };
+  qty: number;
+  unit_price: number;
+  total_price: number;
+  is_confirmed?: boolean;
+  created_at?: string;
+}
+
+export interface OrderTransaction {
+  id: number;
+  amount: number;
+  method: string;
+  status: string;
+  reference: string;
+  created_at: string;
+  customer_name?: string | null;
+  user?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+}
+
 export interface Order {
   id: number;
   order_code: string;
@@ -86,6 +103,7 @@ export interface Order {
     email: string;
   } | null;
   customer_name?: string | null;
+  user_name?: string | null;
   table: {
     id: number;
     code: string;
@@ -103,38 +121,13 @@ export interface Order {
   total_discount: number;
   total_paid: number;
   cashier?: string | null;
-  items: Array<{
-    id: number;
-    service: {
-      id: number;
-      name: string;
-      price: number;
-    };
-    qty: number;
-    unit_price: number;
-    total_price: number;
-    is_confirmed?: boolean;
-    created_at?: string;
-  }>;
+  items: Array<OrderItem>;
   applied_discount?: {
     code: string;
     discount_type: string;
     discount_value: number;
   };
-  transactions: Array<{
-    id: number;
-    amount: number;
-    method: string;
-    status: string;
-    reference: string;
-    created_at: string;
-    customer_name?: string | null;
-    user?: {
-      id: number;
-      name: string;
-      email?: string;
-    } | null;
-  }>;
+  transactions: Array<OrderTransaction>;
 }
 
 export interface DiscountCode {
