@@ -33,7 +33,8 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->brandName('Billiards CMS')
+            ->brandName(fn () => \Filament\Facades\Filament::getTenant()?->name ?? 'Billiards CMS')
+            ->homeUrl(fn () => \Filament\Facades\Filament::getTenant() ? '/s/' . \Filament\Facades\Filament::getTenant()->slug : '/')
             ->favicon(asset('images/favicon.svg'))
             ->profile(\Filament\Auth\Pages\EditProfile::class)
             ->navigationGroups([
