@@ -128,8 +128,15 @@ class ManagePaymentSettings extends Page
             $store = $this->getStore();
 
             if (!$store) {
+                $debugInfo = [
+                    'tenant' => \Filament\Facades\Filament::getTenant() ? 'exists' : 'null',
+                    'currentStoreId' => app()->has('currentStoreId') ? app('currentStoreId') : 'not set',
+                    'user_store_id' => Auth::user()?->store_id ?? 'null',
+                ];
+                
                 Notification::make()
                     ->title('Không tìm thấy store')
+                    ->body('Debug: ' . json_encode($debugInfo))
                     ->danger()
                     ->send();
                 return;
@@ -169,9 +176,23 @@ class ManagePaymentSettings extends Page
 
     protected function getStore(): ?Store
     {
+        // Try Filament tenant first
+        $tenant = \Filament\Facades\Filament::getTenant();
+        if ($tenant instanceof Store) {
+            return $tenant;
+        }
+        
+        // Fallback to currentStoreId
         if (app()->has('currentStoreId')) {
             return Store::find(app('currentStoreId'));
         }
+        
+        // Last fallback: get from auth user's store
+        $user = Auth::user();
+        if ($user && $user->store_id) {
+            return Store::find($user->store_id);
+        }
+        
         return null;
     }
 
