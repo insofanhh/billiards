@@ -124,12 +124,17 @@ class OrderController extends Controller
         $order = Order::create([
             'order_code' => 'ORD-' . Str::upper(Str::random(8)),
             'user_id' => $request->user()->id,
+            'customer_name' => null,
             'table_id' => $table->id,
             'store_id' => $table->store_id,
             'price_rate_id' => $priceRate->id,
             'start_at' => $startTime,
             'status' => 'active',
         ]);
+        
+        // Resolve and set customer name
+        $customerName = $this->resolveCustomerName($order, $request);
+        $order->update(['customer_name' => $customerName]);
 
         $statusInUse = $this->getTableStatusId($table->store_id, 'Đang sử dụng');
         if ($statusInUse) {
@@ -741,12 +746,19 @@ class OrderController extends Controller
 
             $totalPaid = $totalBeforeDiscount - $discount;
 
-            $order->update([
+            $updateData = [
                 'total_play_time_minutes' => $playTimeMinutes,
                 'total_before_discount' => round($totalBeforeDiscount),
                 'total_discount' => round($discount),
                 'total_paid' => round($totalPaid),
-            ]);
+            ];
+            
+            // Ensure customer_name is set if not already
+            if (!$order->customer_name) {
+                $updateData['customer_name'] = $customerName;
+            }
+            
+            $order->update($updateData);
 
             // Handle pending transaction creation or update
             $existingPending = Transaction::where('order_id', $order->id)

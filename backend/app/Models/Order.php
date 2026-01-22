@@ -15,6 +15,7 @@ class Order extends Model
         'store_id',
         'order_code',
         'user_id',
+        'customer_name',
         'table_id',
         'price_rate_id',
         'admin_confirmed_by',

@@ -182,12 +182,12 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
           {(orderCustomerName || order.cashier) && (
             <div className="mb-4 text-sm border-t border-slate-200 dark:border-gray-700 pt-4">
               {orderCustomerName && (
-                <p className="text-slate-600 dark:text-gray-400">
+                <p className="text-slate-600 dark:text-gray-400 mb-2">
                   Khách hàng: <span className="font-semibold text-slate-900 dark:text-white">{orderCustomerName}</span>
                 </p>
               )}
               {order.cashier && (
-                <p className="text-slate-600 dark:text-gray-400 pt-2">
+                <p className="text-slate-600 dark:text-gray-400">
                   Thu ngân: <span className="font-semibold text-slate-900 dark:text-white">{order.cashier}</span>
                 </p>
               )}
@@ -323,13 +323,24 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
               {!hasSuccessfulTransaction && pendingTransaction && (
                 <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-900/30">
                   <p className="text-center text-yellow-800 dark:text-yellow-200 font-bold mb-2">
-                    Đang chờ xác nhận thanh toán ({pendingTransaction.status === 'pending' ? 'Đang chờ' : pendingTransaction.status})
+                    Khách hàng thanh toán bằng ({
+                      pendingTransaction.method 
+                        ? (pendingTransaction.method === 'cash' ? 'Tiền mặt' : pendingTransaction.method === 'card' ? 'Thẻ' : 'Chuyển khoản')
+                        : 'Chưa chọn'
+                    })
                   </p>
                   <button
                     onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
-                    className="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold hover:bg-yellow-700 transition-colors"
+                    disabled={confirmPaymentMutation.isPending}
+                    className="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Xác nhận đã nhận tiền
+                    {confirmPaymentMutation.isPending && (
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đã nhận tiền'}
                   </button>
                 </div>
               )}

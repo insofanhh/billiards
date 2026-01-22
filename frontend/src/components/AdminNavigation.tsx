@@ -52,7 +52,7 @@ export function AdminNavigation({ userName, userRoles, onLogout }: AdminNavigati
   const iconClasses = 'h-5 w-5';
   const icons = {
     dashboard: (
-      <img src="/favicon.svg" alt="Dashboard" className="h-5 w-5" />
+      <img src="/icons/icon-192x192.png" alt="Dashboard" className="h-8 w-8 rounded-lg" />
     ),
     orders: (
       <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>

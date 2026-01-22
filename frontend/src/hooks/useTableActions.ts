@@ -46,9 +46,8 @@ export function useTableActions(tableCode: string | undefined, slug?: string) {
 
     const approveOpenMutation = useMutation({
         mutationFn: (orderId: number) => ordersApi.approve(orderId),
-        onSuccess: (order) => {
+        onSuccess: () => {
             invalidateQueries();
-            navigate(slug ? `/s/${slug}/staff/order/${order.id}` : `/order/${order.id}`);
         },
     });
 

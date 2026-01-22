@@ -185,7 +185,7 @@ export function ClientOrderPage() {
             )}
 
             {order.status === 'active' && (
-              <div className="mb-6 bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-5 backdrop-blur-sm transition-colors duration-300">
+              <div className="mb-6 mt-6 bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-5 backdrop-blur-sm transition-colors duration-300">
                 <button
                   onClick={() => setShowAddService(!showAddService)}
                   className="w-full py-2 px-4 border border-blue-600 dark:border-[#13ec6d] text-blue-600 dark:text-[#13ec6d] rounded-xl hover:bg-blue-50 dark:hover:bg-[#13ec6d]/10 transition-colors"
