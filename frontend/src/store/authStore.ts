@@ -12,6 +12,8 @@ interface AuthState {
   logout: () => void;
   checkSession: () => Promise<void>;
   updateActivity: () => void;
+  initFromUrlToken: () => Promise<boolean>;
+  syncTokenFromSession: () => Promise<boolean>;
 }
 
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
@@ -111,6 +113,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('last_activity_at');
     set({ user: null, token: null, isAuthenticated: false, canLogin: false, lastActivityAt: null });
     updateEchoAuth();
+  },
+
+  initFromUrlToken: async () => {
+    // Check for token in URL fragment (#token=...)
+    const hash = window.location.hash;
+    const tokenMatch = hash.match(/#token=(.+)/);
+    
+    if (tokenMatch && tokenMatch[1]) {
+      const token = tokenMatch[1];
+      
+      try {
+        // Set token first
+        localStorage.setItem('auth_token', token);
+        
+        // Fetch user data
+        const { checkSession } = await import('../api/auth');
+        const user = await checkSession();
+        
+        // Update store
+        get().setAuth(user, token);
+        
+        // Clean up URL (remove token from fragment)
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        
+        return true;
+      } catch (error) {
+        console.error('Failed to initialize from URL token', error);
+        localStorage.removeItem('auth_token');
+        return false;
+      }
+    }
+    
+    return false;
+  },
+
+  syncTokenFromSession: async () => {
+    const state = get();
+    
+    // Only sync if no token but user might be authenticated via session
+    if (state.token || state.isAuthenticated) {
+      return false;
+    }
+    
+    try {
+      // Try to generate token from active session (uses cookies)
+      const { syncTokenFromSession } = await import('../api/auth');
+      const response = await syncTokenFromSession();
+      
+      // Successfully got token from session
+      get().setAuth(response.user, response.token);
+      return true;
+    } catch (error: any) {
+      // No active session or error
+      // This is normal if user hasn't logged in via admin panel
+      return false;
+    }
   },
 }));
 

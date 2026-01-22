@@ -9,6 +9,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Auth bridge for session-to-token synchronization
+Route::middleware('web')->group(function () {
+    Route::get('/auth/bridge', [\App\Http\Controllers\Web\AuthBridgeController::class, 'generateToken'])
+        ->name('auth.bridge');
+});
+
 Route::get('/{any}', function () {
     return file_get_contents(public_path('index.html'));
 })->where('any', '^(?!api|admin|broadcasting|livewire|phpmyadmin).*$');

@@ -115,6 +115,39 @@ class AuthController extends Controller
             'phone' => $user->phone,
             'roles' => $user->roles->pluck('name'),
             'permissions' => $permissions,
+            'store' => $user->store ? [
+                'id' => $user->store->id,
+                'name' => $user->store->name,
+                'slug' => $user->store->slug,
+            ] : null,
+        ]);
+    }
+
+    public function syncToken(Request $request)
+    {
+        $user = $request->user();
+        
+        // Generate new token for frontend use from active session
+        $token = $user->createToken('session-sync-token')->plainTextToken;
+        
+        $user->load('roles');
+        $permissions = method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : collect();
+        
+        return response()->json([
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'roles' => $user->roles->pluck('name'),
+                'permissions' => $permissions,
+                'store' => $user->store ? [
+                    'id' => $user->store->id,
+                    'name' => $user->store->name,
+                    'slug' => $user->store->slug,
+                ] : null,
+            ],
         ]);
     }
 
