@@ -92,13 +92,13 @@ export function TableDetailModal({ table, isOpen, onClose, slug }: Props) {
                     </div>
 
                     {/* Footer */}
-                    <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 flex flex-row-reverse">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 flex flex-row-reverse gap-3">
                          {table.status.name === 'Trống' && (
                             <button
                                 type="button"
                                 onClick={() => createOrder({ table_code: table.code })}
                                 disabled={isCreating}
-                                className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm ${isCreating ? 'opacity-75 cursor-wait' : ''}`}
+                                className={`flex-1 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:flex-none sm:w-auto sm:text-sm ${isCreating ? 'opacity-75 cursor-wait' : ''}`}
                             >
                                 {isCreating ? 'Đang mở...' : 'Mở bàn'}
                             </button>
@@ -106,7 +106,7 @@ export function TableDetailModal({ table, isOpen, onClose, slug }: Props) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                            className="flex-1 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
                         >
                             Đóng
                         </button>
