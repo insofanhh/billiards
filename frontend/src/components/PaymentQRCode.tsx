@@ -53,7 +53,7 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
   }
 
   // Check if payment info is configured
-  if (!paymentInfo || !paymentInfo.bank_account || !paymentInfo.bank_name) {
+  if (!paymentInfo || !paymentInfo.bank_account_no || !paymentInfo.bank_name) {
     return (
       <div className="bg-white dark:bg-white/5 rounded-xl p-6 border border-gray-200 dark:border-white/10">
         <div className="flex flex-col items-center justify-center gap-4 py-8">
@@ -72,7 +72,7 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
     );
   }
 
-  const bankAccount = paymentInfo.bank_account;
+  const bankAccount = paymentInfo.bank_account_no;
   const bankName = paymentInfo.bank_name;
   const bankAccountName = paymentInfo.bank_account_name || "";
   const prefix = "TKPBMS";
