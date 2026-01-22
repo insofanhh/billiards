@@ -37,11 +37,11 @@ class AdminPanelProvider extends PanelProvider
             ->homeUrl(function () {
                 $tenant = \Filament\Facades\Filament::getTenant();
                 if ($tenant) {
-                    // Redirect through auth bridge to sync token
-                    $targetPath = '/s/' . $tenant->slug;
-                    return route('auth.bridge', ['redirect' => $targetPath]);
+                    // Direct navigation to store frontend
+                    // TokenInitializer will automatically sync token from session
+                    return '/s/' . $tenant->slug;
                 }
-                return route('auth.bridge', ['redirect' => '/']);
+                return '/';
             })
             ->favicon(asset('images/favicon.svg'))
             ->profile(\Filament\Auth\Pages\EditProfile::class)
