@@ -33,7 +33,8 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->brandName(fn () => \Filament\Facades\Filament::getTenant()?->name ?? 'Billiards CMS')
+            ->brandLogo(asset('/icons/icon-admin.png'))
+            ->brandLogoHeight('2.5rem')
             ->homeUrl(function () {
                 $tenant = \Filament\Facades\Filament::getTenant();
                 if ($tenant) {
