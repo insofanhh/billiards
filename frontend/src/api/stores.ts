@@ -7,7 +7,7 @@ export interface PublicStore {
 }
 
 export interface StorePaymentInfo {
-  bank_account: string;
+  bank_account_no: string;
   bank_name: string;
   bank_account_name: string;
 }

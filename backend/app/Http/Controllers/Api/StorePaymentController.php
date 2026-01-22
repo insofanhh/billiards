@@ -27,7 +27,7 @@ class StorePaymentController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'bank_account' => $store->bank_account_no,
+                'bank_account_no' => $store->bank_account_no,
                 'bank_name' => $store->bank_name,
                 'bank_account_name' => $store->bank_account_name,
             ],
