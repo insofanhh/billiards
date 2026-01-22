@@ -7,9 +7,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface Props {
   onScanClick: () => void;
+  storeName?: string;
 }
 
-export function BannerSlider({ onScanClick }: Props) {
+export function BannerSlider({ onScanClick, storeName }: Props) {
   const navigate = useNavigate();
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
@@ -122,7 +123,7 @@ export function BannerSlider({ onScanClick }: Props) {
         <div className="mx-auto max-w-7xl px-4 w-full lg:px-8">
           <div className="max-w-2xl space-y-8 animate-fade-in-up">
             <div>
-              <p className="text-base uppercase tracking-widest text-[#13ec6d] font-semibold mb-4">Trang khách hàng</p>
+              <p className="text-base uppercase tracking-widest text-[#13ec6d] font-semibold mb-4">{storeName || 'Trang khách hàng'}</p>
               <h1 className="text-4xl font-bold sm:text-5xl md:text-6xl text-white leading-tight">
                 Quét mã QR để mở bàn <br className="hidden sm:block" />và nhận thông báo mới
               </h1>

@@ -41,6 +41,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
 
 // Public endpoints for guests
 Route::get('/tables', [TableController::class, 'index']);
+Route::get('/public/stores/{slug}', [\App\Http\Controllers\Api\PublicStoreController::class, 'show']);
 Route::get('/tables/{code}', [TableController::class, 'show']);
 Route::post('/tables/{code}/request-open', [TableController::class, 'requestOpen']);
 Route::get('/public-discounts', [DiscountCodeController::class, 'getPublicDiscounts']);

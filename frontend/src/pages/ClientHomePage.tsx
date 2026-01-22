@@ -20,10 +20,20 @@ import { LatestPosts } from '../components/blog/LatestPosts';
 import { BannerSlider } from '../components/client/home/BannerSlider';
 import { PromoList } from '../components/client/home/PromoList';
 import { InfoSection } from '../components/client/home/InfoSection';
+import { storesApi } from '../api/stores';
 
 export function TenantHomePage() {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const [guestName] = useState(getTemporaryUserName);
+  
+  const { data: store } = useQuery({
+    queryKey: ['public-store', slug],
+    queryFn: () => storesApi.getBySlug(slug!),
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [isHandlingScan, setIsHandlingScan] = useState(false);
@@ -122,7 +132,7 @@ export function TenantHomePage() {
         isOverBanner={true}
       />
 
-      <BannerSlider onScanClick={() => setIsScannerOpen(true)} />
+      <BannerSlider onScanClick={() => setIsScannerOpen(true)} storeName={store?.name || slug} />
 
       <main className="mx-auto max-w-7xl px-4 py-10 lg:px-8 space-y-10">
 

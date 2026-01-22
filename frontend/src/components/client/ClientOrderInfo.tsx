@@ -1,4 +1,5 @@
 import type { Order } from '../../types';
+import { TableTimer } from '../TableTimer';
 
 interface Props {
   order: Order;
@@ -85,12 +86,20 @@ export function ClientOrderInfo({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-2 gap-6 mt-6">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Bắt đầu</p>
           <p className="text-lg font-semibold text-gray-900 dark:text-white">
             {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}
           </p>
+          {order.start_at && order.status === 'active' && (
+            <div className="flex items-center text-red-500 dark:text-red-400 font-mono text-sm mt-2">
+              <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <TableTimer startTime={order.start_at} />
+            </div>
+          )}
         </div>
         {order.end_at && (
           <div>

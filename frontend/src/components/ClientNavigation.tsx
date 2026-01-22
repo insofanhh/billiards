@@ -106,7 +106,7 @@ export function ClientNavigation({
   const iconClasses = 'h-5 w-5';
   const icons = {
     home: (
-      <img src="/favicon.svg" alt="Trang chủ" className="h-5 w-5" />
+      <img src="/icons/icon-192x192.png" alt="Trang chủ" className="h-8 w-8 rounded-lg" />
     ),
     user: (
       <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -239,8 +239,8 @@ export function ClientNavigation({
           <div className="flex-shrink-0">
             <button
               type="button"
-              onClick={handleHome}
-              className={`flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${onHomeClick ? '' : 'cursor-default'}`}
+              onClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+              className={`flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
             >
               <div className="rounded-xl bg-yellow-500/20 p-2 text-yellow-600 dark:text-yellow-400">
                 {icons.home}
