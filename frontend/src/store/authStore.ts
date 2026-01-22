@@ -9,7 +9,7 @@ interface AuthState {
   canLogin: boolean;
   lastActivityAt: number | null;
   setAuth: (user: User, token: string) => void;
-  logout: () => Promise<void>;
+  logout: () => void;
   checkSession: () => Promise<void>;
   updateActivity: () => void;
   initFromUrlToken: () => Promise<boolean>;

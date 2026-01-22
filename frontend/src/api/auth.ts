@@ -69,4 +69,5 @@ export const authApi = {
 // Export standalone checkSession for dynamic import usage if needed, or just rely on authApi
 export const checkSession = authApi.checkSession;
 export const syncTokenFromSession = authApi.syncTokenFromSession;
+export const logout = authApi.logout;
 
