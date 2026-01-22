@@ -14,25 +14,25 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
   const [timeLeft, setTimeLeft] = useState(600);
   const [paymentInfo, setPaymentInfo] = useState<StorePaymentInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const { storeSlug } = useParams<{ storeSlug: string }>();
+  const { slug } = useParams<{ slug: string }>();
 
   useEffect(() => {
     const fetchPaymentInfo = async () => {
-      if (!storeSlug) {
-        console.error('PaymentQRCode: No storeSlug in URL');
+      if (!slug) {
+        console.error('PaymentQRCode: No slug in URL params');
         setLoading(false);
         return;
       }
 
-      console.log('PaymentQRCode: Fetching payment info for store:', storeSlug);
-      const info = await storesApi.getPaymentInfo(storeSlug);
+      console.log('PaymentQRCode: Fetching payment info for store:', slug);
+      const info = await storesApi.getPaymentInfo(slug);
       console.log('PaymentQRCode: Received payment info:', info);
       setPaymentInfo(info);
       setLoading(false);
     };
 
     fetchPaymentInfo();
-  }, [storeSlug]);
+  }, [slug]);
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -57,7 +57,6 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
     return (
       <div className="bg-white dark:bg-white/5 rounded-xl p-6 border border-gray-200 dark:border-white/10">
         <div className="flex flex-col items-center justify-center gap-4 py-8">
-          <div className="text-6xl">⚠️</div>
           <h3 className="text-lg font-bold text-center text-gray-900 dark:text-white">
             Chưa cấu hình thanh toán
           </h3>
@@ -65,7 +64,7 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
             Cửa hàng chưa thiết lập thông tin thanh toán. Vui lòng liên hệ quản trị viên để cấu hình tài khoản ngân hàng và SePay API.
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-            Store: {storeSlug}
+            Store: {slug}
           </p>
         </div>
       </div>
