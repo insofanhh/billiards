@@ -9,7 +9,7 @@ interface AuthState {
   canLogin: boolean;
   lastActivityAt: number | null;
   setAuth: (user: User, token: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkSession: () => Promise<void>;
   updateActivity: () => void;
   initFromUrlToken: () => Promise<boolean>;
@@ -107,7 +107,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     updateEchoAuth();
   },
   
-  logout: () => {
+  
+  logout: async () => {
+    try {
+      // Call API to logout from server (clears session + all tokens)
+      const { logout: apiLogout } = await import('../api/auth');
+      await apiLogout();
+    } catch (error) {
+      // Continue even if API call fails (network issues, etc)
+      console.error('API logout failed', error);
+    }
+    
+    // Clear local state
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('last_activity_at');
