@@ -56,8 +56,17 @@ export const authApi = {
     const response = await apiClient.get('/user');
     return response.data;
   },
+
+  syncTokenFromSession: async (): Promise<AuthResponse> => {
+    // Try to generate token from active session (cookies)
+    // This works if user logged in via admin panel
+    await getCsrfToken();
+    const response = await apiClient.post('/auth/sync-token');
+    return response.data;
+  },
 };
 
 // Export standalone checkSession for dynamic import usage if needed, or just rely on authApi
 export const checkSession = authApi.checkSession;
+export const syncTokenFromSession = authApi.syncTokenFromSession;
 

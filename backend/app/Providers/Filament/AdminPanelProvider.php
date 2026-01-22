@@ -34,7 +34,15 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->brandName(fn () => \Filament\Facades\Filament::getTenant()?->name ?? 'Billiards CMS')
-            ->homeUrl(fn () => \Filament\Facades\Filament::getTenant() ? '/s/' . \Filament\Facades\Filament::getTenant()->slug : '/')
+            ->homeUrl(function () {
+                $tenant = \Filament\Facades\Filament::getTenant();
+                if ($tenant) {
+                    // Redirect through auth bridge to sync token
+                    $targetPath = '/s/' . $tenant->slug;
+                    return route('auth.bridge', ['redirect' => $targetPath]);
+                }
+                return route('auth.bridge', ['redirect' => '/']);
+            })
             ->favicon(asset('images/favicon.svg'))
             ->profile(\Filament\Auth\Pages\EditProfile::class)
             ->navigationGroups([
