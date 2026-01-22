@@ -96,5 +96,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Webhook endpoints for SePay
 Route::post('/webhook/sepay/{storeSlug}/{webhookToken}', [SePayWebhookController::class, 'handle']);
-Route::post('/webhook/sepay', [SePayWebhookController::class, 'handle']); // Legacy support 
+Route::post('/webhook/sepay/{storeSlug?}', [SePayWebhookController::class, 'handle'])->where('storeSlug', '[a-z0-9-]+'); // Legacy support 
 
