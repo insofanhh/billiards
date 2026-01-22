@@ -39,6 +39,11 @@ apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    
+    // Update activity timestamp on authenticated requests
+    // This keeps the session alive as long as the user is making API calls
+    const lastActivityAt = Date.now();
+    localStorage.setItem('last_activity_at', lastActivityAt.toString());
   }
 
   // Inject Tenant Slug from URL (assuming path is /s/:slug/...)
