@@ -33,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->brandLogo(asset('/icons/icon-admin.png'))
+            ->brandLogo(asset('/icons/icon-512x512.png'))
             ->brandLogoHeight('2.5rem')
             ->homeUrl(function () {
                 $tenant = \Filament\Facades\Filament::getTenant();
