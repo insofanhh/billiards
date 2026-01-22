@@ -1,0 +1,94 @@
+### Test SePay Production Format
+### ĐÂY LÀ FORMAT CHÍNH XÁC MÀ SEPAY SỬ DỤNG TRÊN PRODUCTION
+
+### TEST 1: Format Production (SePay thực tế) - KHÔNG có prefix "Apikey"
+POST http://localhost:8000/api/webhook/sepay
+Content-Type: application/json
+Authorization: K8O32IEZAGV56cui
+
+{
+  "gateway": "TPBank",
+  "transactionDate": "2024-12-09 13:42:38",
+  "accountNumber": "83689318888",
+  "subAccount": null,
+  "transferType": "in",
+  "transferAmount": 11933,
+  "accumulated": 19193,
+  "code": "BMSIT8UIEZHG",
+  "content": "TKPBMS TXN-LLUNUJIFYE",
+  "referenceCode": "FT24344539533641",
+  "description": "Chuyen tien"
+}
+
+###
+
+### TEST 2: Format Postman (Có prefix "Apikey") - Vẫn hoạt động
+POST http://localhost:8000/api/webhook/sepay
+Content-Type: application/json
+Authorization: Apikey K8O32IEZAGV56cui
+
+{
+  "gateway": "TPBank",
+  "transactionDate": "2024-12-09 13:42:38",
+  "accountNumber": "83689318888",
+  "subAccount": null,
+  "transferType": "in",
+  "transferAmount": 11933,
+  "accumulated": 19193,
+  "code": "BMSIT8UIEZHG",
+  "content": "TKPBMS TXN-LLUNUJIFYE",
+  "referenceCode": "FT24344539533641",
+  "description": "Chuyen tien"
+}
+
+###
+
+### TEST 3: Format Custom Header
+POST http://localhost:8000/api/webhook/sepay
+Content-Type: application/json
+SEPAY_API_KEY: K8O32IEZAGV56cui
+
+{
+  "gateway": "TPBank",
+  "transactionDate": "2024-12-09 13:42:38",
+  "accountNumber": "83689318888",
+  "transferAmount": 11933,
+  "content": "TKPBMS TXN-LLUNUJIFYE"
+}
+
+###
+
+### TEST 4: Wrong API Key (Should fail with 401)
+POST http://localhost:8000/api/webhook/sepay
+Content-Type: application/json
+Authorization: WRONG_KEY
+
+{
+  "gateway": "TPBank",
+  "accountNumber": "83689318888",
+  "transferAmount": 11933,
+  "content": "TKPBMS TXN-LLUNUJIFYE"
+}
+
+###
+
+### TEST 5: No API Key (Should fail with 401)
+POST http://localhost:8000/api/webhook/sepay
+Content-Type: application/json
+
+{
+  "gateway": "TPBank",
+  "accountNumber": "83689318888",
+  "transferAmount": 11933,
+  "content": "TKPBMS TXN-LLUNUJIFYE"
+}
+
+###
+
+### NOTES:
+### 1. Thay đổi "transferAmount" theo số tiền đơn hàng thực tế
+### 2. Thay đổi "content" với mã TXN từ QR code (VD: TKPBMS TXN-XXXXXXXXXX)
+### 3. TEST 1 là format chính xác của SePay production
+### 4. Tất cả TEST 1, 2, 3 đều phải trả về 200 OK
+### 5. TEST 4, 5 phải trả về 401 Unauthorized
+
