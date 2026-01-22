@@ -19,11 +19,14 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
   useEffect(() => {
     const fetchPaymentInfo = async () => {
       if (!storeSlug) {
+        console.error('PaymentQRCode: No storeSlug in URL');
         setLoading(false);
         return;
       }
 
+      console.log('PaymentQRCode: Fetching payment info for store:', storeSlug);
       const info = await storesApi.getPaymentInfo(storeSlug);
+      console.log('PaymentQRCode: Received payment info:', info);
       setPaymentInfo(info);
       setLoading(false);
     };
@@ -41,14 +44,6 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  const bankAccount = paymentInfo?.bank_account || "83689318888";
-  const bankName = paymentInfo?.bank_name || "TPBank";
-  const bankAccountName = paymentInfo?.bank_account_name || "";
-  const prefix = "TKPBMS";
-  const description = `${prefix} ${referenceCode}`;
-  
-  const qrUrl = `https://qr.sepay.vn/img?acc=${bankAccount}&bank=${bankName}&amount=${amount}&des=${encodeURIComponent(description)}`;
-
   if (loading) {
     return (
       <div className="bg-white dark:bg-white/5 rounded-xl p-6 border border-gray-200 dark:border-white/10 flex justify-center items-center">
@@ -56,6 +51,34 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
       </div>
     );
   }
+
+  // Check if payment info is configured
+  if (!paymentInfo || !paymentInfo.bank_account || !paymentInfo.bank_name) {
+    return (
+      <div className="bg-white dark:bg-white/5 rounded-xl p-6 border border-gray-200 dark:border-white/10">
+        <div className="flex flex-col items-center justify-center gap-4 py-8">
+          <div className="text-6xl">⚠️</div>
+          <h3 className="text-lg font-bold text-center text-gray-900 dark:text-white">
+            Chưa cấu hình thanh toán
+          </h3>
+          <p className="text-sm text-center text-gray-600 dark:text-gray-400 max-w-md">
+            Cửa hàng chưa thiết lập thông tin thanh toán. Vui lòng liên hệ quản trị viên để cấu hình tài khoản ngân hàng và SePay API.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+            Store: {storeSlug}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const bankAccount = paymentInfo.bank_account;
+  const bankName = paymentInfo.bank_name;
+  const bankAccountName = paymentInfo.bank_account_name || "";
+  const prefix = "TKPBMS";
+  const description = `${prefix} ${referenceCode}`;
+  
+  const qrUrl = `https://qr.sepay.vn/img?acc=${bankAccount}&bank=${bankName}&amount=${amount}&des=${encodeURIComponent(description)}`;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
