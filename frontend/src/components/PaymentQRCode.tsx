@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { storesApi, type StorePaymentInfo } from '../api/stores';
+import { useParams } from 'react-router-dom';
 
 interface PaymentQRCodeProps {
   amount: number;
@@ -10,13 +12,24 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
   referenceCode
 }) => {
   const [timeLeft, setTimeLeft] = useState(600);
+  const [paymentInfo, setPaymentInfo] = useState<StorePaymentInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { storeSlug } = useParams<{ storeSlug: string }>();
 
-  const bankAccount = "83689318888";
-  const bankName = "TPBank";
-  const prefix = "TKPBMS";
-  const description = `${prefix} ${referenceCode}`;
-  
-  const qrUrl = `https://qr.sepay.vn/img?acc=${bankAccount}&bank=${bankName}&amount=${amount}&des=${encodeURIComponent(description)}`;
+  useEffect(() => {
+    const fetchPaymentInfo = async () => {
+      if (!storeSlug) {
+        setLoading(false);
+        return;
+      }
+
+      const info = await storesApi.getPaymentInfo(storeSlug);
+      setPaymentInfo(info);
+      setLoading(false);
+    };
+
+    fetchPaymentInfo();
+  }, [storeSlug]);
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -27,6 +40,22 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
 
     return () => clearInterval(timer);
   }, [timeLeft]);
+
+  const bankAccount = paymentInfo?.bank_account || "83689318888";
+  const bankName = paymentInfo?.bank_name || "TPBank";
+  const bankAccountName = paymentInfo?.bank_account_name || "";
+  const prefix = "TKPBMS";
+  const description = `${prefix} ${referenceCode}`;
+  
+  const qrUrl = `https://qr.sepay.vn/img?acc=${bankAccount}&bank=${bankName}&amount=${amount}&des=${encodeURIComponent(description)}`;
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-white/5 rounded-xl p-6 border border-gray-200 dark:border-white/10 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 dark:border-[#13ec6d] border-t-transparent"></div>
+      </div>
+    );
+  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -53,6 +82,12 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
           <span className="text-gray-600 dark:text-gray-400">Ngân hàng:</span>
           <span className="font-semibold text-gray-900 dark:text-white">{bankName}</span>
         </div>
+        {bankAccountName && (
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600 dark:text-gray-400">Chủ tài khoản:</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{bankAccountName}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 dark:text-gray-400">Số tài khoản:</span>
           <span className="font-semibold text-lg text-gray-900 dark:text-white">{bankAccount}</span>
@@ -87,4 +122,3 @@ export const PaymentQRCode: React.FC<PaymentQRCodeProps> = ({
     </div>
   );
 };
-

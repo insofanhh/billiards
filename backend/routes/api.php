@@ -42,6 +42,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
 // Public endpoints for guests
 Route::get('/tables', [TableController::class, 'index']);
 Route::get('/public/stores/{slug}', [\App\Http\Controllers\Api\PublicStoreController::class, 'show']);
+Route::get('/public/stores/{slug}/payment-info', [\App\Http\Controllers\Api\StorePaymentController::class, 'getPaymentInfo']);
 Route::get('/tables/{code}', [TableController::class, 'show']);
 Route::post('/tables/{code}/request-open', [TableController::class, 'requestOpen']);
 Route::get('/public-discounts', [DiscountCodeController::class, 'getPublicDiscounts']);
@@ -64,6 +65,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/saved-discounts', [DiscountCodeController::class, 'getSavedDiscounts']);
     Route::post('/save-discount/{id}', [DiscountCodeController::class, 'saveDiscount']);
     Route::delete('/save-discount/{id}', [DiscountCodeController::class, 'removeSavedDiscount']);
+    
+    Route::get('/store/webhook-url', [\App\Http\Controllers\Api\StorePaymentController::class, 'getWebhookUrl']);
+    Route::get('/store/payment-settings', [\App\Http\Controllers\Api\StorePaymentController::class, 'getSettings']);
+    Route::put('/store/payment-settings', [\App\Http\Controllers\Api\StorePaymentController::class, 'updateSettings']);
     
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
@@ -89,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('posts/{id}/comments', [CommentController::class, 'store']);
 });
 
-// Endpoint for SePay to call
-Route::post('/webhook/sepay', [SePayWebhookController::class, 'handle']);
+// Webhook endpoints for SePay
+Route::post('/webhook/sepay/{storeSlug}/{webhookToken}', [SePayWebhookController::class, 'handle']);
+Route::post('/webhook/sepay', [SePayWebhookController::class, 'handle']); // Legacy support 
 
