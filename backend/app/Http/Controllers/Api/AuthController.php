@@ -154,8 +154,20 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            // Logout web session
+            // Logout ALL guards to ensure complete logout across frontend and admin
             \Illuminate\Support\Facades\Auth::guard('web')->logout();
+            
+            // Also logout default guard
+            \Illuminate\Support\Facades\Auth::guard()->logout();
+            
+            // Try to logout Filament guard if exists
+            try {
+                if (\Illuminate\Support\Facades\Auth::guard('filament')->check()) {
+                    \Illuminate\Support\Facades\Auth::guard('filament')->logout();
+                }
+            } catch (\Throwable $e) {
+                // Guard might not exist, continue
+            }
             
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -166,14 +178,17 @@ class AuthController extends Controller
             }
         } catch (\Throwable $e) {
             // Ignore errors during logout (e.g. if already logged out)
+            \Illuminate\Support\Facades\Log::info('Logout error: ' . $e->getMessage());
         }
 
-        // Return response that clears cookies
+        // Return response that clears all cookies
         $cookie = \Cookie::forget('laravel_session');
         $xsrf = \Cookie::forget('XSRF-TOKEN');
+        $filamentCookie = \Cookie::forget('filament_session');
 
         return response()->json(['message' => 'Logged out successfully'])
             ->withCookie($cookie)
-            ->withCookie($xsrf);
+            ->withCookie($xsrf)
+            ->withCookie($filamentCookie);
     }
 }
