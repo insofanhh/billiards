@@ -7,7 +7,11 @@ import { useNavigate } from 'react-router-dom';
 import { isGuestUser } from '../../../utils/temporaryUser';
 import { formatCurrency } from '../../../utils/format';
 
-export function PromoList() {
+interface PromoListProps {
+    slug?: string;
+}
+
+export function PromoList({ slug }: PromoListProps) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { showNotification } = useNotification();
@@ -16,8 +20,9 @@ export function PromoList() {
     const [savingDiscountId, setSavingDiscountId] = useState<number | null>(null);
 
     const { data: publicDiscounts, isLoading: isLoadingDiscounts } = useQuery({
-        queryKey: ['public-discounts'],
-        queryFn: discountCodesApi.getPublicDiscounts,
+        queryKey: ['public-discounts', slug],
+        queryFn: () => discountCodesApi.getPublicDiscounts(slug),
+        enabled: !!slug,
     });
 
     const saveMutation = useMutation({

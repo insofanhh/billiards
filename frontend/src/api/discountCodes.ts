@@ -6,9 +6,10 @@ export const discountCodesApi = {
     const response = await apiClient.get(`/discount-codes/${code}`);
     return response.data;
   },
-  getPublicDiscounts: async (): Promise<DiscountCode[]> => {
-    const response = await apiClient.get('/public-discounts');
-    return response.data;
+  getPublicDiscounts: async (slug?: string): Promise<DiscountCode[]> => {
+    const url = slug ? `/public-discounts?store_slug=${slug}` : '/public-discounts';
+    const response = await apiClient.get(url);
+    return response.data.data || response.data;
   },
   getSavedDiscounts: async (): Promise<DiscountCode[]> => {
     const response = await apiClient.get('/saved-discounts');

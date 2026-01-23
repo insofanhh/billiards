@@ -2,9 +2,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { tablesApi } from '../api/tables';
+import { apiClient } from '../api/client';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuthStore } from '../store/authStore';
 
 import type { Table } from '../types';
 
@@ -104,12 +106,30 @@ export function ClientTablePage() {
   const requestOpenMutation = useMutation({
     mutationFn: async () => {
       const isAuthenticated = !!localStorage.getItem('auth_token');
+      
+      if (!isAuthenticated) {
+        // Clear any stale session cookies to prevent conflict with new Guest Token
+        try {
+            await apiClient.post('/logout');
+        } catch (e) {
+            // Ignore errors (e.g. 401) during cleanup
+            console.warn('Cleanup logout failed', e);
+        }
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+      }
+
       return tablesApi.requestOpen(code!, isAuthenticated ? '' : name.trim(), slug);
     },
     onSuccess: (res) => {
       if (res.token) {
         localStorage.setItem('auth_token', res.token);
         localStorage.setItem('user', JSON.stringify(res.user));
+        
+        // Update auth store to keep state in sync
+        const { setAuth } = useAuthStore.getState();
+        setAuth(res.user, res.token);
+
         const trimmedName = name.trim();
         localStorage.setItem('guest_name', trimmedName);
         setGuestName(getTemporaryUserName);
@@ -146,7 +166,7 @@ export function ClientTablePage() {
     return <div className="min-h-screen flex items-center justify-center">Không tìm thấy bàn</div>;
   }
 
-  const isAvailable = table.status.name === 'Trống';
+  const isAvailable = table.status === 'Trống';
   const rate = table.table_type.current_price_rate || getCurrentPriceRate(table.table_type.price_rates);
 
   return (
@@ -168,7 +188,7 @@ export function ClientTablePage() {
               ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
               : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
               }`}>
-              {table.status.name}
+              {table.status}
             </span>
           </div>
 

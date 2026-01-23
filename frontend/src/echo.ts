@@ -20,10 +20,17 @@ const LARAVEL_BASE_URL = API_BASE_URL.replace('/api', '') || 'https://billiardsc
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token') || '';
-  return {
+  const headers: any = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
   };
+
+  const match = window.location.pathname.match(/^\/s\/([^/]+)/);
+  if (match && match[1]) {
+      headers['X-Store-Slug'] = match[1];
+  }
+
+  return headers;
 };
 
 export const echo = new Echo({

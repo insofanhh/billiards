@@ -197,7 +197,7 @@ export function TenantHomePage() {
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Ưu đãi dành cho bạn</h2>
             </div>
           </div>
-          <PromoList />
+          <PromoList slug={slug} />
         </section>
 
       </main>

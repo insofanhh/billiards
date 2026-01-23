@@ -26,14 +26,14 @@ class TableController extends Controller
     {
         // Potential optimization: Eager load specific order statuses to avoid N+1 in Resource
         // For now, keeping it simple as per request scope, but noted for future.
-        $tables = TableBilliard::with(['status', 'tableType'])->get();
+        $tables = TableBilliard::with(['tableType'])->get();
         return TableResource::collection($tables);
     }
 
     public function show(Request $request, $code)
     {
         $query = TableBilliard::where('code', $code)
-            ->with(['status', 'tableType', 'tableType.priceRates']);
+            ->with(['tableType', 'tableType.priceRates']);
             
         // Eager load active order to optimize Resource usage or accessing it directly
         // However, TableResource calls ->orders(), so standard eager loading 'orders' 

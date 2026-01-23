@@ -55,7 +55,7 @@ export function HomePage() {
     // Stats Calculation
     const stats = useMemo(() => {
         const total = tables.length;
-        const active = tables.filter((t: Table) => t.status.name === 'Đang sử dụng').length;
+        const active = tables.filter((t: Table) => t.status === 'Đang sử dụng').length;
         const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
         
         // Calculate estimated revenue from active tables
@@ -70,7 +70,7 @@ export function HomePage() {
         return tables.filter((table: Table) => {
             const matchesSearch = table.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                   table.code.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'all' || table.status.name === statusFilter;
+            const matchesStatus = statusFilter === 'all' || table.status === statusFilter;
             const matchesFloor = floorFilter === 'all' || table.location === floorFilter;
             
             return matchesSearch && matchesStatus && matchesFloor;
@@ -155,8 +155,8 @@ export function HomePage() {
         };
 
         const handleRefetch = () => {
-            queryClient.invalidateQueries({ queryKey: ['tables'] });
-            queryClient.refetchQueries({ queryKey: ['tables'] });
+            queryClient.invalidateQueries({ queryKey: ['tables', slug] });
+            queryClient.refetchQueries({ queryKey: ['tables', slug] });
         };
 
         const events = [
@@ -180,7 +180,7 @@ export function HomePage() {
                 if (event === '.transaction.confirmed') {
                     const orderId = data.order?.id;
                     if (orderId) {
-                        const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+                        const currentTables = queryClient.getQueryData<Table[]>(['tables', slug]);
                         const table = currentTables?.find((t: Table) => t.active_order?.id === orderId);
                         if (table) {
 
@@ -191,7 +191,7 @@ export function HomePage() {
                 if (event.includes('service')) {
                     const orderId = data.order?.id;
                     if (orderId) {
-                        const currentTables = queryClient.getQueryData<Table[]>(['tables']);
+                        const currentTables = queryClient.getQueryData<Table[]>(['tables', slug]);
                         const table = currentTables?.find((t: Table) => t.active_order?.id === orderId);
                         if (table) {
                             if (event.includes('added')) {

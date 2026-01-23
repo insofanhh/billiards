@@ -53,7 +53,7 @@ export function ClientOrderPage() {
     cancelRequestMutation, 
     paymentMutation, 
     applyDiscountMutation 
-  } = useOrderActions(id);
+  } = useOrderActions(id, slug);
 
   useEffect(() => {
     if (order?.table?.code) {

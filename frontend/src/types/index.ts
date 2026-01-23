@@ -19,11 +19,7 @@ export interface Table {
   seats: number;
   qr_code?: string;
   location?: string;
-  status: {
-    id: number;
-    name: string;
-    color: string;
-  };
+  status: string;
   table_type: {
     id: number;
     name: string;
