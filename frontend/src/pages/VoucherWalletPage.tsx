@@ -24,7 +24,7 @@ export function VoucherWalletPage() {
 
   const { data: publicDiscounts, isLoading: isLoadingPublic } = useQuery({
     queryKey: ['public-discounts'],
-    queryFn: discountCodesApi.getPublicDiscounts,
+    queryFn: () => discountCodesApi.getPublicDiscounts(),
   });
 
   const saveMutation = useMutation({
