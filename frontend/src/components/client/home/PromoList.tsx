@@ -113,10 +113,10 @@ export function PromoList({ slug }: PromoListProps) {
                                         onClick={() => {
                                             if (!isAuthenticated) {
                                                 showNotification('Vui lòng đăng nhập để lưu voucher');
-                                                navigate('/login');
+                                                navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
                                             } else if (isGuest) {
                                                 showNotification('Vui lòng đăng ký thành viên để lưu voucher');
-                                                navigate('/register');
+                                                navigate(`/register?redirect=${encodeURIComponent(window.location.pathname)}`);
                                             } else {
                                                 saveMutation.mutate(discount.id);
                                             }

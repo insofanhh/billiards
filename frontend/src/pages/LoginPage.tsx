@@ -52,11 +52,23 @@ export function LoginPage() {
           localStorage.setItem('guest_name', response.user.name);
         }
         showNotification('Đăng nhập thành công. Chuyển tới khu vực khách hàng.');
-        navigate('/client');
+        
+        // Redirect to registered store if available and not already redirecting specific place
+        if (response.user?.store?.slug && (!redirectParam || !redirectParam.includes('/s/'))) {
+             navigate(`/s/${response.user.store.slug}`);
+             return;
+        }
+
+        navigate(safeRedirect);
         return;
       }
 
       showNotification('Đăng nhập thành công.');
+      // Default fallback
+      if (response.user?.store?.slug && (!redirectParam || !redirectParam.includes('/s/'))) {
+             navigate(`/s/${response.user.store.slug}`);
+             return;
+      }
       navigate(safeRedirect);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại');

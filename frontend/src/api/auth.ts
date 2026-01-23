@@ -12,6 +12,7 @@ export interface RegisterRequest {
   phone?: string;
   password: string;
   password_confirmation: string;
+  store_slug?: string;
 }
 
 export interface AuthResponse {
