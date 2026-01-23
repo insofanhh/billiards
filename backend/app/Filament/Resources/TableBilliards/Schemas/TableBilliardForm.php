@@ -63,7 +63,7 @@ class TableBilliardForm
                     ->required()
                     ->searchable()
                     ->preload()
-                    ->default(1),
+                    ->default('Trống'),
                 Select::make('table_type_id')
                     ->label('Loại bàn')
                     ->relationship('tableType', 'name')
