@@ -27,7 +27,7 @@ class OrdersTable
                     ->sortable()
                     ->weight('bold')
                     ->copyable(),
-                TextColumn::make('user.name')
+                TextColumn::make('customer_name')
                     ->label('Khách hàng')
                     ->searchable()
                     ->sortable(),
