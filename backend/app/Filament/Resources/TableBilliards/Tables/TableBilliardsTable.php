@@ -30,7 +30,7 @@ class TableBilliardsTable
                     ->numeric()
                     ->sortable()
                     ->alignCenter(),
-                TextColumn::make('status.name')
+                TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -61,9 +61,13 @@ class TableBilliardsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status_id')
+                SelectFilter::make('status')
                     ->label('Trạng thái')
-                    ->relationship('status', 'name'),
+                    ->options([
+                        'Trống' => 'Trống',
+                        'Đang sử dụng' => 'Đang sử dụng',
+                        'Bảo trì' => 'Bảo trì',
+                    ]),
                 SelectFilter::make('table_type_id')
                     ->label('Loại bàn')
                     ->relationship('tableType', 'name'),

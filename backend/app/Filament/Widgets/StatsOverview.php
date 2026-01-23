@@ -41,7 +41,7 @@ class StatsOverview extends StatsOverviewWidget
         
         $todayOrders = Order::whereBetween('created_at', [$dayStart, $dayEnd])->count();
         
-        $activeTables = TableBilliard::whereHas('status', fn($q) => $q->where('name', 'Đang sử dụng'))->count();
+        $activeTables = TableBilliard::where('status', 'Đang sử dụng')->count();
         
         $totalCustomers = User::role('customer')->count();
         

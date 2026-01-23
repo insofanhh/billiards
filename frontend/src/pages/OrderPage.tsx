@@ -83,6 +83,7 @@ export function OrderPage() {
                     isPendingEnd={isPendingEnd} 
                     isCompleted={isCompleted}
                     servicesTotal={servicesTotal}
+                    slug={slug}
                 />
             </div>
           </main>

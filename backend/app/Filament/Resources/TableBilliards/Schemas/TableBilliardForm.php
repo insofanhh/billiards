@@ -57,12 +57,15 @@ class TableBilliardForm
                     ->label('Vị trí')
                     ->maxLength(255)
                     ->helperText('Vị trí bàn trong quán'),
-                Select::make('status_id')
+                Select::make('status')
                     ->label('Trạng thái')
-                    ->relationship('status', 'name')
+                    ->options([
+                        'Trống' => 'Trống',
+                        'Đang sử dụng' => 'Đang sử dụng',
+                        'Bảo trì' => 'Bảo trì',
+                    ])
                     ->required()
                     ->searchable()
-                    ->preload()
                     ->default('Trống'),
                 Select::make('table_type_id')
                     ->label('Loại bàn')

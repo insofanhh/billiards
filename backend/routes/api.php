@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/orders/{id}/approve-end', [OrderController::class, 'approveEnd']);
     Route::patch('/orders/{id}/reject-end', [OrderController::class, 'rejectEnd']);
     Route::post('/orders/{id}/apply-discount', [OrderController::class, 'applyDiscount']);
+    Route::post('/orders/{id}/remove-discount', [OrderController::class, 'removeDiscount']);
     Route::post('/orders/{id}/services', [OrderController::class, 'addService']);
     Route::patch('/orders/{id}/services/{itemId}', [OrderController::class, 'updateService']);
     Route::patch('/orders/{id}/services/{itemId}/confirm', [OrderController::class, 'confirmServiceItem']);

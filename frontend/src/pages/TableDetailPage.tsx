@@ -81,7 +81,7 @@ export function TableDetailPage() {
     );
   }
 
-  const isAvailable = table.status.name === 'Trống';
+  const isAvailable = table.status === 'Trống';
   const hasActiveOrder = !!table.active_order;
   const hasPendingPaymentOrder = table.active_order?.status === 'completed';
   const hasPendingEndOrder = !!table.pending_end_order;
@@ -106,11 +106,11 @@ export function TableDetailPage() {
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{table.code}</h1>
               <p className="text-xl text-gray-600 dark:text-gray-300 mt-2">{table.name}</p>
             </div>
-            <span className={`px-4 py-2 rounded-full text-sm font-medium ${table.status.name === 'Trống' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-              table.status.name === 'Đang sử dụng' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${table.status === 'Trống' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+              table.status === 'Đang sử dụng' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
                 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
               }`}>
-              {table.status.name}
+              {table.status}
             </span>
           </div>
 

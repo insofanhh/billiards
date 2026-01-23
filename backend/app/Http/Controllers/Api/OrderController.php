@@ -12,7 +12,7 @@ use App\Models\ServiceInventory;
 use App\Models\TableBilliard;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\TableStatus;
+
 use App\Scopes\TenantScope;
 use App\Events\OrderApproved;
 use App\Events\OrderRejected;
@@ -136,9 +136,8 @@ class OrderController extends Controller
         $customerName = $this->resolveCustomerName($order, $request);
         $order->update(['customer_name' => $customerName]);
 
-        $statusInUse = $this->getTableStatusId($table->store_id, 'Đang sử dụng');
-        if ($statusInUse) {
-            $table->update(['status_id' => $statusInUse]);
+        if ($table) {
+            $table->update(['status' => 'Đang sử dụng']);
         }
 
         return new OrderResource($order->load(['table', 'priceRate']));
@@ -396,10 +395,7 @@ class OrderController extends Controller
         ]);
 
         if ($order->table) {
-            $statusInUse = $this->getTableStatusId($order->table->store_id, 'Đang sử dụng');
-            if ($statusInUse) {
-                $order->table->update(['status_id' => $statusInUse]);
-            }
+            $order->table->update(['status' => 'Đang sử dụng']);
         }
 
         $order->load(['table', 'priceRate', 'user']);
@@ -527,6 +523,48 @@ class OrderController extends Controller
                 'applied_discount_id' => $discountCode->id,
                 'total_discount' => $roundedDiscount,
                 'total_paid' => $roundedTotalPaid,
+            ]);
+        });
+
+        $order->refresh();
+        $order->load(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount', 'user']);
+
+        return new OrderResource($order);
+    }
+
+    /**
+     * Remove applied discount from the order.
+     */
+    public function removeDiscount(Request $request, $id)
+    {
+        if (!$this->isStaff($request)) {
+             return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $order = Order::where('id', $id)->whereIn('status', ['pending_end', 'completed'])->firstOrFail();
+
+        if (!$order->applied_discount_id) {
+             return response()->json(['message' => 'Đơn hàng không có mã giảm giá nào'], 422);
+        }
+
+        DB::transaction(function () use ($order) {
+            $discountCode = $order->appliedDiscount;
+            if ($discountCode && $discountCode->used_count > 0) {
+                $discountCode->decrement('used_count');
+            }
+
+            // Also restore user saved discount if applicable?
+            // "applyDiscount" deletes from user_saved_discounts.
+            // "removeDiscount" should probably not auto-restore it to saved list because we don't know if it was from saved list.
+            // But if it was, the user lost it. 
+            // However, typical logic: used code is removed from saved. If cancelled, maybe it should be restored?
+            // To be safe and simple: just decrement usage count. Re-saving is manual or separate logic.
+            // The requirement doesn't specify, so I'll stick to decrement used_count.
+
+            $order->update([
+                'applied_discount_id' => null,
+                'total_discount' => 0,
+                'total_paid' => $order->total_before_discount,
             ]);
         });
 
@@ -795,13 +833,7 @@ class OrderController extends Controller
         event(new OrderEndApproved($order));
     }
 
-    private function getTableStatusId($storeId, $name)
-    {
-        return TableStatus::withoutGlobalScope(TenantScope::class)
-            ->where('store_id', $storeId)
-            ->where('name', $name)
-            ->value('id');
-    }
+
 
     private function markOrderAsPaid(Order $order, float $paidAmount)
     {
@@ -811,10 +843,7 @@ class OrderController extends Controller
         ]);
         
         if ($order->table) {
-            $statusEmpty = $this->getTableStatusId($order->table->store_id, 'Trống');
-            if ($statusEmpty) {
-                $order->table->update(['status_id' => $statusEmpty]);
-            }
+            $order->table->update(['status' => 'Trống']);
         }
     }
 
@@ -832,14 +861,20 @@ class OrderController extends Controller
             $user->load('roles');
         }
         
-        $roles = $user->roles->pluck('name')->toArray();
-        if (array_intersect(['staff', 'admin', 'super_admin'], $roles)) {
+        // Use case-insensitive check
+        $roles = $user->roles->pluck('name')
+            ->map(fn($role) => strtolower($role))
+            ->toArray();
+            
+        if (array_intersect(['staff', 'admin', 'super_admin', 'super admin'], $roles)) {
             return true;
         }
         
         try {
             if (method_exists($user, 'hasAnyRole')) {
-                if ($user->hasAnyRole(['admin', 'staff', 'super_admin'])) {
+                // Also try case-insensitive checks if possible, but hasAnyRole is usually strict.
+                // We'll rely on our manual check above for robustness.
+                if ($user->hasAnyRole(['admin', 'staff', 'super_admin', 'Super Admin', 'Staff', 'Admin'])) {
                     return true;
                 }
             }

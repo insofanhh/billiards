@@ -64,8 +64,17 @@ class DiscountCodeController extends Controller
             ->where(function ($query) use ($now) {
                 $query->whereNull('end_at')
                     ->orWhere('end_at', '>=', $now);
-            })
-            ->where(function ($query) {
+            });
+
+        if ($request->has('store_slug')) {
+             $storeSlug = $request->input('store_slug');
+             $store = \App\Models\Store::where('slug', $storeSlug)->first();
+             if ($store) {
+                 $query->where('store_id', $store->id);
+             }
+        }
+
+        $query->where(function ($query) {
                 $query->whereNull('usage_limit')
                     ->orWhereRaw('used_count < usage_limit');
             });

@@ -38,7 +38,7 @@ export function TableDetailModal({ table, isOpen, onClose, slug }: Props) {
         }
     };
 
-    const { badge } = getStatusColorConfig(table.status.name);
+    const { badge } = getStatusColorConfig(table.status);
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -63,7 +63,7 @@ export function TableDetailModal({ table, isOpen, onClose, slug }: Props) {
                                         {table.code}
                                     </h3>
                                     <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${badge}`}>
-                                        {table.status.name}
+                                        {table.status}
                                     </span>
                                 </div>
                                 <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">
@@ -93,7 +93,7 @@ export function TableDetailModal({ table, isOpen, onClose, slug }: Props) {
 
                     {/* Footer */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 flex flex-row-reverse gap-3">
-                         {table.status.name === 'Trống' && (
+                         {table.status === 'Trống' && (
                             <button
                                 type="button"
                                 onClick={() => createOrder({ table_code: table.code })}

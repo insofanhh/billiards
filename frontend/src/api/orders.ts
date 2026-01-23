@@ -84,6 +84,11 @@ export const ordersApi = {
     return response.data.data || response.data;
   },
 
+  removeDiscount: async (id: number): Promise<Order> => {
+    const response = await apiClient.post(`/orders/${id}/remove-discount`);
+    return response.data.data || response.data;
+  },
+
   cancelRequest: async (id: number): Promise<Order> => {
     const response = await apiClient.post(`/orders/${id}/cancel-request`);
     return response.data.data || response.data;

@@ -46,11 +46,7 @@ class TableResource extends JsonResource
             'seats' => $this->seats,
             'qr_code' => $this->qr_code,
             'location' => $this->location,
-            'status' => [
-                'id' => $this->status?->id,
-                'name' => $this->status?->name,
-                'color' => $this->status?->color,
-            ],
+            'status' => $this->status,
             'table_type' => [
                 'id' => $this->tableType?->id,
                 'name' => $this->tableType?->name,

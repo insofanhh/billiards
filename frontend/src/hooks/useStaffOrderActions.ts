@@ -2,15 +2,19 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders';
 import { useNotification } from '../contexts/NotificationContext';
 
-export function useStaffOrderActions(id: string | undefined) {
+export function useStaffOrderActions(id: string | undefined, slug?: string) {
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
   const orderId = Number(id!);
+  const queryKey = ['order', id, slug];
+ 
+  // Actually, previously it was just ['order', id]. 
+  // Let's stick to the plan: update to ['order', id, slug].
 
   const approveEndMutation = useMutation({
     mutationFn: () => ordersApi.approveEnd(orderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       showNotification('Đã kết thúc bàn thành công!');
     },
@@ -19,7 +23,7 @@ export function useStaffOrderActions(id: string | undefined) {
   const rejectEndMutation = useMutation({
     mutationFn: () => ordersApi.rejectEnd(orderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       showNotification('Đã từ chối yêu cầu kết thúc.');
     },
@@ -28,7 +32,7 @@ export function useStaffOrderActions(id: string | undefined) {
   const removeServiceMutation = useMutation({
     mutationFn: (itemId: number) => ordersApi.removeService(orderId, itemId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey });
       showNotification('Đã xóa dịch vụ.');
     },
   });
@@ -38,7 +42,7 @@ export function useStaffOrderActions(id: string | undefined) {
       await Promise.all(itemIds.map((itemId) => ordersApi.confirmServiceItem(orderId, itemId)));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey });
       showNotification('Đã xác nhận các món đã chọn!');
     },
   });
@@ -47,8 +51,8 @@ export function useStaffOrderActions(id: string | undefined) {
     mutationFn: (data: { method: 'cash' | 'card' | 'mobile'; amount: number }) =>
       ordersApi.createTransaction(orderId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
-      queryClient.refetchQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.refetchQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       showNotification('Tạo giao dịch thanh toán thành công!');
     },
@@ -57,8 +61,8 @@ export function useStaffOrderActions(id: string | undefined) {
   const confirmPaymentMutation = useMutation({
     mutationFn: (txnId: number) => ordersApi.confirmTransaction(orderId, txnId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', id] });
-      queryClient.refetchQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.refetchQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       showNotification('Đã xác nhận thanh toán!');
     },
@@ -66,9 +70,20 @@ export function useStaffOrderActions(id: string | undefined) {
 
   const applyDiscountMutation = useMutation({
     mutationFn: (code: string) => ordersApi.applyDiscount(orderId, code),
-    onSuccess: (updatedOrder) => {
-        queryClient.setQueryData(['order', id], updatedOrder);
+    onSuccess: () => {
+        // queryClient.setQueryData(queryKey, updatedOrder); // Manual update might be flaky if structure differs
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.refetchQueries({ queryKey });
         showNotification('Áp dụng mã giảm giá thành công!');
+    },
+  });
+  
+  const removeDiscountMutation = useMutation({
+    mutationFn: () => ordersApi.removeDiscount(orderId),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.refetchQueries({ queryKey });
+        showNotification('Đã hủy mã giảm giá thành công!');
     },
   });
 
@@ -79,6 +94,7 @@ export function useStaffOrderActions(id: string | undefined) {
     confirmBatchMutation,
     paymentMutation,
     confirmPaymentMutation,
-    applyDiscountMutation
+    applyDiscountMutation,
+    removeDiscountMutation
   };
 }

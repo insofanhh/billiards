@@ -20,14 +20,9 @@ class TableBilliard extends Model
         'seats',
         'qr_code',
         'location',
-        'status_id',
+        'status',
         'table_type_id',
     ];
-
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(TableStatus::class, 'status_id');
-    }
 
     public function tableType(): BelongsTo
     {

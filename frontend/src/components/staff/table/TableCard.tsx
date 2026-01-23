@@ -57,7 +57,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
     const pendingOrder = table.pending_order || (table.active_order?.status === 'pending' ? table.active_order : null);
     const isPendingPayment = table.active_order?.status === 'completed';
     const activePriceRate = table.table_type.current_price_rate || getCurrentPriceRate(table.table_type.price_rates);
-    const { border, badge } = getStatusColorConfig(table.status.name);
+    const { border, badge } = getStatusColorConfig(table.status);
 
     return (
         <div
@@ -69,14 +69,14 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">{table.code}</h3>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badge}`}>
-                        {table.status.name}
+                        {table.status}
                     </span>
                 </div>
 
                 {/* Sub Info */}
                 <div className="flex justify-between items-center mb-4">
                     <span className="text-gray-900 dark:text-gray-100 font-medium">{table.name}</span>
-                    {table.status.name === 'Đang sử dụng' && table.active_order && (
+                    {table.status === 'Đang sử dụng' && table.active_order && (
                         <div className="flex items-center text-red-500 font-mono text-sm">
                             <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -98,7 +98,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                             </span>
                         </p>
                     )}
-                    {table.status.name === 'Đang sử dụng' && table.active_order?.total_amount !== undefined && (
+                    {table.status === 'Đang sử dụng' && table.active_order?.total_amount !== undefined && (
                         <p className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                             Tạm tính: <span className="text-gray-900 dark:text-white font-bold text-lg float-right">
                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(table.active_order.total_amount)}
@@ -110,7 +110,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
 
             {/* Actions */}
             <div className="mt-auto">
-                {table.status.name === 'Trống' && !pendingOrder && (
+                {table.status === 'Trống' && !pendingOrder && (
                     <button 
                         onClick={(e) => {
                             e.stopPropagation();
@@ -164,7 +164,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                         </button>
                     </div>
                 )}
-                {table.status.name === 'Đang sử dụng' && (
+                {table.status === 'Đang sử dụng' && (
                     <div className="grid grid-cols-2 gap-3">
                         <button 
                             onClick={(e) => {
@@ -201,7 +201,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                         </button>
                     </div>
                 )}
-                {table.status.name === 'Bảo trì' && (
+                {table.status === 'Bảo trì' && (
                     <button className="ml-auto w-max px-4 py-2 bg-slate-900 text-white dark:bg-slate-700 rounded-lg flex items-center justify-center space-x-2 hover:bg-slate-800 hover:shadow-lg active:scale-95 transform transition-all duration-200">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

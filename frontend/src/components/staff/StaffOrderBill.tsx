@@ -9,9 +9,10 @@ interface Props {
   isPendingEnd: boolean;
   isCompleted: boolean;
   servicesTotal: number;
+  slug?: string;
 }
 
-export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, servicesTotal }: Props) {
+export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, servicesTotal, slug }: Props) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
   const [discountCodeInput, setDiscountCodeInput] = useState('');
@@ -25,8 +26,9 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
     confirmBatchMutation,
     paymentMutation,
     confirmPaymentMutation,
-    applyDiscountMutation
-  } = useStaffOrderActions(String(order.id));
+    applyDiscountMutation,
+    removeDiscountMutation
+  } = useStaffOrderActions(String(order.id), slug);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -34,6 +36,12 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (order?.applied_discount?.code) {
+      setDiscountCodeInput(order.applied_discount.code);
+    }
+  }, [order?.applied_discount?.code]);
 
   const groupedItems = useMemo(() => {
     if (!order?.items) return [];
@@ -304,8 +312,23 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                       onClick={handlApplyDiscount}
                       className="px-4 py-2 bg-slate-200 rounded-lg text-slate-800 dark:bg-gray-700 dark:text-white hover:bg-slate-300 dark:hover:bg-gray-600"
                     >
-                      Áp dụng
+                      {applyDiscountMutation.isPending ? 'Đang xử lý...' : order.applied_discount ? 'Đổi mã' : 'Áp dụng'}
                     </button>
+                    {order.applied_discount && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Bạn có chắc chắn muốn hủy mã giảm giá này?')) {
+                            removeDiscountMutation.mutate();
+                            setDiscountCodeInput('');
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400"
+                        disabled={removeDiscountMutation.isPending}
+                        title="Hủy mã giảm giá"
+                      >
+                         {removeDiscountMutation.isPending ? '...' : 'Hủy'}
+                      </button>
+                    )}
                   </div>
                   {discountFeedback && (
                     <p className={`text-sm mt-2 ${discountFeedback.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
