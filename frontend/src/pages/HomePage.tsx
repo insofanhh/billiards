@@ -320,6 +320,16 @@ export function HomePage() {
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <p className="mt-4 text-gray-600 dark:text-gray-400">Đang tải...</p>
                         </div>
+                    ) : tables.length === 0 ? (
+                        <div className="text-center py-12">
+                            {user?.roles?.some((role: string) => ['super_admin', 'admin'].includes(role)) ? (
+                                <p className="text-lg text-gray-600 dark:text-gray-400">
+                                    Chưa có bàn. Vui lòng tạo trong <a href="/admin" className="text-blue-600 hover:underline">Trang quản trị</a>!
+                                </p>
+                            ) : (
+                                <p className="text-lg text-gray-600 dark:text-gray-400">Chưa có bàn. Vui lòng liên hệ quản trị viên để tạo bàn!</p>
+                            )}
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {filteredTables.map((table: Table) => {

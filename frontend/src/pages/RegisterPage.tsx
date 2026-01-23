@@ -37,23 +37,52 @@ export function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     try {
       setError(null);
+
+      // Extract store slug from redirect param if present
+      let storeSlug = searchParams.get('store_slug') || undefined;
+      
+      if (!storeSlug && redirectTarget) {
+         const match = redirectTarget.match(/\/s\/([^/?#]+)/);
+         if (match) {
+             storeSlug = match[1];
+         }
+      }
+
       const registerData: RegisterRequest = {
         name: data.name,
         email: data.email,
         phone: data.phone,
         password: data.password,
         password_confirmation: data.password_confirmation,
+        store_slug: storeSlug,
       };
+      
       const response = await authApi.register(registerData);
       setAuth(response.user, response.token);
+      
       if (response.user?.name) {
         localStorage.setItem('guest_name', response.user.name);
       }
+
+      // If registered with a store specific slug, ensure we redirect there if safeRedirect is generic
+      if (response.user?.store?.slug && !safeRedirect.includes('/s/')) {
+          navigate(`/s/${response.user.store.slug}`);
+          return;
+      }
+      
       navigate(safeRedirect);
     } catch (err: any) {
+      if (err.response?.data?.errors) {
+        // Handle field-specific errors specifically for email
+         if (err.response.data.errors.email) {
+             setError(err.response.data.errors.email[0]);
+             return;
+         }
+      }
       setError(err.response?.data?.message || 'Đăng ký thất bại');
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300 px-4 py-12">

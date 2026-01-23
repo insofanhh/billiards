@@ -185,12 +185,12 @@ export function ClientNavigation({
 
   const handleLogin = () => {
     setShowGuestDropdown(false);
-    navigate('/login');
+    navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
   };
 
   const handleRegister = () => {
     setShowGuestDropdown(false);
-    navigate('/register');
+    navigate(`/register?redirect=${encodeURIComponent(window.location.pathname)}`);
   };
 
   const resolveRoleRedirect = () => {
@@ -203,9 +203,7 @@ export function ClientNavigation({
     if (normalizedRoles.some((role) => role === 'staff' || role === 'admin' || role === 'super_admin')) {
       return slug ? `/s/${slug}/staff` : '/staff';
     }
-    if (normalizedRoles.includes('customer')) {
-      return '/';
-    }
+    // Customer role should not redirect anywhere on click
     return null;
   };
 

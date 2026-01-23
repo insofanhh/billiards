@@ -31,16 +31,23 @@ class AuthController extends Controller
             \Illuminate\Support\Facades\Auth::guard('web')->login($user, $request->boolean('remember'));
             $request->session()->regenerate();
         } catch (\Throwable $e) {
-            // Silently fail session login if something is wrong with configuration
-            // forcing token auth to still work
             \Illuminate\Support\Facades\Log::error('Session login failed: ' . $e->getMessage());
         }
 
-        // Still issue a token for API clients that might need it (hybrid approach)
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        $user->load('roles');
+        $user->load('roles', 'store'); // Eager load store
         $permissions = method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : collect();
+
+        // Check if user has a store association for redirects
+        $storeData = null;
+        if ($user->store) {
+            $storeData = [
+                'id' => $user->store->id,
+                'name' => $user->store->name,
+                'slug' => $user->store->slug,
+            ];
+        }
 
         return response()->json([
             'user' => [
@@ -50,11 +57,7 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
-                'store' => $user->store ? [
-                    'id' => $user->store->id,
-                    'name' => $user->store->name,
-                    'slug' => $user->store->slug,
-                ] : null,
+                'store' => $storeData,
             ],
             'token' => $token,
         ]);
@@ -64,16 +67,56 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255', // Removed unique:users to handle manual check
             'phone' => 'nullable|string|max:50',
             'password' => 'required|string|min:8|confirmed',
+            'store_slug' => 'nullable|string|exists:stores,slug',
         ]);
+
+        // Custom validation for existing user
+        $existingUser = User::where('email', $request->email)->first();
+        if ($existingUser) {
+            if ($existingUser->store_id) {
+                // If user is already associated with a store
+                
+                // If registering for the same store or a general registration matching the existing store
+                $requestStoreId = null;
+                if ($request->filled('store_slug')) {
+                    $requestStore = \App\Models\Store::where('slug', $request->store_slug)->first();
+                    $requestStoreId = $requestStore?->id;
+                }
+
+                if ($requestStoreId && $existingUser->store_id != $requestStoreId) {
+                     return response()->json([
+                        'message' => 'Tài khoản đã được đăng ký ở hệ thống khác',
+                        'errors' => ['email' => ['Tài khoản đã được đăng ký ở cửa hàng khác.']]
+                    ], 422);
+                }
+
+                return response()->json([
+                    'message' => 'Tài khoản đã tồn tại',
+                    'errors' => ['email' => ['Email đã được đăng ký.']]
+                ], 422);
+            } else {
+                 return response()->json([
+                    'message' => 'Tài khoản đã tồn tại',
+                    'errors' => ['email' => ['Email đã được đăng ký.']]
+                ], 422);
+            }
+        }
+
+        $storeId = null;
+        if ($request->filled('store_slug')) {
+            $store = \App\Models\Store::where('slug', $request->store_slug)->first();
+            $storeId = $store?->id;
+        }
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
+            'store_id' => $storeId, // Associate user with store
         ]);
 
         $customerRole = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
@@ -81,7 +124,6 @@ class AuthController extends Controller
             $user->assignRole($customerRole);
         }
 
-        // Auto login after register
         \Illuminate\Support\Facades\Auth::login($user);
         $request->session()->regenerate();
 
@@ -89,6 +131,15 @@ class AuthController extends Controller
 
         $user->load('roles');
         $permissions = method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : collect();
+        
+        $storeData = null;
+        if ($storeId && isset($store)) {
+             $storeData = [
+                'id' => $store->id,
+                'name' => $store->name,
+                'slug' => $store->slug,
+            ];
+        }
 
         return response()->json([
             'user' => [
@@ -98,6 +149,7 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
+                'store' => $storeData,
             ],
             'token' => $token,
         ], 201);
