@@ -42,10 +42,23 @@ class SePayWebhookController extends Controller
                 ], 404);
             }
 
-            Log::info("SePay Webhook: Store resolved", [
+            Log::info("SePay Webhook: Store resolved by URL", [
                 'store_id' => $store->id,
                 'store_name' => $store->name,
             ]);
+        }
+        
+        // Fallback: Resolve Store by Account Number in payload
+        if (!$store && $request->has('accountNumber')) {
+            $accNo = $request->input('accountNumber');
+            $store = Store::where('bank_account_no', $accNo)->first();
+            
+            if ($store) {
+                 Log::info("SePay Webhook: Store resolved by Account Number", [
+                    'store_id' => $store->id,
+                    'acc_no' => $accNo,
+                ]);
+            }
         }
 
         // 2. Authenticate the request
