@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { discountCodesApi } from '../api/discountCodes';
 import { ClientNavigation } from '../components/ClientNavigation';
@@ -12,26 +12,27 @@ const formatCurrency = (value: number) =>
 
 export function VoucherWalletPage() {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const queryClient = useQueryClient();
   const { showNotification } = useNotification();
   const [guestName] = useState(getTemporaryUserName);
 
   const { data: savedDiscounts, isLoading: isLoadingSaved } = useQuery({
-    queryKey: ['saved-discounts'],
-    queryFn: discountCodesApi.getSavedDiscounts,
+    queryKey: ['saved-discounts', slug],
+    queryFn: () => discountCodesApi.getSavedDiscounts(slug),
     enabled: !!localStorage.getItem('auth_token'),
   });
 
   const { data: publicDiscounts, isLoading: isLoadingPublic } = useQuery({
-    queryKey: ['public-discounts'],
-    queryFn: () => discountCodesApi.getPublicDiscounts(),
+    queryKey: ['public-discounts', slug],
+    queryFn: () => discountCodesApi.getPublicDiscounts(slug),
   });
 
   const saveMutation = useMutation({
     mutationFn: discountCodesApi.saveDiscount,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-discounts'] });
-      queryClient.invalidateQueries({ queryKey: ['public-discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['public-discounts', slug] });
       showNotification('Đã lưu voucher vào ví');
     },
     onError: (error: any) => {
@@ -132,8 +133,11 @@ export function VoucherWalletPage() {
               {isSaved ? (
                 <button
                   onClick={() => {
-                    navigate('/client');
+                    navigate(slug ? `/s/${slug}` : '/client');
                     setTimeout(() => {
+                      // Optionally open scanner if that's the intended flow behavior
+                      // but user only asked to redirect to home page. 
+                      // Keeping scanner logic as it seems to be the "Use" flow (scan QR to start).
                       const event = new CustomEvent('openScanner');
                       window.dispatchEvent(event);
                     }, 100);
@@ -170,9 +174,9 @@ export function VoucherWalletPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => navigate('/client')}
-        onHistoryClick={() => navigate('/client/history')}
-        onVouchersClick={() => navigate('/client/vouchers')}
+        onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+        onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+        onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
         vouchersActive
       />
       <div className="mx-auto max-w-6xl px-4 py-10">

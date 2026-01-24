@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { blogApi } from '../../../api/blog';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ClientNavigation } from '../../../components/ClientNavigation';
 import { useState } from 'react';
 import { getTemporaryUserName } from '../../../utils/temporaryUser';
 
 export function BlogListPage() {
     const navigate = useNavigate();
+    const { slug } = useParams<{ slug?: string }>();
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [guestName] = useState(getTemporaryUserName);
 
@@ -38,9 +39,9 @@ export function BlogListPage() {
         <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] font-display text-slate-800 dark:text-white transition-colors duration-300">
             <ClientNavigation
                 userName={guestName}
-                onHomeClick={() => navigate('/client')}
-                onHistoryClick={() => navigate('/client/history')}
-                onVouchersClick={() => navigate('/client/vouchers')}
+                onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+                onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+                onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
                 blogActive={true}
             />
 

@@ -114,7 +114,8 @@ export function TenantHomePage() {
 
   const handleResumeOrder = () => {
     if (!activeOrderSnapshot) return;
-    navigate(`/client/order/${activeOrderSnapshot.orderId}`);
+    const targetSlug = activeOrderSnapshot.storeSlug || slug;
+    navigate(targetSlug ? `/s/${targetSlug}/order/${activeOrderSnapshot.orderId}` : `/client/order/${activeOrderSnapshot.orderId}`);
   };
 
   const handleScanError = (error: unknown) => {
@@ -126,9 +127,9 @@ export function TenantHomePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => navigate('/client')}
-        onHistoryClick={() => navigate('/client/history')}
-        onVouchersClick={() => navigate('/client/vouchers')}
+        onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+        onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+        onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
         isOverBanner={true}
       />
 

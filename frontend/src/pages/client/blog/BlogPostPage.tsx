@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import { getTemporaryUserName } from '../../../utils/temporaryUser';
 
 export function BlogPostPage() {
-    const { id } = useParams();
+    const { id, slug } = useParams<{ id: string; slug?: string }>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [guestName] = useState(getTemporaryUserName);
@@ -93,9 +93,9 @@ export function BlogPostPage() {
         <div className="min-h-screen bg-[#f8f8f5] dark:bg-[rgb(16,34,24)] font-display text-zinc-800 dark:text-white transition-colors duration-300">
             <ClientNavigation
                 userName={guestName}
-                onHomeClick={() => navigate('/client')}
-                onHistoryClick={() => navigate('/client/history')}
-                onVouchersClick={() => navigate('/client/vouchers')}
+                onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+                onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+                onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
                 blogActive={true}
             />
 

@@ -41,8 +41,8 @@ export function ClientOrderPage() {
   });
 
   const { data: savedDiscounts } = useQuery({
-    queryKey: ['saved-discounts'],
-    queryFn: discountCodesApi.getSavedDiscounts,
+    queryKey: ['saved-discounts', slug],
+    queryFn: () => discountCodesApi.getSavedDiscounts(slug),
     enabled: !!localStorage.getItem('auth_token') && !!order,
   });
 
@@ -64,7 +64,7 @@ export function ClientOrderPage() {
   useEffect(() => {
     if (!order) return;
     if (isClientOrderContinuable(order.status)) {
-      persistClientActiveOrderFromOrder(order);
+      persistClientActiveOrderFromOrder(order, slug);
     } else {
       clearClientActiveOrder();
     }

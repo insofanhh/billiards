@@ -3,7 +3,7 @@ import type { BannerSettings } from '../../../api/settings';
 import { settingsApi } from '../../../api/settings';
 import { useQuery } from '@tanstack/react-query';
 import { extractYoutubeId } from '../../../utils/url';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface Props {
   onScanClick: () => void;
@@ -12,6 +12,7 @@ interface Props {
 
 export function BannerSlider({ onScanClick, storeName }: Props) {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -142,7 +143,7 @@ export function BannerSlider({ onScanClick, storeName }: Props) {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/client/history')}
+                onClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
                 className="rounded-full border border-white/30 bg-white/10 px-8 py-4 text-center text-lg font-bold text-white transition hover:bg-white/20 backdrop-blur-sm"
               >
                 Lịch sử của tôi

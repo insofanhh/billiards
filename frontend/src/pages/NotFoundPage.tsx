@@ -1,18 +1,19 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
 
 export function NotFoundPage() {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const guestName = getTemporaryUserName();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => navigate('/client')}
-        onHistoryClick={() => navigate('/client/history')}
-        onVouchersClick={() => navigate('/client/vouchers')}
+        onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+        onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+        onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
       />
 
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center justify-center px-4 py-10">
@@ -32,7 +33,7 @@ export function NotFoundPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <button
                 type="button"
-                onClick={() => navigate('/client')}
+                onClick={() => navigate(slug ? `/s/${slug}` : '/client')}
                 className="rounded-2xl bg-yellow-400 dark:bg-[#13ec6d] px-6 py-3 text-base font-semibold text-gray-900 dark:text-zinc-900 shadow-lg shadow-yellow-500/30 dark:shadow-green-500/20 transition hover:bg-yellow-300 dark:hover:bg-[#10d863] focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
               >
                 Về trang chủ

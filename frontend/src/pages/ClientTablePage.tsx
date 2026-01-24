@@ -173,9 +173,9 @@ export function ClientTablePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => navigate('/client')}
-        onHistoryClick={() => navigate('/client/history')}
-        onVouchersClick={() => navigate('/client/vouchers')}
+        onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+        onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+        onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
       />
       <div className="max-w-4xl mx-auto py-12 px-4">
         <div className="bg-white dark:bg-white/5 rounded-2xl shadow-md border border-gray-100 dark:border-white/10 p-8 backdrop-blur-sm transition-colors">

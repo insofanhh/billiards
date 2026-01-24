@@ -116,7 +116,15 @@ class DiscountCodeController extends Controller
 
         $now = Carbon::now();
 
-        $discounts = $user->savedDiscounts()
+        $usedDiscountIds = DB::table('orders')
+                ->where('user_id', $user->id)
+                ->whereNotNull('applied_discount_id')
+                ->pluck('applied_discount_id')
+                ->unique();
+        
+
+
+        $discounts = $user->savedDiscounts()->withoutGlobalScope(\App\Scopes\TenantScope::class)
             ->where('active', true)
             ->where(function ($query) use ($now) {
                 $query->whereNull('start_at')
@@ -125,9 +133,26 @@ class DiscountCodeController extends Controller
             ->where(function ($query) use ($now) {
                 $query->whereNull('end_at')
                     ->orWhere('end_at', '>=', $now);
-            })
-            ->orderBy('created_at', 'desc')
+            });
+
+        if ($usedDiscountIds->isNotEmpty()) {
+            $discounts->whereNotIn('discount_codes.id', $usedDiscountIds);
+        }
+
+        if ($request->has('store_slug')) {
+            $storeSlug = $request->input('store_slug');
+            $store = \App\Models\Store::where('slug', $storeSlug)->first();
+            if ($store) {
+                 $discounts->where('discount_codes.store_id', $store->id);
+            }
+        } elseif ($user->store_id) {
+             $discounts->where('discount_codes.store_id', $user->store_id);
+        }
+
+        $discounts = $discounts->orderBy('created_at', 'desc')
             ->get();
+        
+
 
         return DiscountCodeResource::collection($discounts);
     }
@@ -173,7 +198,9 @@ class DiscountCodeController extends Controller
             return response()->json(['message' => 'Voucher đã được bạn sử dụng trước đó. Chờ quản trị viên xuất bản lại để dùng tiếp.'], 400);
         }
 
-        $user->savedDiscounts()->attach($id);
+        $user->savedDiscounts()->attach($id, [
+            'store_id' => $discount->store_id ?? $user->store_id
+        ]);
 
         return response()->json(['message' => 'Đã lưu voucher thành công']);
     }
