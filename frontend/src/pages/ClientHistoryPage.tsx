@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders';
 import { ClientNavigation } from '../components/ClientNavigation';
@@ -11,6 +11,7 @@ const formatCurrency = (value: number) =>
 
 export function ClientHistoryPage() {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const [guestName] = useState(getTemporaryUserName);
   const { data: orders, isLoading } = useQuery({
     queryKey: ['client-orders-history'],
@@ -47,9 +48,9 @@ export function ClientHistoryPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
       <ClientNavigation
         userName={guestName}
-        onHomeClick={() => navigate('/client')}
-        onHistoryClick={() => navigate('/client/history')}
-        onVouchersClick={() => navigate('/client/vouchers')}
+        onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+        onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
+        onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
         historyActive
       />
       <div className="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-6">

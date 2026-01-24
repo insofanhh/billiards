@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/authStore';
 import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
 import { getClientOrderStatusLabel } from '../utils/clientActiveOrder';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNotification } from '../contexts/NotificationContext';
+import { isGuestUser } from '../utils/temporaryUser';
 
 type ClientNavigationProps = {
   userName?: string;
@@ -39,6 +41,7 @@ export function ClientNavigation({
   };
 
   const { theme, toggleTheme } = useTheme();
+  const { showNotification } = useNotification();
   const user = useAuthStore((state) => state.user);
   const activeOrder = useClientActiveOrder();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -156,7 +159,8 @@ export function ClientNavigation({
 
   const handleHome = () => {
     if (activeOrder) {
-      navigate(getPath(`/client/order/${activeOrder.orderId}`));
+      const targetSlug = activeOrder.storeSlug || slug;
+      navigate(targetSlug ? `/s/${targetSlug}/order/${activeOrder.orderId}` : `/client/order/${activeOrder.orderId}`);
     } else {
       onHomeClick?.();
     }
@@ -164,6 +168,19 @@ export function ClientNavigation({
   };
 
   const handleHistory = () => {
+    // Check if user is authenticated and not a guest
+    const isAuthenticated = !!localStorage.getItem('auth_token');
+    const isGuest = isGuestUser();
+
+    if (!isAuthenticated || isGuest) {
+      showNotification('Vui lòng đăng nhập để xem lịch sử chơi');
+      // Redirect to login with proper return path
+      const currentPath = window.location.pathname;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      setMobileMenuOpen(false);
+      return;
+    }
+
     onHistoryClick?.();
     setMobileMenuOpen(false);
   };
@@ -449,7 +466,11 @@ export function ClientNavigation({
             </button>
           </div>
           <div className="space-y-4 px-6 py-6">
-            <div className="rounded-2xl border border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 p-4">
+            <button 
+              type="button"
+              onClick={handleProfileClick}
+              className="w-full text-left rounded-2xl border border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 p-4 transition hover:bg-gray-100 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 dark:focus-visible:ring-white"
+            >
               <div className="flex items-center gap-3">
                 <span className="rounded-xl bg-white dark:bg-white/10 p-2 text-yellow-600 dark:text-yellow-400 shadow-sm dark:shadow-none">
                   {icons.user}
@@ -459,7 +480,7 @@ export function ClientNavigation({
                   <p className="text-base font-semibold text-gray-900 dark:text-white">{displayName}</p>
                 </div>
               </div>
-            </div>
+            </button>
             {onHomeClick && (
               <button
                 type="button"

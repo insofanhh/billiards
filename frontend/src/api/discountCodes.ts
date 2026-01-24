@@ -11,9 +11,11 @@ export const discountCodesApi = {
     const response = await apiClient.get(url);
     return response.data.data || response.data;
   },
-  getSavedDiscounts: async (): Promise<DiscountCode[]> => {
-    const response = await apiClient.get('/saved-discounts');
-    return response.data;
+  getSavedDiscounts: async (slug?: string): Promise<DiscountCode[]> => {
+    const url = slug ? `/saved-discounts?store_slug=${slug}` : '/saved-discounts';
+    const response = await apiClient.get(url);
+    // Handle both resource collection structure and plain array
+    return response.data.data || response.data;
   },
   saveDiscount: async (id: number): Promise<void> => {
     await apiClient.post(`/save-discount/${id}`);

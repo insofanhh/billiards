@@ -6,6 +6,7 @@ export type ClientActiveOrderSnapshot = {
   tableName?: string | null;
   tableCode?: string | null;
   status: Order['status'];
+  storeSlug?: string | null;
   updatedAt: string;
 };
 
@@ -81,6 +82,7 @@ type SnapshotInput = {
   orderCode?: string | null;
   tableName?: string | null;
   tableCode?: string | null;
+  storeSlug?: string | null;
 };
 
 export const persistClientActiveOrder = (input: SnapshotInput | null) => {
@@ -93,6 +95,7 @@ export const persistClientActiveOrder = (input: SnapshotInput | null) => {
     orderCode: input.orderCode ?? null,
     tableName: input.tableName ?? null,
     tableCode: input.tableCode ?? null,
+    storeSlug: input.storeSlug ?? null,
     status: input.status,
     updatedAt: new Date().toISOString(),
   };
@@ -104,7 +107,7 @@ export const persistClientActiveOrder = (input: SnapshotInput | null) => {
   return snapshot;
 };
 
-export const persistClientActiveOrderFromOrder = (order: Order | null | undefined) => {
+export const persistClientActiveOrderFromOrder = (order: Order | null | undefined, storeSlug?: string | null) => {
   if (!order) {
     clearClientActiveOrder();
     return null;
@@ -115,6 +118,7 @@ export const persistClientActiveOrderFromOrder = (order: Order | null | undefine
     tableName: order.table?.name ?? null,
     tableCode: order.table?.code ?? null,
     status: order.status,
+    storeSlug: storeSlug ?? null,
   });
 };
 

@@ -25,6 +25,7 @@ class DiscountCodeResource extends JsonResource
             'end_at' => $this->end_at?->toIso8601String(),
             'usage_limit' => $this->usage_limit,
             'used_count' => $this->used_count,
+            'is_saved' => $this->when(isset($this->is_saved), $this->is_saved),
         ];
     }
 }
