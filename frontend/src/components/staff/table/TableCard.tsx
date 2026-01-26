@@ -32,6 +32,15 @@ const getStatusColorConfig = (statusName: string) => {
     }
 };
 
+const getPaymentMethodLabel = (method?: string) => {
+    switch (method) {
+        case 'cash': return 'Tiền mặt';
+        case 'transfer': return 'Chuyển khoản';
+        case 'card': return 'Thẻ';
+        default: return method;
+    }
+};
+
 export function TableCard({ table, slug, hasNotification, onClick }: TableCardProps) {
     const navigate = useNavigate();
     const { 
@@ -242,6 +251,13 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                 >
                     <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-bold shadow-sm">
                         Chờ thanh toán
+                        {(() => {
+                            const transaction = table.active_order?.transactions?.find(t => t.status === 'pending');
+                            if (transaction?.method) {
+                                return ` (${getPaymentMethodLabel(transaction.method)})`;
+                            }
+                            return '';
+                        })()}
                     </span>
                 </div>
             )}
