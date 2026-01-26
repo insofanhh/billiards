@@ -176,7 +176,7 @@ class SePayWebhookController extends Controller
                     $order->save();
 
                     if ($order->table) {
-                        $order->table->update(['status_id' => 1]);
+                        $order->table->update(['status' => 'Trống']);
                     }
                 }
 
