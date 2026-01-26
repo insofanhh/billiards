@@ -27,17 +27,66 @@ class TableResource extends JsonResource
             ->whereHas('transactions', function ($query) {
                 $query->where('status', 'pending');
             })
+            ->with(['transactions', 'items'])
             ->latest()
             ->first();
 
         $activeOrder = $pendingPaymentOrder ?: $this->orders()
             ->where('status', 'active')
+            ->with(['transactions', 'priceRate', 'items'])
             ->latest()
             ->first();
 
         $currentPriceRate = $this->table_type_id 
             ? PriceRate::forTableTypeAtTime($this->table_type_id) 
             : null;
+
+        $activeOrderData = null;
+        if ($activeOrder) {
+            $totalAmount = $activeOrder->total_paid > 0 ? $activeOrder->total_paid : 0;
+            
+            if ($totalAmount == 0) {
+                // Calculate dynamic time fee
+                $timeFee = 0;
+                if ($activeOrder->start_at && $activeOrder->status === 'active') {
+                    $minutes = abs(now()->diffInMinutes($activeOrder->start_at));
+                    
+                    // Use order's price rate or table's current rate
+                    $pricePerHour = 0;
+                    if ($activeOrder->priceRate) {
+                         $pricePerHour = $activeOrder->priceRate->price_per_hour;
+                    } elseif ($currentPriceRate) {
+                         $pricePerHour = $currentPriceRate->price_per_hour;
+                    }
+                    
+                    $timeFee = ($minutes / 60) * $pricePerHour;
+                }
+                
+                // Calculate Items Total from relation
+                $itemsTotal = $activeOrder->items ? $activeOrder->items->sum(function($item) {
+                     return $item->qty * $item->unit_price;
+                }) : 0;
+                
+                // Provisional = (Items Total + Time Fee) - Discount
+                $totalAmount = ($itemsTotal + $timeFee) - $activeOrder->total_discount;
+            }
+
+            $activeOrderData = [
+                'id' => $activeOrder->id,
+                'order_code' => $activeOrder->order_code,
+                'start_at' => $activeOrder->start_at?->toIso8601String(),
+                'status' => $activeOrder->status,
+                'total_amount' => $totalAmount,
+                'transactions' => $activeOrder->transactions->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'method' => $t->method,
+                        'status' => $t->status,
+                        'amount' => $t->amount,
+                    ];
+                }),
+            ];
+        }
 
         return [
             'id' => $this->id,
@@ -76,12 +125,7 @@ class TableResource extends JsonResource
                 'order_code' => $pendingEnd->order_code,
                 'user_name' => optional($pendingEnd->user)->name,
             ] : null,
-            'active_order' => $activeOrder ? [
-                'id' => $activeOrder->id,
-                'order_code' => $activeOrder->order_code,
-                'start_at' => $activeOrder->start_at?->toIso8601String(),
-                'status' => $activeOrder->status,
-            ] : null,
+            'active_order' => $activeOrderData,
         ];
     }
 }
