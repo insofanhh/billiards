@@ -1,8 +1,12 @@
+
 import { useState } from 'react';
 import { platformApi } from '../api/platform';
 import { useNavigate } from 'react-router-dom';
 
+import { useClientSeo } from '../hooks/useClientSeo';
+
 export function TenantRegistrationForm() {
+  useClientSeo();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     store_name: '',
