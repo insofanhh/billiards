@@ -67,7 +67,7 @@ export const useWebSerial = () => {
     const readLoop = async (port: any) => {
         while (port.readable && keepReading.current) {
             const textDecoder = new TextDecoderStream();
-            const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+            port.readable.pipeTo(textDecoder.writable);
             const reader = textDecoder.readable.getReader();
             readerRef.current = reader;
 
@@ -92,7 +92,7 @@ export const useWebSerial = () => {
         if (!portRef.current?.writable) return;
 
         const textEncoder = new TextEncoderStream();
-        const writableStreamClosed = textEncoder.readable.pipeTo(portRef.current.writable);
+        textEncoder.readable.pipeTo(portRef.current.writable);
         const writer = textEncoder.writable.getWriter();
         writerRef.current = writer;
 
