@@ -3,6 +3,8 @@ import type { Table } from '../../../types';
 import { useTableActions } from '../../../hooks/useTableActions';
 import { TableTimer } from '../../TableTimer';
 import { getCurrentPriceRate } from '../../../utils/pricing';
+// import { SerialConnectButton } from '../../common/SerialConnectButton';
+// import { useWebSerial } from '../../../hooks/useWebSerial';
 
 interface TableCardProps {
     table: Table;
@@ -49,6 +51,9 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
         approveOpen, isApprovingOpen,
         rejectOpen, isRejectingOpen
     } = useTableActions(undefined, slug);
+    
+    // Serial Hook
+    // const { isConnected, sendCommand } = useWebSerial();
 
     const handleTableClick = (code: string) => {
         if (onClick) {
@@ -77,9 +82,15 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                 {/* Header */}
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">{table.code}</h3>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badge}`}>
-                        {table.status}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badge}`}>
+                            {table.status}
+                        </span>
+                        {/* Serial Button for Demo/Debug */}
+                        {/* <div onClick={e => e.stopPropagation()}>
+                           <SerialConnectButton />
+                        </div> */}
+                    </div>
                 </div>
 
                 {/* Sub Info */}
@@ -124,6 +135,9 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                         onClick={(e) => {
                             e.stopPropagation();
                             createOrder({ table_code: table.code });
+                            // if (isConnected) {
+                            //     sendCommand(JSON.stringify({ action: 'ON', table_code: table.code }));
+                            // }
                         }}
                         disabled={isCreating}
                         className={`w-full py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg flex items-center justify-center space-x-2 hover:bg-slate-800 hover:shadow-lg active:scale-95 transform transition-all duration-200 ${isCreating ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -194,6 +208,9 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                                 e.stopPropagation();
                                 if (table.active_order?.id) {
                                     approveEnd(table.active_order.id);
+                                    // if (isConnected) {
+                                    //     sendCommand(JSON.stringify({ action: 'OFF', table_code: table.code }));
+                                    // }
                                 }
                             }}
                             disabled={isApprovingEnd}

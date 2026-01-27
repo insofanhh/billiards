@@ -20,7 +20,11 @@ import { PlatformLoginPage } from './pages/platform/PlatformLoginPage';
 import { PlatformDashboard } from './pages/platform/PlatformDashboard';
 import { PlatformStoreList } from './pages/platform/PlatformStoreList';
 import { PlatformStoreDetail } from './pages/platform/PlatformStoreDetail';
+
 import { PlatformStoreCreate } from './pages/platform/PlatformStoreCreate';
+import { PlatformSettings } from './pages/platform/PlatformSettings';
+import { PlatformUserList } from './pages/platform/PlatformUserList';
+
 
 export const router = createBrowserRouter([
   {
@@ -161,6 +165,14 @@ export const router = createBrowserRouter([
         {
             path: 'stores/:id',
             element: <PlatformStoreDetail />,
+        },
+        {
+            path: 'settings',
+            element: <PlatformSettings />,
+        },
+        {
+            path: 'users',
+            element: <PlatformUserList />,
         },
         {
             index: true,

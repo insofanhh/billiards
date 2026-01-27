@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { platformClient } from '../api/platformClient';
+import { Toaster } from 'react-hot-toast';
 
 export const PlatformLayout = () => {
     const navigate = useNavigate();
@@ -76,10 +77,17 @@ export const PlatformLayout = () => {
                             <span className="text-sm font-medium">Store Management</span>
                         </Link>
 
-                        <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                            <span className="material-symbols-outlined">group</span>
+                        <Link 
+                            to="/platform/users"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                                isActive('/platform/users') 
+                                ? 'bg-[#137fec]/10 text-[#137fec]' 
+                                : 'text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                            <span className={`material-symbols-outlined ${isActive('/platform/users') ? 'active-icon' : ''}`}>group</span>
                             <span className="text-sm font-medium">User Accounts</span>
-                        </a>
+                        </Link>
                         <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                             <span className="material-symbols-outlined">analytics</span>
                             <span className="text-sm font-medium">Analytics</span>
@@ -87,10 +95,17 @@ export const PlatformLayout = () => {
 
                         <div className="my-2 border-t border-gray-100 dark:border-gray-800"></div>
 
-                        <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                            <span className="material-symbols-outlined">settings</span>
+                        <Link 
+                            to="/platform/settings" 
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                                isActive('/platform/settings') 
+                                ? 'bg-[#137fec]/10 text-[#137fec]' 
+                                : 'text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                            <span className={`material-symbols-outlined ${isActive('/platform/settings') ? 'active-icon' : ''}`}>settings</span>
                             <span className="text-sm font-medium">Settings</span>
-                        </a>
+                        </Link>
                         <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                             <span className="material-symbols-outlined">help</span>
                             <span className="text-sm font-medium">Help Center</span>
@@ -115,6 +130,7 @@ export const PlatformLayout = () => {
                     <Outlet />
                  </div>
             </main>
+            <Toaster position="top-right" />
         </div>
     );
 };

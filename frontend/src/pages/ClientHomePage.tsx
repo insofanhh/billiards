@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { type IDetectedBarcode, Scanner } from '@yudiel/react-qr-scanner';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { TenantRegistrationForm } from '../components/TenantRegistrationForm';
+import { SupportWidget } from '../components/SupportWidget';
 import { getTemporaryUserName } from '../utils/temporaryUser';
 import { ordersApi } from '../api/orders';
 import { useClientActiveOrder } from '../hooks/useClientActiveOrder';
@@ -21,6 +22,7 @@ import { BannerSlider } from '../components/client/home/BannerSlider';
 import { PromoList } from '../components/client/home/PromoList';
 import { InfoSection } from '../components/client/home/InfoSection';
 import { storesApi } from '../api/stores';
+import { settingsApi } from '../api/settings';
 
 export function TenantHomePage() {
   const navigate = useNavigate();
@@ -240,6 +242,14 @@ export function TenantHomePage() {
 }
 
 function PlatformHomePage() {
+  useEffect(() => {
+     settingsApi.getBanners().then(settings => {
+        if (settings.learnMoreUrl) {
+           (window as any).learnMoreUrl = settings.learnMoreUrl;
+        }
+     });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542385106-93d395a4c9c1?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
@@ -279,7 +289,18 @@ function PlatformHomePage() {
                 >
                   Đăng ký dùng thử
                 </button>
-                <button className="rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-bold text-white transition hover:bg-white/10 backdrop-blur-sm">
+                <button 
+                  onClick={() => {
+                     const learnMoreUrl = (window as any).learnMoreUrl;
+                     if (learnMoreUrl) {
+                        window.location.href = learnMoreUrl;
+                     } else {
+                        // Fallback behavior if no URL is configured
+                        window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+                     }
+                  }}
+                  className="rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-bold text-white transition hover:bg-white/10 backdrop-blur-sm"
+                >
                   Tìm hiểu thêm
                 </button>
              </div>
@@ -293,6 +314,7 @@ function PlatformHomePage() {
        <div className="absolute bottom-4 text-center text-xs text-gray-500 w-full z-10">
           &copy; {new Date().getFullYear()} Billiards SaaS Platform. All rights reserved.
        </div>
+       <SupportWidget />
     </div>
   );
 }

@@ -24,6 +24,7 @@ Route::prefix('platform')->group(function () {
 
     Route::middleware(['auth:sanctum', 'platform.admin'])->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\PlatformAuthController::class, 'me']);
+        Route::post('/change-password', [\App\Http\Controllers\Api\PlatformAuthController::class, 'changePassword']);
         Route::post('/logout', [\App\Http\Controllers\Api\PlatformAuthController::class, 'logout']);
         
         // Store Management
@@ -32,6 +33,15 @@ Route::prefix('platform')->group(function () {
         Route::get('/stores/{id}', [\App\Http\Controllers\Api\PlatformStoreController::class, 'show']);
         Route::put('/stores/{id}', [\App\Http\Controllers\Api\PlatformStoreController::class, 'update']);
         Route::delete('/stores/{id}', [\App\Http\Controllers\Api\PlatformStoreController::class, 'destroy']); // Delete
+
+        // Settings
+        Route::get('/settings', [\App\Http\Controllers\Api\PlatformSettingController::class, 'index']);
+        Route::put('/settings', [\App\Http\Controllers\Api\PlatformSettingController::class, 'update']);
+
+        // User Management
+        Route::get('/users', [\App\Http\Controllers\Api\PlatformUserController::class, 'index']);
+        Route::get('/users/{id}', [\App\Http\Controllers\Api\PlatformUserController::class, 'show']);
+        Route::delete('/users/{id}', [\App\Http\Controllers\Api\PlatformUserController::class, 'destroy']);
     });
 });
 

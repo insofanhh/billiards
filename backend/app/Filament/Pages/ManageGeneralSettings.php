@@ -14,9 +14,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use UnitEnum;
-use Filament\Notifications\Notification;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
-use Illuminate\Support\Facades\Config;
 
 class ManageGeneralSettings extends SettingsPage
 {

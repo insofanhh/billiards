@@ -3,6 +3,10 @@ import { apiClient } from './client';
 export type BannerSettings = {
   images: string[];
   videoUrl: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoKeywords?: string | null;
+  learnMoreUrl?: string | null;
 };
 
 export const settingsApi = {
@@ -10,7 +14,11 @@ export const settingsApi = {
     const response = await apiClient.get('/settings/banners');
     return {
         images: response.data?.banners ?? [],
-        videoUrl: response.data?.banner_video_url ?? null
+        videoUrl: response.data?.banner_video_url ?? null,
+        seoTitle: response.data?.seo_title,
+        seoDescription: response.data?.seo_description,
+        seoKeywords: response.data?.seo_keywords,
+        learnMoreUrl: response.data?.learn_more_url,
     };
   },
 };

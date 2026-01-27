@@ -36,10 +36,12 @@ use Illuminate\Validation\ValidationException;
 class OrderController extends Controller
 {
     protected PriceCalculatorService $priceCalculator;
+    protected \App\Services\IotService $iotService;
 
-    public function __construct(PriceCalculatorService $priceCalculator)
+    public function __construct(PriceCalculatorService $priceCalculator, \App\Services\IotService $iotService)
     {
         $this->priceCalculator = $priceCalculator;
+        $this->iotService = $iotService;
     }
 
     /**
@@ -138,6 +140,7 @@ class OrderController extends Controller
 
         if ($table) {
             $table->update(['status' => 'Đang sử dụng']);
+            $this->iotService->turnOnTable($table);
         }
 
         return new OrderResource($order->load(['table', 'priceRate']));
@@ -396,6 +399,7 @@ class OrderController extends Controller
 
         if ($order->table) {
             $order->table->update(['status' => 'Đang sử dụng']);
+            $this->iotService->turnOnTable($order->table);
         }
 
         $order->load(['table', 'priceRate', 'user']);
@@ -797,6 +801,10 @@ class OrderController extends Controller
             }
             
             $order->update($updateData);
+
+            if ($order->table) {
+                $this->iotService->turnOffTable($order->table);
+            }
 
             // Handle pending transaction creation or update
             $existingPending = Transaction::where('order_id', $order->id)
