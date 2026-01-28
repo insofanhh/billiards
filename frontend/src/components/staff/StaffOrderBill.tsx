@@ -63,7 +63,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
       const prevTime = lastItem.created_at ? new Date(lastItem.created_at).getTime() : 0;
       const currTime = item.created_at ? new Date(item.created_at).getTime() : 0;
 
-      if (currTime - prevTime < 60000) {
+      if (currTime - prevTime < 2000) {
         currentGroup.items.push(item);
       } else {
         groups.push(currentGroup);

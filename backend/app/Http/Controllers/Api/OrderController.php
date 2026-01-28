@@ -20,6 +20,7 @@ use App\Events\OrderEndRequested;
 use App\Events\OrderEndApproved;
 use App\Events\OrderEndRejected;
 use App\Events\OrderServiceAdded;
+use App\Events\OrderUpdated;
 use App\Events\OrderServiceUpdated;
 use App\Events\OrderServiceRemoved;
 use App\Events\OrderServiceConfirmed;
@@ -406,23 +407,76 @@ class OrderController extends Controller
         event(new OrderApproved($order));
 
         return new OrderResource($order);
-    }
-
-    /**
-     * Reject a pending order request (Staff).
-     */
-    public function reject(Request $request, $id)
-    {
-        $order = Order::where('id', $id)
-            ->where('status', 'pending')
-            ->firstOrFail();
-
-        $order->update(['status' => 'cancelled']);
-        $order->load(['user']);
-
         event(new OrderRejected($order));
 
         return response()->json(['message' => 'Đã hủy yêu cầu'], 200);
+    }
+
+    /**
+     * Add multiple services to an order.
+     */
+    public function addServices(Request $request, string $id)
+    {
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'items' => 'required|array',
+            'items.*.service_id' => 'required|exists:services,id',
+            'items.*.qty' => 'required|integer|min:1',
+        ]);
+
+        $shouldAutoConfirm = $this->isStaff($request);
+        
+        // Use a fixed timestamp for all items in this batch to ensure they group together
+        $now = now();
+
+        DB::beginTransaction();
+        try {
+            foreach ($validated['items'] as $itemData) {
+                $service = Service::findOrFail($itemData['service_id']);
+                
+                // Check stock
+                if ($service->inventory_quantity !== null && $service->inventory_quantity < $itemData['qty']) {
+                    throw new \Exception("Dịch vụ {$service->name} không đủ số lượng trong kho");
+                }
+
+                // Deduct stock
+                if ($service->inventory_quantity !== null) {
+                    $service->decrement('inventory_quantity', $itemData['qty']);
+                }
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'service_id' => $service->id,
+                    'qty' => $itemData['qty'],
+                    'unit_price' => $service->price,
+                    'total_price' => $service->price * $itemData['qty'],
+                    'is_confirmed' => $shouldAutoConfirm,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+            
+            // Recalculate total
+            $total = $order->items()->sum('total_price');
+            $order->update(['total_before_discount' => $total]);
+            
+            DB::commit();
+
+            // Broadcast events...
+            if ($shouldAutoConfirm) {
+                 broadcast(new OrderUpdated($order));
+            } else {
+                 broadcast(new OrderServiceAdded($order));
+                 broadcast(new OrderUpdated($order));
+            }
+
+            return response()->json(['message' => 'Services added successfully']);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 
     /**
@@ -874,7 +928,7 @@ class OrderController extends Controller
             ->map(fn($role) => strtolower($role))
             ->toArray();
             
-        if (array_intersect(['staff', 'admin', 'super_admin', 'super admin'], $roles)) {
+        if (array_intersect(['staff', 'admin', 'super_admin', 'super admin', 'manager', 'owner'], $roles)) {
             return true;
         }
         

@@ -59,6 +59,10 @@ export const ordersApi = {
     await apiClient.post(`/orders/${id}/services`, data);
   },
 
+  addServices: async (id: number, items: { service_id: number; qty: number }[]): Promise<void> => {
+    await apiClient.post(`/orders/${id}/services/bulk`, { items });
+  },
+
   updateService: async (id: number, itemId: number, qty: number): Promise<void> => {
     await apiClient.patch(`/orders/${id}/services/${itemId}`, { qty });
   },

@@ -140,6 +140,21 @@ export function ClientOrderPage() {
       <div className="max-w-4xl mx-auto py-12 px-4">
         {!hasSuccessfulTransaction ? (
           <>
+            {order.status === 'active' && (
+              <div className="mb-6 bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-5 backdrop-blur-sm transition-colors duration-300">
+                <button
+                  onClick={() => setShowAddService(!showAddService)}
+                  className="w-full py-2 px-4 border border-blue-600 dark:border-[#13ec6d] text-blue-600 dark:text-[#13ec6d] rounded-xl hover:bg-blue-50 dark:hover:bg-[#13ec6d]/10 transition-colors font-medium"
+                >
+                  {showAddService ? 'Ẩn danh sách dịch vụ' : 'Gọi thêm dịch vụ'}
+                </button>
+
+                {showAddService && (
+                  <ClientServiceList orderId={Number(id)} services={services} />
+                )}
+              </div>
+            )}
+
             <ClientOrderInfo 
               order={order}
               onRequestEnd={() => requestEndMutation.mutate()}
@@ -184,20 +199,7 @@ export function ClientOrderPage() {
               </div>
             )}
 
-            {order.status === 'active' && (
-              <div className="mb-6 mt-6 bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-5 backdrop-blur-sm transition-colors duration-300">
-                <button
-                  onClick={() => setShowAddService(!showAddService)}
-                  className="w-full py-2 px-4 border border-blue-600 dark:border-[#13ec6d] text-blue-600 dark:text-[#13ec6d] rounded-xl hover:bg-blue-50 dark:hover:bg-[#13ec6d]/10 transition-colors"
-                >
-                  {showAddService ? 'Ẩn danh sách dịch vụ' : 'Gọi thêm dịch vụ'}
-                </button>
 
-                {showAddService && (
-                  <ClientServiceList orderId={Number(id)} services={services} />
-                )}
-              </div>
-            )}
 
             {/* Payment & Bill Section for Active/Completed/PendingEnd */}
             {order.status === 'completed' && (

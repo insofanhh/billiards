@@ -14,7 +14,7 @@ export function NotificationPopup({ message, onClose }: NotificationPopupProps) 
     };
     document.addEventListener('keydown', handleEscape);
     
-    // Auto close after 2 seconds
+    // Auto close after 1 seconds
     const timer = setTimeout(() => {
         onClose();
     }, 1000);
