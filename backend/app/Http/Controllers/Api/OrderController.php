@@ -237,18 +237,48 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->firstOrFail();
 
-        if ($orderItem->is_confirmed || $orderItem->stock_deducted) {
-            return response()->json(['message' => 'Không thể chỉnh sửa dịch vụ đã được xác nhận hoặc đã trừ kho'], 400);
+        // Allow editing confirmed items logic update
+        // if ($orderItem->is_confirmed || $orderItem->stock_deducted) {
+        //     return response()->json(['message' => 'Không thể chỉnh sửa dịch vụ đã được xác nhận hoặc đã trừ kho'], 400);
+        // }
+
+        $newQty = (int) $request->qty;
+        $oldQty = $orderItem->qty;
+        $diff = $newQty - $oldQty;
+
+        if ($diff === 0) {
+             return response()->json(['message' => 'Số lượng không thay đổi', 'item' => $orderItem->load('service')]);
         }
 
-        $qty = (int) $request->qty;
+        DB::transaction(function () use ($orderItem, $newQty, $oldQty, $diff) {
+            $service = $orderItem->service;
 
-        DB::transaction(function () use ($orderItem, $qty) {
-            $this->ensureInventoryAvailable($orderItem->service, $qty, $orderItem);
+            if ($orderItem->stock_deducted) {
+                // Item was already deducted from stock. We need to handle the difference.
+                $inventory = ServiceInventory::firstOrCreate(
+                    ['service_id' => $service->id],
+                    ['quantity' => 0]
+                );
+
+                if ($diff > 0) {
+                    // Increasing quantity: Check if we have enough FOR THE DIFFERENCE
+                    if ($inventory->quantity < $diff) {
+                         throw new \Exception("Dịch vụ {$service->name} không đủ số lượng trong kho (cần thêm {$diff})");
+                    }
+                    $inventory->decrement('quantity', $diff);
+                } else {
+                    // Decreasing quantity: Return stock
+                    $inventory->increment('quantity', abs($diff));
+                }
+            } else {
+                // Stock NOT deducted yet. Just check if we have enough for the NEW TOTAL
+                // This will throw if strictly not enough, but won't deduct.
+                $this->ensureInventoryAvailable($service, $newQty);
+            }
 
             $orderItem->update([
-                'qty' => $qty,
-                'total_price' => $orderItem->unit_price * $qty,
+                'qty' => $newQty,
+                'total_price' => $orderItem->unit_price * $newQty,
             ]);
         });
 
@@ -448,14 +478,24 @@ class OrderController extends Controller
             foreach ($validated['items'] as $itemData) {
                 $service = Service::findOrFail($itemData['service_id']);
                 
-                // Check stock
-                if ($service->inventory_quantity !== null && $service->inventory_quantity < $itemData['qty']) {
-                    throw new \Exception("Dịch vụ {$service->name} không đủ số lượng trong kho");
+                // Get inventory
+                $inventory = ServiceInventory::firstOrCreate(
+                    ['service_id' => $service->id],
+                    ['quantity' => 0]
+                );
+                
+                // Check stock availability (Always check to prevent requesting OOS)
+                $available = $inventory->quantity; // + existing if any? No, new items.
+                if ($available < $itemData['qty']) {
+                     throw new \Exception("Dịch vụ {$service->name} không đủ số lượng trong kho (Hiện có: {$available})");
                 }
 
-                // Deduct stock
-                if ($service->inventory_quantity !== null) {
-                    $service->decrement('inventory_quantity', $itemData['qty']);
+                $stockDeducted = false;
+
+                // Deduct stock if auto-confirming (Staff)
+                if ($shouldAutoConfirm) {
+                    $inventory->decrement('quantity', $itemData['qty']);
+                    $stockDeducted = true;
                 }
 
                 OrderItem::create([
@@ -465,6 +505,7 @@ class OrderController extends Controller
                     'unit_price' => $service->price,
                     'total_price' => $service->price * $itemData['qty'],
                     'is_confirmed' => $shouldAutoConfirm,
+                    'stock_deducted' => $stockDeducted,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);

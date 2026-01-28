@@ -29,6 +29,15 @@ export function useStaffOrderActions(id: string | undefined, slug?: string) {
     },
   });
 
+  const updateServiceMutation = useMutation({
+    mutationFn: (data: { itemId: number; qty: number }) =>
+      ordersApi.updateService(orderId, data.itemId, data.qty),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      showNotification('Đã cập nhật số lượng.');
+    },
+  });
+
   const removeServiceMutation = useMutation({
     mutationFn: (itemId: number) => ordersApi.removeService(orderId, itemId),
     onSuccess: () => {
@@ -90,6 +99,7 @@ export function useStaffOrderActions(id: string | undefined, slug?: string) {
   return {
     approveEndMutation,
     rejectEndMutation,
+    updateServiceMutation,
     removeServiceMutation,
     confirmBatchMutation,
     paymentMutation,
