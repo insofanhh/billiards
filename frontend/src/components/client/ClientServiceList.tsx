@@ -13,6 +13,65 @@ interface Props {
     onSuccess?: () => void;
 }
 
+interface SelectedItemRowProps {
+    service: Service;
+    qty: number;
+    isStaff: boolean;
+    onDelete: () => void;
+}
+
+function SelectedItemRow({ service, qty, isStaff, onDelete }: SelectedItemRowProps) {
+    const [showDelete, setShowDelete] = useState(false);
+    const touchStartX = useRef<number | null>(null);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!touchStartX.current) return;
+        const diff = touchStartX.current - e.touches[0].clientX;
+        if (diff > 50) setShowDelete(true); // Swipe left
+        if (diff < -50) setShowDelete(false); // Swipe right
+    };
+
+    const handleClick = () => {
+        setShowDelete(prev => !prev);
+    };
+
+    return (
+        <div 
+            className={`relative overflow-hidden rounded-lg transition-all border ${
+                isStaff 
+                    ? 'bg-[#272a37] border-transparent' 
+                    : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
+            }`}
+             onTouchStart={handleTouchStart}
+             onTouchMove={handleTouchMove}
+        >
+            <div 
+                className={`flex justify-between items-center p-3 transition-transform duration-300 ease-out cursor-pointer select-none ${showDelete ? '-translate-x-12' : 'translate-x-0'}`}
+                onClick={handleClick}
+            >
+                <span className={`font-medium ${isStaff ? 'text-gray-300' : 'text-gray-900 dark:text-gray-100'}`}>{service.name} (x{qty})</span>
+                <span className="font-bold text-[#13ec6d]">{formatCurrency(service.price * qty)}</span>
+            </div>
+
+            <div 
+                className={`absolute top-0 bottom-0 right-0 w-12 flex items-center justify-center bg-red-500 text-white transition-opacity duration-300 cursor-pointer ${showDelete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                }}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </div>
+        </div>
+    );
+}
+
 export function ClientServiceList({ orderId, services, variant = 'client', gridCols, onSuccess }: Props) {
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
     const [selected, setSelected] = useState<Record<number, number>>({});
@@ -402,21 +461,28 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
             </div>
 
             {hasSelected && (
-                <div className={`${isStaff ? 'flex-none bg-[#1A1D27] z-10 p-4 border-t border-gray-800' : 'mt-6 pt-4 border-t border-gray-100 dark:border-white/10'}`}>
+                <div className={`${isStaff ? 'flex-none z-10 p-4 border-t border-gray-800' : 'mt-6 pt-4 border-t border-gray-100 dark:border-white/10'}`}>
                     <h3 className={`font-bold text-base mb-3 ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Món đang chọn (Chưa lưu)</h3>
                     <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff ? 'max-h-[140px] overflow-y-auto pr-1' : ''}`}>
+
+
                         {Object.entries(selected).map(([id, qty]) => {
                             const service = services.find((s) => s.id === Number(id));
                             if (!service) return null;
                             return (
-                                <div key={id} className={`flex justify-between items-center p-3 rounded-lg border ${
-                                    isStaff 
-                                        ? 'bg-[#272a37] border-transparent' 
-                                        : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
-                                }`}>
-                                   <span className={`font-medium ${isStaff ? 'text-gray-300' : 'text-gray-900 dark:text-gray-100'}`}>{service.name} (x{qty})</span>
-                                   <span className="font-bold text-[#13ec6d]">{formatCurrency(service.price * qty)}</span>
-                                </div>
+                                <SelectedItemRow 
+                                    key={id} 
+                                    service={service} 
+                                    qty={qty} 
+                                    isStaff={isStaff} 
+                                    onDelete={() => {
+                                        setSelected(prev => {
+                                            const next = { ...prev };
+                                            delete next[Number(id)];
+                                            return next;
+                                        });
+                                    }} 
+                                />
                             );
                         })}
                     </div>
