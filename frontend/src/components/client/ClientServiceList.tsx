@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import type { Service } from '../../types';
 import { ordersApi } from '../../api/orders';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,7 +17,9 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
     const [selected, setSelected] = useState<Record<number, number>>({});
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
     const { showNotification } = useNotification();
 
@@ -76,6 +78,73 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
         }
     }, [categories, selectedCategory]);
 
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const categoryRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+    const isDragging = useRef(false);
+    const startX = useRef(0);
+    const scrollLeft = useRef(0);
+    const hasMoved = useRef(false);
+
+    useEffect(() => {
+        if (selectedCategory && scrollContainerRef.current) {
+            const button = categoryRefs.current.get(selectedCategory);
+            if (button) {
+                const container = scrollContainerRef.current;
+                
+                // Calculate position to center the button
+                // scrollLeft = currentScroll + (buttonLeftRelative - containerCenter + buttonHalfWidth)
+                const buttonRect = button.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                const scrollTarget = container.scrollLeft + 
+                    (buttonRect.left - containerRect.left) - 
+                    (containerRect.width / 2) + 
+                    (buttonRect.width / 2);
+
+                container.scrollTo({ left: scrollTarget, behavior: 'smooth' });
+            }
+        }
+    }, [selectedCategory]);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        isDragging.current = true;
+        hasMoved.current = false;
+        if (scrollContainerRef.current) {
+            startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
+            scrollLeft.current = scrollContainerRef.current.scrollLeft;
+        }
+    };
+
+    const handleMouseLeave = () => {
+        isDragging.current = false;
+    };
+
+    const handleMouseUp = () => {
+        isDragging.current = false;
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging.current || !scrollContainerRef.current) return;
+        e.preventDefault();
+        const x = e.pageX - scrollContainerRef.current.offsetLeft;
+        const walk = (x - startX.current) * 2; // Scroll speed multiplier
+        if (Math.abs(walk) > 5) hasMoved.current = true;
+        scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+    };
+
+    const handleWheel = (e: React.WheelEvent) => {
+        if (scrollContainerRef.current && e.deltaY !== 0) {
+            scrollContainerRef.current.scrollLeft += e.deltaY;
+        }
+    };
+
+    const handleClickCapture = (e: React.MouseEvent) => {
+        if (hasMoved.current) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    };
+
     const hasSelected = Object.keys(selected).length > 0;
 
     const handleSubmit = async () => {
@@ -118,17 +187,30 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
     return (
         <div className="mt-4">
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 ${isStaff ? 'border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
+            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
                 {/* Categories */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar flex-1">
+                <div 
+                    ref={scrollContainerRef}
+                    className="flex gap-2 overflow-x-auto no-scrollbar flex-1 cursor-grab active:cursor-grabbing select-none"
+                    onMouseDown={handleMouseDown}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                    onWheel={handleWheel}
+                    onClickCapture={handleClickCapture}
+                >
                     {categories.map((category) => (
                         <button
                             key={category.id}
+                            ref={(el) => {
+                                if (el) categoryRefs.current.set(category.id, el);
+                                else categoryRefs.current.delete(category.id);
+                            }}
                             onClick={() => {
                                 setSelectedCategory(category.id);
                                 setSearchTerm(''); // Clear search when picking category to avoid confusion
                             }}
-                            className={`px-4 py-2 whitespace-nowrap rounded-t-lg transition-colors font-medium text-sm ${
+                            className={`px-4 py-2 whitespace-nowrap rounded-t-lg transition-colors font-medium text-sm pointer-events-none ${
                                 selectedCategory === category.id && !searchTerm
                                     ? isStaff 
                                         ? 'bg-[#13ec6d] text-black font-bold' 
@@ -137,6 +219,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                         ? 'bg-[#272a37] text-gray-400 hover:bg-[#323645] hover:text-white'
                                         : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
                             }`}
+                            style={{ pointerEvents: 'auto' }} // Re-enable pointer events for click but allow container to handle drag
                         >
                             {category.name}
                         </button>
@@ -144,26 +227,73 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                 </div>
 
                 {/* Search Input */}
-                <div className="relative">
-                    <input 
-                        type="text" 
-                        placeholder="Tìm dịch vụ..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className={`w-full sm:w-64 pl-9 pr-4 py-2 rounded-lg text-sm outline-none transition-all ${
-                            isStaff 
-                                ? 'bg-[#272a37] text-white placeholder-gray-500 focus:bg-[#323645] border border-transparent focus:border-[#13ec6d]' 
-                                : 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-transparent focus:ring-2 focus:ring-blue-500'
-                        }`}
-                    />
-                     <svg 
-                        className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isStaff ? 'text-gray-500' : 'text-gray-400'}`}
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                <div className={`transition-all duration-300 ease-in-out ${
+                    isSearchOpen 
+                        ? `absolute inset-0 z-10 w-full sm:static sm:w-64 ${isStaff ? 'bg-[#1A1D27]' : 'bg-white dark:bg-gray-900'}` 
+                        : 'relative w-10 flex items-center justify-end'
+                }`}>
+                    {isSearchOpen ? (
+                        <div className="relative w-full h-full flex items-center">
+                            <input 
+                                ref={inputRef}
+                                type="text" 
+                                placeholder="Tìm dịch vụ..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onFocus={() => setIsSearchOpen(true)} 
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        setIsSearchOpen(false);
+                                    }, 150);
+                                }}
+                                className={`w-full pl-10 pr-10 py-2 rounded-lg text-sm outline-none transition-all ${
+                                    isStaff 
+                                        ? 'bg-[#272a37] text-white placeholder-gray-500 border border-transparent focus:border-[#13ec6d]' 
+                                        : 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-transparent focus:border-[#13ec6d] focus:ring-1 focus:ring-[#13ec6d]'
+                                }`}
+                                autoFocus
+                            />
+                            {/* Search Icon (Decorative) */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center pointer-events-none ${isStaff ? 'text-gray-500' : 'text-gray-400'}`}>
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            
+                            {/* Clear/Close Button */}
+                             <button
+                                onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                                onClick={(e) => {
+                                    e.preventDefault(); 
+                                    setSearchTerm(''); 
+                                    inputRef.current?.focus();
+                                }}
+                                className={`absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer transition-colors ${
+                                    isStaff ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    ) : (
+                        <button 
+                            onClick={() => {
+                                setIsSearchOpen(true);
+                                setTimeout(() => inputRef.current?.focus(), 50);
+                            }}
+                            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                                isStaff 
+                                    ? 'text-gray-400 hover:bg-[#323645] hover:text-white' 
+                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
+                            } ${searchTerm ? 'text-[#13ec6d]' : ''}`}
+                        >
+                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -203,7 +333,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                 )}
                                 
                                 <div className="mt-auto flex items-center justify-between">
-                                    <span className={`font-bold ${isStaff ? 'text-[#13ec6d]' : 'text-blue-600 dark:text-[#13ec6d]'}`}>
+                                    <span className="font-bold text-[#13ec6d]">
                                         {formatCurrency(service.price)}
                                     </span>
                                 </div>
@@ -239,11 +369,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                             }
                                             setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }));
                                         }}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${
-                                            isStaff
-                                                ? 'bg-[#13ec6d] text-black hover:bg-[#10d462]'
-                                                : 'bg-blue-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 hover:bg-blue-700'
-                                        } ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors bg-[#13ec6d] text-black hover:bg-[#10d462] ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -267,10 +393,10 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                 <div key={id} className={`flex justify-between items-center p-3 rounded-lg border ${
                                     isStaff 
                                         ? 'bg-[#272a37] border-transparent' 
-                                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/30'
+                                        : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
                                 }`}>
-                                   <span className={`font-medium ${isStaff ? 'text-gray-300' : 'text-blue-900 dark:text-blue-100'}`}>{service.name} (x{qty})</span>
-                                   <span className={`font-bold ${isStaff ? 'text-[#13ec6d]' : 'text-blue-700 dark:text-blue-300'}`}>{formatCurrency(service.price * qty)}</span>
+                                   <span className={`font-medium ${isStaff ? 'text-gray-300' : 'text-gray-900 dark:text-gray-100'}`}>{service.name} (x{qty})</span>
+                                   <span className="font-bold text-[#13ec6d]">{formatCurrency(service.price * qty)}</span>
                                 </div>
                             );
                         })}
@@ -278,11 +404,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className={`w-full font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 ${
-                            isStaff 
-                                ? 'bg-[#323645] text-white hover:text-[#13ec6d]' 
-                                : 'bg-blue-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900'
-                        }`}
+                        className={`w-full font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black`}
                     >
                         {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
                     </button>
