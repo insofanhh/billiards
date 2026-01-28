@@ -168,9 +168,9 @@ export function ClientOrderPage() {
               <div className="mb-6 bg-white dark:bg-white/5 rounded-3xl shadow-sm border border-gray-100 dark:border-white/10 p-5 backdrop-blur-sm transition-colors duration-300 mt-6">
                 <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Dịch vụ đã gọi</h3>
                 <div className="space-y-2">
-                   {/* Simplified rendering for ordered items - could be in a component too but keeping here for now as it's simple usage of mapped data */}
+                   {/* Aggregated Items */}
                    {(() => {
-                      const sortedItems = [...order.items].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+                      const sortedItems = [...order.items].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()); // Newest first
                       const grouped = sortedItems.reduce((acc: any, item) => {
                           if(!acc[item.service.id]) acc[item.service.id] = [];
                           acc[item.service.id].push(item);
@@ -185,10 +185,12 @@ export function ClientOrderPage() {
                           return (
                             <div key={first.service.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-transparent dark:border-white/5">
                                 <div className="flex-1">
-                                    <p className="font-medium text-gray-900 dark:text-white">{first.service.name}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Số lượng: {totalQty}</p>
+                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{first.service.name}</p>
+                                    <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <span className="bg-white dark:bg-white/10 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-white/5 font-mono">x{totalQty}</span>
+                                    </div>
                                 </div>
-                                <p className="font-semibold ml-4 text-gray-900 dark:text-white">
+                                <p className="font-bold ml-4 text-blue-600 dark:text-[#13ec6d]">
                                     {formatCurrency(totalPrice)}
                                 </p>
                             </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Service } from '../../types';
 import { ordersApi } from '../../api/orders';
 import { useQueryClient } from '@tanstack/react-query';
@@ -246,7 +247,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
 
     const gridContainerClass = isStaff 
-        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar px-4 pb-4' 
+        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar pb-4' 
         : `grid ${finalGridCols} gap-4 pr-2 custom-scrollbar max-h-[80vh] overflow-y-auto`;
 
     // Wrapper for staff grid content
@@ -263,7 +264,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
     return (
         <div className={isStaff ? "h-full flex flex-col" : "mt-4"}>
-            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'px-4 pt-4 border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
+            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'pt-4 border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
                 {/* Categories */}
                 <div 
                     ref={scrollContainerRef}
@@ -460,41 +461,59 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                 </GridWrapper>
             </div>
 
-            {hasSelected && (
-                <div className={`${isStaff ? 'flex-none z-10 p-4 border-t border-gray-800' : 'mt-6 pt-4 border-t border-gray-100 dark:border-white/10'}`}>
-                    <h3 className={`font-bold text-base mb-3 ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Món đang chọn (Chưa lưu)</h3>
-                    <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff ? 'max-h-[140px] overflow-y-auto pr-1' : ''}`}>
+            {/* Cart / Selected Items Drawer */}
+            {/* Cart / Selected Items Drawer */}
+            {hasSelected && (() => {
+                const cartContent = (
+                    <div className={`${isStaff 
+                        ? 'flex-none z-10 p-4 border-t border-gray-800' 
+                        : 'fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-[#1a2e23] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl border-t border-gray-100 dark:border-white/5 p-5 pb-8 backdrop-blur-md transition-all duration-300 animate-slide-up'
+                    }`}>
+                        <div className={`${!isStaff ? 'max-w-4xl mx-auto' : ''}`}>
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className={`font-bold text-base ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'} flex items-center gap-2`}>
+                                    Món đang chọn
+                                    <span className="bg-[#13ec6d] text-black text-xs px-2 py-0.5 rounded-full font-bold">
+                                        {Object.values(selected).reduce((a, b) => a + b, 0)}
+                                    </span>
+                                </h3>
+                                {/* Optional: Clear all button */}
+                            </div>
 
-
-                        {Object.entries(selected).map(([id, qty]) => {
-                            const service = services.find((s) => s.id === Number(id));
-                            if (!service) return null;
-                            return (
-                                <SelectedItemRow 
-                                    key={id} 
-                                    service={service} 
-                                    qty={qty} 
-                                    isStaff={isStaff} 
-                                    onDelete={() => {
-                                        setSelected(prev => {
-                                            const next = { ...prev };
-                                            delete next[Number(id)];
-                                            return next;
-                                        });
-                                    }} 
-                                />
-                            );
-                        })}
+                            <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff ? 'max-h-[140px]' : 'max-h-[140px]'} overflow-y-auto pr-1`}>
+                                {Object.entries(selected).map(([id, qty]) => {
+                                    const service = services.find((s) => s.id === Number(id));
+                                    if (!service) return null;
+                                    return (
+                                        <SelectedItemRow 
+                                            key={id} 
+                                            service={service} 
+                                            qty={qty} 
+                                            isStaff={isStaff} 
+                                            onDelete={() => {
+                                                setSelected(prev => {
+                                                    const next = { ...prev };
+                                                    delete next[Number(id)];
+                                                    return next;
+                                                });
+                                            }} 
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                className={`w-full font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black shadow-lg shadow-[#13ec6d]/20`}
+                            >
+                                {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
+                            </button>
+                        </div>
                     </div>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className={`w-full font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black`}
-                    >
-                        {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
-                    </button>
-                </div>
-            )}
+                );
+                
+                return isStaff ? cartContent : createPortal(cartContent, document.body);
+            })()}
 
         </div>
     );
