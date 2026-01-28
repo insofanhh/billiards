@@ -204,7 +204,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
 
           <div className="border-t border-slate-200 dark:border-gray-700 pt-4">
             <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Dịch vụ đã chọn</h3>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-2">
               {groupedItems.map(({ time, items }, index) => {
                 const isAllConfirmed = (items as any[]).every((i) => i.is_confirmed);
                 const unconfirmedIds = (items as any[]).filter((i) => !i.is_confirmed).map((i) => i.id);

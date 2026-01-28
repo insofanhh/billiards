@@ -70,7 +70,7 @@ export function ServiceDrawer({ isOpen, onClose, orderId, slug, tableCode }: Ser
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <div className="flex-1 overflow-hidden flex flex-col">
                     {isLoading ? (
                          <div className="flex justify-center items-center h-40">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

@@ -185,9 +185,26 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
     const defaultGridCols = isStaff ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
     const finalGridCols = gridCols || defaultGridCols;
 
+
+    const gridContainerClass = isStaff 
+        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar px-4 pb-4' 
+        : `grid ${finalGridCols} gap-4 pr-2 custom-scrollbar max-h-[80vh] overflow-y-auto`;
+
+    // Wrapper for staff grid content
+    const StaffGridWrapper = ({ children }: { children: React.ReactNode }) => (
+        <div className={`grid ${finalGridCols} gap-4`}>{children}</div>
+    );
+    
+    // Wrapper for client grid (already is the grid)
+    const ClientGridWrapper = ({ children }: { children: React.ReactNode }) => (
+        <>{children}</>
+    );
+    
+    const GridWrapper = isStaff ? StaffGridWrapper : ClientGridWrapper;
+
     return (
-        <div className="mt-4">
-            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
+        <div className={isStaff ? "h-full flex flex-col" : "mt-4"}>
+            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'px-4 pt-4 border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
                 {/* Categories */}
                 <div 
                     ref={scrollContainerRef}
@@ -297,95 +314,97 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                 </div>
             </div>
 
-            <div className={`grid ${finalGridCols} gap-4 pr-2 custom-scrollbar ${isStaff ? 'pb-2' : 'max-h-[80vh] overflow-y-auto'}`}>
-                {displayedServices.map((service: Service) => {
-                    const availableQuantity = service.inventory_quantity ?? 0;
-                    const qty = selected[service.id] || 0;
-                    const isOutOfStock = availableQuantity <= 0;
-                    
-                    const cardBase = isStaff 
-                        ? 'bg-[#272a37] border-transparent' 
-                        : 'bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10';
+            <div className={gridContainerClass}>
+                <GridWrapper>
+                    {displayedServices.map((service: Service) => {
+                        const availableQuantity = service.inventory_quantity ?? 0;
+                        const qty = selected[service.id] || 0;
+                        const isOutOfStock = availableQuantity <= 0;
                         
-                    const cardClasses = `${cardBase} rounded-xl p-3 flex flex-col transition-all shadow-sm hover:shadow-md ${isOutOfStock ? 'opacity-50' : ''}`;
-
-                    return (
-                        <div key={service.id} className={cardClasses}>
-                            <div className="relative aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                                {service.image ? (
-                                    <img 
-                                        src={service.image} 
-                                        alt={service.name} 
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-gray-400 text-xs">
-                                        No Image
-                                    </div>
-                                )}
-
-                            </div>
+                        const cardBase = isStaff 
+                            ? 'bg-[#272a37] border-transparent' 
+                            : 'bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10';
                             
-                            <div className="flex-1 flex flex-col">
-                                <h3 className={`font-bold text-sm mb-1 ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'} line-clamp-2`}>{service.name}</h3>
-                                {service.description && (
-                                    <p className="text-xs text-gray-500 line-clamp-1 mb-2">{service.description}</p>
-                                )}
-                                
-                                <div className="mt-auto flex items-center justify-between">
-                                    <span className="font-bold text-[#13ec6d]">
-                                        {formatCurrency(service.price)}
-                                    </span>
-                                </div>
+                        const cardClasses = `${cardBase} rounded-xl p-3 flex flex-col transition-all shadow-sm hover:shadow-md ${isOutOfStock ? 'opacity-50' : ''}`;
 
-                                <div className={`flex items-center justify-between mt-3 ${isStaff ? 'bg-[#1A1D27]' : 'bg-gray-50 dark:bg-white/5'} rounded-lg p-1`}>
-                                    <button
-                                        onClick={() => {
-                                            if (qty <= 0) return;
-                                            setSelected((s) => {
-                                                const next = s[service.id] - 1;
-                                                const copy = { ...s };
-                                                if (next <= 0) delete copy[service.id];
-                                                else copy[service.id] = next;
-                                                return copy;
-                                            });
-                                        }}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${
-                                            isStaff 
-                                                ? 'bg-[#323645] text-white hover:bg-[#3e4255]' 
-                                                : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
-                                    <span className={`font-bold text-sm ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{qty}</span>
-                                    <button
-                                        onClick={() => {
-                                            if (isOutOfStock || qty >= availableQuantity) {
-                                                showNotification('Hết hàng hoặc đủ số lượng');
-                                                return;
-                                            }
-                                            setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }));
-                                        }}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors bg-[#13ec6d] text-black hover:bg-[#10d462] ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
+                        return (
+                            <div key={service.id} className={cardClasses}>
+                                <div className="relative aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                    {service.image ? (
+                                        <img 
+                                            src={service.image} 
+                                            alt={service.name} 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                                            No Image
+                                        </div>
+                                    )}
+
+                                </div>
+                                
+                                <div className="flex-1 flex flex-col">
+                                    <h3 className={`font-bold text-sm mb-1 ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'} line-clamp-2`}>{service.name}</h3>
+                                    {service.description && (
+                                        <p className="text-xs text-gray-500 line-clamp-1 mb-2">{service.description}</p>
+                                    )}
+                                    
+                                    <div className="mt-auto flex items-center justify-between">
+                                        <span className="font-bold text-[#13ec6d]">
+                                            {formatCurrency(service.price)}
+                                        </span>
+                                    </div>
+
+                                    <div className={`flex items-center justify-between mt-3 ${isStaff ? 'bg-[#1A1D27]' : 'bg-gray-50 dark:bg-white/5'} rounded-lg p-1`}>
+                                        <button
+                                            onClick={() => {
+                                                if (qty <= 0) return;
+                                                setSelected((s) => {
+                                                    const next = s[service.id] - 1;
+                                                    const copy = { ...s };
+                                                    if (next <= 0) delete copy[service.id];
+                                                    else copy[service.id] = next;
+                                                    return copy;
+                                                });
+                                            }}
+                                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${
+                                                isStaff 
+                                                    ? 'bg-[#323645] text-white hover:bg-[#3e4255]' 
+                                                    : 'bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                        <span className={`font-bold text-sm ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{qty}</span>
+                                        <button
+                                            onClick={() => {
+                                                if (isOutOfStock || qty >= availableQuantity) {
+                                                    showNotification('Hết hàng hoặc đủ số lượng');
+                                                    return;
+                                                }
+                                                setSelected((s) => ({ ...s, [service.id]: (s[service.id] || 0) + 1 }));
+                                            }}
+                                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors bg-[#13ec6d] text-black hover:bg-[#10d462] ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </GridWrapper>
             </div>
 
             {hasSelected && (
-                <div className={`mt-6 pt-4 border-t ${isStaff ? 'border-gray-800' : 'border-gray-100 dark:border-white/10'}`}>
+                <div className={`${isStaff ? 'flex-none bg-[#1A1D27] z-10 p-4 border-t border-gray-800' : 'mt-6 pt-4 border-t border-gray-100 dark:border-white/10'}`}>
                     <h3 className={`font-bold text-base mb-3 ${isStaff ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Món đang chọn (Chưa lưu)</h3>
-                    <div className="space-y-2 mb-4">
+                    <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff ? 'max-h-[140px] overflow-y-auto pr-1' : ''}`}>
                         {Object.entries(selected).map(([id, qty]) => {
                             const service = services.find((s) => s.id === Number(id));
                             if (!service) return null;
