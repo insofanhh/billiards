@@ -12,9 +12,128 @@ interface Props {
   slug?: string;
 }
 
+// Internal component for deletable row
+function DeletableServiceRow({ item, isActive, onDelete }: { item: any, isActive: boolean, onDelete: (qty: number) => void }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [deleteQty, setDeleteQty] = useState(1);
+    
+    // Reset when item qty changes (e.g. after delete)
+    useEffect(() => {
+        if(deleteQty > item.qty) setDeleteQty(1);
+    }, [item.qty]);
+
+    return (
+        <div 
+            className={`p-4 transition-all duration-200 border-b border-slate-100 dark:border-gray-700 last:border-0 ${!item.is_confirmed ? 'bg-orange-50 dark:bg-orange-900/10' : ''}`}
+        >
+            <div 
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => isActive && setIsExpanded(!isExpanded)}
+            >
+                <div>
+                     <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-800 dark:text-white">{item.service.name}</p>
+                        {!item.is_confirmed && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                Mới
+                            </span>
+                        )}
+                    </div>
+                     <div className="flex items-center gap-3 mt-1">
+                        <p className="text-sm text-slate-500 dark:text-gray-400">
+                            Số lượng: <span className="font-bold text-slate-700 dark:text-gray-300">
+                                {(() => {
+                                    const unconfirmedCount = item.unconfirmedQty;
+                                    const confirmedCount = item.qty - unconfirmedCount;
+
+                                    if (unconfirmedCount > 0) {
+                                        if (confirmedCount > 0) {
+                                            return (
+                                                <span>
+                                                    {confirmedCount} + <span className="text-orange-500">{unconfirmedCount} mới</span>
+                                                </span>
+                                            );
+                                        } else {
+                                            return <span className="text-orange-500">{unconfirmedCount} mới</span>;
+                                        }
+                                    }
+                                    return item.qty;
+                                })()}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                
+                {/* Price (Always visible unless fully replaced by expanded UI? No, let's keep price or hide it) 
+                    Design request: "Dưới button xóa có tăng giảm số lượng". Implies a side panel or reveal.
+                    Let's just hide Price when expanded to make room for controls if needed, 
+                    OR keep Price and put controls below. 
+                    Let's put controls on the right side when expanded.
+                */}
+                {!isExpanded ? (
+                    <div className="text-right">
+                        <p className="font-bold text-slate-900 dark:text-white text-base">
+                            {formatCurrency(item.total_price)}
+                        </p>
+                        <p className="text-xs text-slate-400 dark:text-gray-500">
+                            {formatCurrency(Number(item.service.price))} / món
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setIsExpanded(false)}
+                            className="mr-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                        >
+                            Hủy
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Expandable Delete Section */}
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-20 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
+                <div className="flex items-center justify-end gap-3 bg-red-50 dark:bg-red-900/10 p-2 rounded-lg" onClick={e => e.stopPropagation()}>
+                    <span className="text-sm font-medium text-slate-600 dark:text-gray-300">Xóa:</span>
+                    
+                    <div className="flex items-center bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600">
+                        <button 
+                            onClick={() => setDeleteQty(Math.max(1, deleteQty - 1))}
+                            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                        >
+                            -
+                        </button>
+                        <span className="w-8 text-center font-bold text-slate-800 dark:text-white text-sm">{deleteQty}</span>
+                        <button 
+                            onClick={() => setDeleteQty(Math.min(item.qty, deleteQty + 1))}
+                            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                        >
+                            +
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            onDelete(deleteQty);
+                            setIsExpanded(false);
+                            setDeleteQty(1);
+                        }}
+                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-sm font-bold shadow-sm"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Xóa
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, servicesTotal, slug }: Props) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile' | null>(null);
   const [discountCodeInput, setDiscountCodeInput] = useState('');
 
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -23,6 +142,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
     approveEndMutation,
     rejectEndMutation,
     removeServiceMutation,
+    updateServiceMutation,
     confirmBatchMutation,
     paymentMutation,
     confirmPaymentMutation,
@@ -56,10 +176,11 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
         service: any, 
         qty: number, 
         total_price: number,
-        ids: number[], // Track all IDs for this service
+        ids: number[], // Make sure to keep this if used elsewhere, or replace logic
+        items: { id: number; qty: number; is_confirmed: boolean }[], // Added detailed items
         unconfirmedIds: number[],
         unconfirmedQty: number,
-        is_confirmed: boolean // True if ALL items of this service are confirmed
+        is_confirmed: boolean 
     }>();
 
     const allUnconfirmedIds: number[] = [];
@@ -74,17 +195,19 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
             existing.qty += item.qty;
             existing.total_price += Number(item.total_price);
             existing.ids.push(item.id);
+            existing.items.push({ id: item.id, qty: item.qty, is_confirmed: item.is_confirmed });
             if (!item.is_confirmed) {
                 existing.unconfirmedIds.push(item.id);
                 existing.unconfirmedQty += item.qty;
             }
-            existing.is_confirmed = existing.is_confirmed && item.is_confirmed; // All must be true
+            existing.is_confirmed = existing.is_confirmed && item.is_confirmed; 
         } else {
             map.set(item.service.id, {
                 service: item.service,
                 qty: item.qty,
                 total_price: Number(item.total_price),
                 ids: [item.id],
+                items: [{ id: item.id, qty: item.qty, is_confirmed: item.is_confirmed }],
                 unconfirmedIds: !item.is_confirmed ? [item.id] : [],
                 unconfirmedQty: !item.is_confirmed ? item.qty : 0,
                 is_confirmed: item.is_confirmed
@@ -113,6 +236,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
       applyDiscountMutation.mutate(code);
       setDiscountFeedback(null);
   };
+
 
   return (
 
@@ -246,78 +370,40 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                         <p className="p-4 text-center text-gray-500 text-sm">Chưa có dịch vụ nào</p>
                     ) : (
                         aggregatedServices.map((item) => (
-                            <div key={item.service.id} className={`p-4 flex justify-between items-center ${!item.is_confirmed ? 'bg-orange-50 dark:bg-orange-900/10' : ''}`}>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-semibold text-slate-800 dark:text-white">{item.service.name}</p>
-                                        {!item.is_confirmed && (
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                                                Mới
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <p className="text-sm text-slate-500 dark:text-gray-400">
-                                            Số lượng: <span className="font-bold text-slate-700 dark:text-gray-300">
-                                                {(() => {
-                                                    const unconfirmedCount = item.unconfirmedQty;
-                                                    const confirmedCount = item.qty - unconfirmedCount;
-
-                                                    if (unconfirmedCount > 0) {
-                                                        if (confirmedCount > 0) {
-                                                            return (
-                                                                <span>
-                                                                    {confirmedCount} + <span className="text-orange-500">{unconfirmedCount} mới</span>
-                                                                </span>
-                                                            );
-                                                        } else {
-                                                            return <span className="text-orange-500">{unconfirmedCount} mới</span>;
-                                                        }
-                                                    }
-                                                    return item.qty;
-                                                })()}
-                                            </span>
-                                        </p>
+                                <DeletableServiceRow 
+                                    key={item.service.id} 
+                                    item={item} 
+                                    isActive={isActive}
+                                    onDelete={(qty) => {
+                                        let remaining = qty;
+                                        // Work backwards from newest items
+                                        const itemsReversed = [...item.items].reverse();
                                         
-                                        {isActive && (
-                                            <button
-                                                onClick={() => {
-                                                    // Delete the last added item (preferred unconfirmed)
-                                                    const idToDelete = item.unconfirmedIds.length > 0 
-                                                        ? item.unconfirmedIds[item.unconfirmedIds.length - 1] 
-                                                        : item.ids[item.ids.length - 1];
-                                                    
-                                                    if(idToDelete) removeServiceMutation.mutate(idToDelete);
-                                                }}
-                                                disabled={removeServiceMutation.isPending}
-                                                className="text-red-500 text-xs hover:underline hover:text-red-600 font-medium flex items-center gap-1"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                                Xóa
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-slate-900 dark:text-white text-base">
-                                        {formatCurrency(item.total_price)}
-                                    </p>
-                                    <p className="text-xs text-slate-400 dark:text-gray-500">
-                                        {formatCurrency(Number(item.service.price))} / món
-                                    </p>
-                                </div>
-                            </div>
+                                        for (const row of itemsReversed) {
+                                            if (remaining <= 0) break;
+                                            
+                                            if (row.qty <= remaining) {
+                                                // Delete full row
+                                                removeServiceMutation.mutate(row.id);
+                                                remaining -= row.qty;
+                                            } else {
+                                                // Partial update
+                                                updateServiceMutation.mutate({ itemId: row.id, qty: row.qty - remaining });
+                                                remaining = 0;
+                                            }
+                                        }
+                                    }}
+                                />
                         ))
                     )}
                 </div>
             </div>
           </div>
         </div>
-
-        {/* Right Column: Total & Payment */}
-        <div className={!isActive ? "lg:col-span-1" : "mt-6 border-t border-slate-200 dark:border-gray-700 pt-6"}>
+    
+            {/* Right Column: Total & Payment */}
+            <div className={!isActive ? "lg:col-span-1" : "mt-6 border-t border-slate-200 dark:border-gray-700 pt-6"}>
+              {/* ... (rest of the file remains unchanged, just ensuring context matches) */}
           <div className="flex justify-between items-center mb-6">
             <p className="font-bold text-lg text-slate-900 dark:text-white">Tổng cộng</p>
             <p className="font-bold text-xl text-blue-600 dark:text-blue-400">
@@ -385,7 +471,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                   </p>
                   <button
                     onClick={() => confirmPaymentMutation.mutate(pendingTransaction.id)}
-                    disabled={confirmPaymentMutation.isPending}
+                    disabled={confirmPaymentMutation.isPending || !pendingTransaction.method}
                     className="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {confirmPaymentMutation.isPending && (
@@ -399,32 +485,35 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                 </div>
               )}
 
-              {!hasSuccessfulTransaction && !isPendingEnd && (
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {(['cash', 'card', 'mobile'] as const).map((method) => (
-                    <button
-                      key={method}
-                      onClick={() => setSelectedPaymentMethod(method)}
-                      className={`py-2 rounded-lg border transition-colors ${selectedPaymentMethod === method
-                        ? 'border-blue-600 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-500'
-                        : 'border-slate-200 text-slate-600 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                    >
-                      {method === 'cash' ? 'Tiền mặt' : method === 'card' ? 'Thẻ' : 'Chuyển khoản'}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Payment Section - Gray out if pending transaction has method (Customer selected) */}
+              <div className={`transition-opacity duration-200 ${pendingTransaction?.method ? 'opacity-50 hover:opacity-100' : ''}`}>
+                  {!hasSuccessfulTransaction && !isPendingEnd && (
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {(['cash', 'card', 'mobile'] as const).map((method) => (
+                        <button
+                          key={method}
+                          onClick={() => setSelectedPaymentMethod(method)}
+                          className={`py-2 rounded-lg border transition-colors ${selectedPaymentMethod === method
+                            ? 'border-blue-600 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-500'
+                            : 'border-slate-200 text-slate-600 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                        >
+                          {method === 'cash' ? 'Tiền mặt' : method === 'card' ? 'Thẻ' : 'Chuyển khoản'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-              {!hasSuccessfulTransaction && !isPendingEnd && (
-                <button
-                  onClick={() => paymentMutation.mutate({ method: selectedPaymentMethod, amount: order.total_before_discount - order.total_discount })}
-                  disabled={paymentMutation.isPending}
-                  className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {paymentMutation.isPending ? 'Đang xử lý...' : 'Thanh toán'}
-                </button>
-              )}
+                  {!hasSuccessfulTransaction && !isPendingEnd && (
+                    <button
+                      onClick={() => paymentMutation.mutate({ method: selectedPaymentMethod!, amount: order.total_before_discount - (order.total_discount || 0) })}
+                      disabled={paymentMutation.isPending || !selectedPaymentMethod}
+                      className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {paymentMutation.isPending ? 'Đang xử lý...' : 'Thanh toán'}
+                    </button>
+                  )}
+              </div>
 
               {hasSuccessfulTransaction && (
                 <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
