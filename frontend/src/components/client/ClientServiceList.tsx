@@ -247,7 +247,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
 
     const gridContainerClass = isStaff 
-        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar pb-4' 
+        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar px-2 pb-4' 
         : `grid ${finalGridCols} gap-4 pr-2 custom-scrollbar max-h-[80vh] overflow-y-auto`;
 
     // Wrapper for staff grid content
@@ -264,7 +264,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
     return (
         <div className={isStaff ? "h-full flex flex-col" : "mt-4"}>
-            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'pt-4 border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
+            <div className={`relative flex items-center justify-between gap-2 mb-4 ${isStaff ? 'px-2 pt-4 border-b border-gray-800 pb-2' : 'border-b border-gray-200 dark:border-white/10 pb-2'}`}>
                 {/* Categories */}
                 <div 
                     ref={scrollContainerRef}

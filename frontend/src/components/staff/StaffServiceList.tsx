@@ -8,7 +8,7 @@ interface Props {
 
 export function StaffServiceList({ orderId, services }: Props) {
   return (
-    <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 h-fit">
+    <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 h-fit">
       <ClientServiceList 
         orderId={orderId} 
         services={services} 
