@@ -407,9 +407,22 @@ class OrderController extends Controller
         event(new OrderApproved($order));
 
         return new OrderResource($order);
+    }
+
+    /**
+     * Reject a pending order request (Staff).
+     */
+    public function reject(Request $request, $id)
+    {
+        $order = Order::where('id', $id)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        $order->update(['status' => 'cancelled']);
+        
         event(new OrderRejected($order));
 
-        return response()->json(['message' => 'Đã hủy yêu cầu'], 200);
+        return response()->json(['message' => 'Đã từ chối yêu cầu'], 200);
     }
 
     /**

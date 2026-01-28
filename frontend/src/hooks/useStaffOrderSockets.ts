@@ -36,6 +36,7 @@ export function useStaffOrderSockets(orderId: number | undefined) {
         '.order.service.added',
         '.order.service.updated',
         '.order.service.removed',
+        '.order.updated', // Added generic update event
         '.order.app.client_joined' // Example if we needed to know when client joins
     ];
 

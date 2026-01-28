@@ -5,6 +5,7 @@ import { tablesApi } from '../api/tables';
 import { apiClient } from '../api/client';
 import { ClientNavigation } from '../components/ClientNavigation';
 import { getTemporaryUserName } from '../utils/temporaryUser';
+import { readClientActiveOrder, isClientOrderContinuable } from '../utils/clientActiveOrder';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore } from '../store/authStore';
 
@@ -102,6 +103,14 @@ export function ClientTablePage() {
     queryFn: () => tablesApi.getByCode(code!, slug),
     enabled: !!code,
   });
+
+  useEffect(() => {
+    // Check if there is already an active order in local storage for this table
+    const storedOrder = readClientActiveOrder();
+    if (storedOrder && storedOrder.tableCode === code && isClientOrderContinuable(storedOrder.status)) {
+        navigate(slug ? `/s/${slug}/order/${storedOrder.orderId}` : `/client/order/${storedOrder.orderId}`);
+    }
+  }, [code, slug, navigate]);
 
   const requestOpenMutation = useMutation({
     mutationFn: async () => {
