@@ -1,10 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Table } from '../../../types';
 import { useTableActions } from '../../../hooks/useTableActions';
 import { TableTimer } from '../../TableTimer';
 import { getCurrentPriceRate } from '../../../utils/pricing';
-// import { SerialConnectButton } from '../../common/SerialConnectButton';
-// import { useWebSerial } from '../../../hooks/useWebSerial';
+import { ServiceDrawer } from '../../common/ServiceDrawer';
 
 interface TableCardProps {
     table: Table;
@@ -52,10 +52,17 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
         rejectOpen, isRejectingOpen
     } = useTableActions(undefined, slug);
     
+    const [showServiceDrawer, setShowServiceDrawer] = useState(false);
+    
     // Serial Hook
     // const { isConnected, sendCommand } = useWebSerial();
 
     const handleTableClick = (code: string) => {
+        if (table.status === 'Đang sử dụng' && table.active_order?.id) {
+            navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}` : `/order/${table.active_order.id}`);
+            return;
+        }
+
         if (onClick) {
             onClick();
             return;
@@ -193,7 +200,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (table.active_order?.id) {
-                                    navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}` : `/order/${table.active_order.id}`);
+                                    setShowServiceDrawer(true);
                                 }
                             }}
                             className="py-2 bg-white border border-gray-300 text-gray-700 dark:bg-transparent dark:border-gray-600 dark:text-gray-300 rounded-lg flex items-center justify-center space-x-1 hover:bg-gray-50 hover:shadow-md hover:border-gray-400 active:scale-95 transform transition-all duration-200"
@@ -277,6 +284,17 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                         })()}
                     </span>
                 </div>
+            )}
+
+            {/* Service Drawer */}
+            {table.active_order && (
+                <ServiceDrawer 
+                    isOpen={showServiceDrawer} 
+                    onClose={() => setShowServiceDrawer(false)}
+                    orderId={table.active_order.id}
+                    slug={slug}
+                    tableCode={table.code}
+                />
             )}
 
         </div>

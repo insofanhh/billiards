@@ -194,11 +194,7 @@ export function HomePage() {
                         const currentTables = queryClient.getQueryData<Table[]>(['tables', slug]);
                         const table = currentTables?.find((t: Table) => t.active_order?.id === orderId);
                         if (table) {
-                            if (event.includes('added')) {
-                                setTablesWithNotifications(prev => new Set(prev).add(table.id));
-                            } else {
-                                checkOrderHasUnconfirmedItems(orderId, table.id);
-                            }
+                            checkOrderHasUnconfirmedItems(orderId, table.id);
                         }
                     }
                 }
