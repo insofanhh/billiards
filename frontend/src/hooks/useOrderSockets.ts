@@ -16,7 +16,8 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
       // Some events might be generic or have different payload structures
       // Ideally we check data.order?.id or data.transaction?.order_id
       const pOrderId = data.order?.id || data.transaction?.order_id;
-      if (pOrderId === Number(orderId)) {
+      
+      if (Number(pOrderId) === Number(orderId)) {
         queryClient.invalidateQueries({ queryKey: ['client-order', String(orderId)] });
         queryClient.refetchQueries({ queryKey: ['client-order', String(orderId)] });
       }
@@ -53,6 +54,9 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
     userChannel.listen('.order.service.updated', invalidateOrder);
     ordersChannel.listen('.order.service.updated', invalidateOrder);
 
+    userChannel.listen('.order.updated', invalidateOrder);
+    ordersChannel.listen('.order.updated', invalidateOrder);
+
     userChannel.listen('.order.service.removed', invalidateOrder);
     ordersChannel.listen('.order.service.removed', invalidateOrder);
 
@@ -64,6 +68,7 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
       userChannel.stopListening('.transaction.confirmed');
       userChannel.stopListening('.order.service.added');
       userChannel.stopListening('.order.service.updated');
+      userChannel.stopListening('.order.updated');
       userChannel.stopListening('.order.service.removed');
       
       ordersChannel.stopListening('.order.approved');
@@ -73,6 +78,7 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
       ordersChannel.stopListening('.transaction.confirmed');
       ordersChannel.stopListening('.order.service.added');
       ordersChannel.stopListening('.order.service.updated');
+      ordersChannel.stopListening('.order.updated');
       ordersChannel.stopListening('.order.service.removed');
       
       echo.leave(`user.${userId}`);
