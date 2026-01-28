@@ -43,35 +43,59 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
     }
   }, [order?.applied_discount?.code]);
 
-  const groupedItems = useMemo(() => {
-    if (!order?.items) return [];
-    // Sort and Group logic same as before
+  const { aggregatedServices, unconfirmedItemIds } = useMemo(() => {
+    if (!order?.items) return { aggregatedServices: [], unconfirmedItemIds: [] };
+
     const sorted = [...order.items].sort((a: any, b: any) => {
       const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return timeA - timeB;
     });
 
-    const groups: { time: string; items: any[] }[] = [];
-    if (sorted.length === 0) return groups;
+    const map = new Map<number, { 
+        service: any, 
+        qty: number, 
+        total_price: number,
+        ids: number[], // Track all IDs for this service
+        unconfirmedIds: number[],
+        unconfirmedQty: number,
+        is_confirmed: boolean // True if ALL items of this service are confirmed
+    }>();
 
-    let currentGroup = { time: sorted[0].created_at || 'Mới thêm', items: [sorted[0]] };
+    const allUnconfirmedIds: number[] = [];
 
-    for (let i = 1; i < sorted.length; i++) {
-      const item = sorted[i];
-      const lastItem = currentGroup.items[currentGroup.items.length - 1];
-      const prevTime = lastItem.created_at ? new Date(lastItem.created_at).getTime() : 0;
-      const currTime = item.created_at ? new Date(item.created_at).getTime() : 0;
+    sorted.forEach((item: any) => {
+        if (!item.is_confirmed) {
+            allUnconfirmedIds.push(item.id);
+        }
 
-      if (currTime - prevTime < 2000) {
-        currentGroup.items.push(item);
-      } else {
-        groups.push(currentGroup);
-        currentGroup = { time: item.created_at || 'Mới thêm', items: [item] };
-      }
-    }
-    groups.push(currentGroup);
-    return groups;
+        const existing = map.get(item.service.id);
+        if (existing) {
+            existing.qty += item.qty;
+            existing.total_price += Number(item.total_price);
+            existing.ids.push(item.id);
+            if (!item.is_confirmed) {
+                existing.unconfirmedIds.push(item.id);
+                existing.unconfirmedQty += item.qty;
+            }
+            existing.is_confirmed = existing.is_confirmed && item.is_confirmed; // All must be true
+        } else {
+            map.set(item.service.id, {
+                service: item.service,
+                qty: item.qty,
+                total_price: Number(item.total_price),
+                ids: [item.id],
+                unconfirmedIds: !item.is_confirmed ? [item.id] : [],
+                unconfirmedQty: !item.is_confirmed ? item.qty : 0,
+                is_confirmed: item.is_confirmed
+            });
+        }
+    });
+
+    return { 
+        aggregatedServices: Array.from(map.values()), 
+        unconfirmedItemIds: allUnconfirmedIds 
+    };
   }, [order?.items]);
 
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
@@ -203,84 +227,91 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
           )}
 
           <div className="border-t border-slate-200 dark:border-gray-700 pt-4">
-            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Dịch vụ đã chọn</h3>
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="font-bold text-lg text-slate-900 dark:text-white">Dịch vụ đã chọn</h3>
+               {isActive && unconfirmedItemIds.length > 0 && (
+                 <button
+                   onClick={() => confirmBatchMutation.mutate(unconfirmedItemIds)}
+                   disabled={confirmBatchMutation.isPending}
+                   className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 animate-pulse"
+                 >
+                   {confirmBatchMutation.isPending ? 'Đang xử lý...' : `Xác nhận món mới (${unconfirmedItemIds.length})`}
+                 </button>
+               )}
+            </div>
+            
             <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-2">
-              {groupedItems.map(({ time, items }, index) => {
-                const isAllConfirmed = (items as any[]).every((i) => i.is_confirmed);
-                const unconfirmedIds = (items as any[]).filter((i) => !i.is_confirmed).map((i) => i.id);
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 overflow-hidden divide-y divide-slate-100 dark:divide-gray-700">
+                    {aggregatedServices.length === 0 ? (
+                        <p className="p-4 text-center text-gray-500 text-sm">Chưa có dịch vụ nào</p>
+                    ) : (
+                        aggregatedServices.map((item) => (
+                            <div key={item.service.id} className={`p-4 flex justify-between items-center ${!item.is_confirmed ? 'bg-orange-50 dark:bg-orange-900/10' : ''}`}>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-slate-800 dark:text-white">{item.service.name}</p>
+                                        {!item.is_confirmed && (
+                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                                Mới
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <p className="text-sm text-slate-500 dark:text-gray-400">
+                                            Số lượng: <span className="font-bold text-slate-700 dark:text-gray-300">
+                                                {(() => {
+                                                    const unconfirmedCount = item.unconfirmedQty;
+                                                    const confirmedCount = item.qty - unconfirmedCount;
 
-                return (
-                  <div key={time} className="mb-6 last:mb-0 border border-slate-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                    <div
-                      className={`px-4 py-3 flex items-center justify-between ${isAllConfirmed ? 'bg-green-100 dark:bg-green-900/10 border-b border-green-200 dark:border-green-900/30' : 'bg-slate-50 dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700'
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isActive && !isAllConfirmed ? (
-                          <button
-                            onClick={() => confirmBatchMutation.mutate(unconfirmedIds)}
-                            disabled={confirmBatchMutation.isPending}
-                            className="w-6 h-6 rounded border border-slate-400 bg-white flex items-center justify-center hover:border-blue-500 text-transparent hover:text-blue-500 transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        ) : (
-                          <div className="w-6 h-6 rounded bg-green-500 flex items-center justify-center text-white">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                        <span className={`font-bold ${isAllConfirmed ? 'text-green-800 dark:text-green-400' : 'text-slate-800 dark:text-gray-200'}`}>Order {index + 1}</span>
-                      </div>
-                      {isAllConfirmed && (
-                        <span className="text-xs font-semibold text-green-700 bg-green-200 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full">
-                          Đã xác nhận
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-4 space-y-4 bg-white dark:bg-gray-800">
-                      {(() => {
-                        const aggregatedItems = (items as any[]).reduce((acc: any[], item) => {
-                          const existing = acc.find((i) => i.service.id === item.service.id);
-                          if (existing) {
-                            existing.qty += item.qty;
-                            existing.total_price += Number(item.total_price);
-                          } else {
-                            acc.push({ ...item, total_price: Number(item.total_price) });
-                          }
-                          return acc;
-                        }, []);
-
-                        return aggregatedItems.map((item) => (
-                          <div key={item.service.id} className="flex justify-between items-center">
-                            <div>
-                              <p className="font-semibold text-slate-800 dark:text-white">{item.service.name}</p>
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm text-slate-500 dark:text-gray-400">Số lượng: {item.qty}</p>
-                                {isActive && (
-                                  <button
-                                    onClick={() => removeServiceMutation.mutate(item.id)}
-                                    className="text-red-500 text-xs hover:underline bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded"
-                                  >
-                                    Xóa
-                                  </button>
-                                )}
-                              </div>
+                                                    if (unconfirmedCount > 0) {
+                                                        if (confirmedCount > 0) {
+                                                            return (
+                                                                <span>
+                                                                    {confirmedCount} + <span className="text-orange-500">{unconfirmedCount} mới</span>
+                                                                </span>
+                                                            );
+                                                        } else {
+                                                            return <span className="text-orange-500">{unconfirmedCount} mới</span>;
+                                                        }
+                                                    }
+                                                    return item.qty;
+                                                })()}
+                                            </span>
+                                        </p>
+                                        
+                                        {isActive && (
+                                            <button
+                                                onClick={() => {
+                                                    // Delete the last added item (preferred unconfirmed)
+                                                    const idToDelete = item.unconfirmedIds.length > 0 
+                                                        ? item.unconfirmedIds[item.unconfirmedIds.length - 1] 
+                                                        : item.ids[item.ids.length - 1];
+                                                    
+                                                    if(idToDelete) removeServiceMutation.mutate(idToDelete);
+                                                }}
+                                                disabled={removeServiceMutation.isPending}
+                                                className="text-red-500 text-xs hover:underline hover:text-red-600 font-medium flex items-center gap-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                                Xóa
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-slate-900 dark:text-white text-base">
+                                        {formatCurrency(item.total_price)}
+                                    </p>
+                                    <p className="text-xs text-slate-400 dark:text-gray-500">
+                                        {formatCurrency(Number(item.service.price))} / món
+                                    </p>
+                                </div>
                             </div>
-                            <p className="font-semibold text-slate-800 dark:text-white">
-                              {formatCurrency(item.total_price)}
-                            </p>
-                          </div>
                         ))
-                      })()}
-                    </div>
-                  </div>
-                );
-              })}
+                    )}
+                </div>
             </div>
           </div>
         </div>

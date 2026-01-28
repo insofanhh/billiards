@@ -14,9 +14,12 @@ export function useStaffOrderSockets(orderId: number | undefined) {
     const invalidateOrder = (data: any) => {
       // Check if the event relates to this order
       const pOrderId = data.order?.id || data.transaction?.order_id;
-      if (pOrderId === Number(orderId)) {
+      
+      if (Number(pOrderId) === Number(orderId)) {
+        queryClient.invalidateQueries({ queryKey: ['order'] }); // Broad invalidation to be safe
         queryClient.invalidateQueries({ queryKey: ['order', String(orderId)] });
         queryClient.refetchQueries({ queryKey: ['order', String(orderId)] });
+        
         // Also invalidate tables list as status might change
         queryClient.invalidateQueries({ queryKey: ['tables'] }); 
       }
