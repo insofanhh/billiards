@@ -10,8 +10,6 @@ class OrderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['transactions.user', 'adminConfirmedBy']);
-
         $successfulTransaction = $this->transactions->firstWhere('status', 'success');
         $pendingTransaction = $this->transactions
             ->where('status', 'pending')
@@ -50,12 +48,13 @@ class OrderResource extends JsonResource
             'items' => $this->items->sortBy('created_at')->map(function ($item) {
                 return [
                     'id' => $item->id,
-                    'service' => [
+                    'name' => $item->name ?? $item->service?->name, // Name fallback
+                    'service' => $item->service ? [
                         'id' => $item->service->id,
                         'name' => $item->service->name,
                         'image' => $item->service->image ? url('storage/' . $item->service->image) : null,
                         'price' => (float) $item->service->price,
-                    ],
+                    ] : null,
                     'qty' => (int) $item->qty,
                     'unit_price' => (float) $item->unit_price,
                     'total_price' => (float) $item->total_price,
@@ -63,6 +62,15 @@ class OrderResource extends JsonResource
                     'created_at' => $item->created_at?->toIso8601String(),
                 ];
             })->values(),
+            'merged_table_fees' => $this->mergedTableFees->map(function ($fee) {
+                return [
+                    'id' => $fee->id,
+                    'table_name' => $fee->table_name,
+                    'start_at' => $fee->start_at->toIso8601String(),
+                    'end_at' => $fee->end_at->toIso8601String(),
+                    'total_price' => (float) $fee->total_price,
+                ];
+            }),
             'applied_discount' => $this->appliedDiscount ? [
                 'code' => $this->appliedDiscount->code,
                 'discount_type' => $this->appliedDiscount->discount_type,

@@ -23,6 +23,7 @@ class OrderItemsTable
                     ->copyable(),
                 TextColumn::make('service.name')
                     ->label('Dịch vụ')
+                    ->default(fn ($record) => $record->name)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('qty')

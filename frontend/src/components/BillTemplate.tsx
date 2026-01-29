@@ -62,9 +62,9 @@ export const BillTemplate: React.FC<BillTemplateProps> = ({ order, items, total 
                     {/* Service Items */}
                     {items.map((item, index) => (
                         <tr key={`${item.id}-${index}`} className="border-b border-dashed border-gray-300">
-                            <td className="py-2">{item.service.name}</td>
+                            <td className="py-2">{item.service?.name || item.name}</td>
                             <td className="text-center py-2">{item.qty}</td>
-                            <td className="text-right py-2">{new Intl.NumberFormat('vi-VN').format(item.service.price)}</td>
+                            <td className="text-right py-2">{new Intl.NumberFormat('vi-VN').format(item.unit_price)}</td>
                             <td className="text-right py-2">{new Intl.NumberFormat('vi-VN').format(item.total_price)}</td>
                         </tr>
                     ))}

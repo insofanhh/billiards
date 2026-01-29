@@ -97,5 +97,13 @@ export const ordersApi = {
     const response = await apiClient.post(`/orders/${id}/cancel-request`);
     return response.data.data || response.data;
   },
+
+  merge: async (sourceTableId: number, targetTableId: number): Promise<any> => {
+        const response = await apiClient.post('/orders/merge', {
+            source_table_id: sourceTableId,
+            target_table_id: targetTableId,
+        });
+        return response.data;
+  },
 };
 

@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
 import { discountCodesApi } from '../api/discountCodes';
@@ -27,6 +27,9 @@ export function ClientOrderPage() {
   const [discountCodeInput, setDiscountCodeInput] = useState('');
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [guestName] = useState(getTemporaryUserName);
+  
+  const [mergedTargetTable, setMergedTargetTable] = useState<string | null>(null);
+  const [movedTargetTable, setMovedTargetTable] = useState<string | null>(null);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['client-order', id, slug],
@@ -46,8 +49,19 @@ export function ClientOrderPage() {
     enabled: !!localStorage.getItem('auth_token') && !!order,
   });
 
+  // Socket Callbacks
+  const socketCallbacks = useMemo(() => ({
+    onMerge: (targetTable: string) => {
+        setMergedTargetTable(targetTable);
+        clearClientActiveOrder();
+    },
+    onMove: (newTableName: string) => {
+        setMovedTargetTable(newTableName);
+    }
+  }), []);
+
   // Custom Hooks
-  useOrderSockets(Number(id), order?.user_id);
+  useOrderSockets(Number(id), order?.user_id, socketCallbacks); // Make sure useOrderSockets is updated to accept full callbacks object
   const { 
     requestEndMutation, 
     cancelRequestMutation, 
@@ -63,12 +77,12 @@ export function ClientOrderPage() {
 
   useEffect(() => {
     if (!order) return;
-    if (isClientOrderContinuable(order.status)) {
+    if (isClientOrderContinuable(order.status) && !mergedTargetTable) {
       persistClientActiveOrderFromOrder(order, slug);
     } else {
       clearClientActiveOrder();
     }
-  }, [order]);
+  }, [order, mergedTargetTable]);
 
   useEffect(() => {
     if (order?.applied_discount?.code) {
@@ -131,6 +145,54 @@ export function ClientOrderPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] transition-colors duration-300">
+      
+      {/* Blocking Merge Notification */}
+      {mergedTargetTable && (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border border-gray-100 dark:border-white/10 animate-fade-in-up">
+                  <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Bàn đã được gộp!</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-8">
+                      Bàn hiện tại đã được gộp sang <span className="font-bold text-blue-600 dark:text-[#13ec6d]">{mergedTargetTable}</span>.
+                      <br/>Vui lòng liên hệ nhân viên nếu cần hỗ trợ.
+                  </p>
+                  <button 
+                      onClick={() => navigate(slug ? `/s/${slug}` : '/client')}
+                      className="w-full py-3.5 bg-blue-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 rounded-xl font-bold text-lg hover:bg-blue-700 dark:hover:bg-[#10d863] transition-colors shadow-lg shadow-blue-600/20 dark:shadow-[#13ec6d]/20"
+                  >
+                      Đã hiểu
+                  </button>
+              </div>
+          </div>
+       )}
+
+      {/* Blocking Moved Notification */}
+      {movedTargetTable && (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border border-gray-100 dark:border-white/10 animate-fade-in-up">
+                  <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Chuyển bàn thành công!</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-8">
+                      Đơn hàng của bạn đã được chuyển sang <span className="font-bold text-green-600 dark:text-[#13ec6d]">{movedTargetTable}</span>.
+                  </p>
+                  <button 
+                      onClick={() => setMovedTargetTable(null)}
+                      className="w-full py-3.5 bg-green-600 dark:bg-[#13ec6d] text-white dark:text-zinc-900 rounded-xl font-bold text-lg hover:bg-green-700 dark:hover:bg-[#10d863] transition-colors shadow-lg shadow-green-600/20 dark:shadow-[#13ec6d]/20"
+                  >
+                      Tiếp tục
+                  </button>
+              </div>
+          </div>
+       )}
+
       <ClientNavigation
         userName={guestName}
         onHomeClick={() => navigate(slug ? `/s/${slug}` : '/client')}
@@ -172,6 +234,7 @@ export function ClientOrderPage() {
                    {(() => {
                       const sortedItems = [...order.items].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()); // Newest first
                       const grouped = sortedItems.reduce((acc: any, item) => {
+                          if (!item.service) return acc;
                           if(!acc[item.service.id]) acc[item.service.id] = [];
                           acc[item.service.id].push(item);
                           return acc;
