@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { echo } from '../echo';
 
-export function useOrderSockets(orderId: number | undefined, userId: number | undefined) {
+interface SocketCallbacks {
+    onMerge?: (targetTable: string) => void;
+    onMove?: (newTableName: string) => void;
+}
+
+export function useOrderSockets(orderId: number | undefined, userId: number | undefined, callbacks?: SocketCallbacks) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -12,9 +17,6 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
     const ordersChannel = echo.channel('orders');
 
     const invalidateOrder = (data: any) => {
-      // Check if the event relates to this order
-      // Some events might be generic or have different payload structures
-      // Ideally we check data.order?.id or data.transaction?.order_id
       const pOrderId = data.order?.id || data.transaction?.order_id;
       
       if (Number(pOrderId) === Number(orderId)) {
@@ -26,9 +28,25 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
     const handleTransactionConfirmed = (data: any) => {
         if (data.transaction?.order_id === Number(orderId)) {
             invalidateOrder(data);
-            // Scroll logic can be handled by a separate effect monitoring transaction status
-            // or we can expose an event emitter here if strictly needed.
-            // For now, we rely on state updates triggering UI changes.
+        }
+    };
+
+    const handleMerge = (data: any) => {
+        console.log('Order merged event received:', data);
+        if (Number(data.orderId) === Number(orderId) && callbacks?.onMerge) {
+            callbacks.onMerge(data.targetTableName);
+        }
+    };
+
+    const handleMove = (data: any) => {
+        console.log('Order moved event received:', data);
+        if (Number(data.orderId) === Number(orderId)) {
+             queryClient.invalidateQueries({ queryKey: ['client-order', String(orderId)] });
+             queryClient.refetchQueries({ queryKey: ['client-order', String(orderId)] });
+
+             if (callbacks?.onMove) {
+                 callbacks.onMove(data.newTableName);
+             }
         }
     };
 
@@ -60,6 +78,10 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
     userChannel.listen('.order.service.removed', invalidateOrder);
     ordersChannel.listen('.order.service.removed', invalidateOrder);
 
+    // Merge & Move Events - Public Orders Channel
+    ordersChannel.listen('.order.merged', handleMerge);
+    ordersChannel.listen('.order.moved', handleMove);
+
     return () => {
       userChannel.stopListening('.order.approved');
       userChannel.stopListening('.order.rejected');
@@ -80,9 +102,11 @@ export function useOrderSockets(orderId: number | undefined, userId: number | un
       ordersChannel.stopListening('.order.service.updated');
       ordersChannel.stopListening('.order.updated');
       ordersChannel.stopListening('.order.service.removed');
+      ordersChannel.stopListening('.order.merged');
+      ordersChannel.stopListening('.order.moved');
       
       echo.leave(`user.${userId}`);
       echo.leave('orders');
     };
-  }, [orderId, userId, queryClient]);
+  }, [orderId, userId, queryClient, callbacks]);
 }

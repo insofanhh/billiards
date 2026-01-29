@@ -12,12 +12,12 @@ export function ClientOrderBill({ order }: Props) {
     return timeA - timeB;
   });
 
-  const groupedItems = sortedItems.reduce((acc: Record<number, OrderItem[]>, item) => {
-    const serviceId = item.service.id;
-    if (!acc[serviceId]) {
-      acc[serviceId] = [];
+  const groupedItems = sortedItems.reduce((acc: Record<string, OrderItem[]>, item) => {
+    const key = item.service ? `service_${item.service.id}` : `custom_${item.id}`;
+    if (!acc[key]) {
+      acc[key] = [];
     }
-    acc[serviceId].push(item);
+    acc[key].push(item);
     return acc;
   }, {});
 
@@ -72,24 +72,46 @@ export function ClientOrderBill({ order }: Props) {
         <div className="mb-4">
           <h4 className="font-semibold mb-2 text-gray-700">Dịch vụ:</h4>
           <div className="space-y-1">
-            {Object.values(groupedItems).map((items) => {
+            {Object.entries(groupedItems).map(([key, items]) => {
               const firstItem = items[0];
               if (!firstItem) return null;
 
-              const totalQty = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
-              const totalPrice = items.reduce((sum, item) => {
-                if (!item.total_price && item.total_price !== 0) {
-                  return sum + ((Number(item.unit_price) || 0) * (Number(item.qty) || 0));
-                }
-                return sum + (Number(item.total_price) || 0);
-              }, 0);
+              if (firstItem.service) {
+                  const totalQty = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+                  const totalPrice = items.reduce((sum, item) => {
+                    if (!item.total_price && item.total_price !== 0) {
+                      return sum + ((Number(item.unit_price) || 0) * (Number(item.qty) || 0));
+                    }
+                    return sum + (Number(item.total_price) || 0);
+                  }, 0);
 
-              return (
-                <div key={firstItem.service.id} className="flex justify-between text-sm">
-                  <span>{firstItem.service.name} x{totalQty}</span>
-                  <span>{formatCurrency(totalPrice)}</span>
-                </div>
-              );
+                  return (
+                    <div key={key} className="flex justify-between text-sm">
+                      <span>{firstItem.service.name} x{totalQty}</span>
+                      <span>{formatCurrency(totalPrice)}</span>
+                    </div>
+                  );
+              } else {
+                 return items.map(item => {
+                      let displayName = item.name;
+                      if (!displayName && item.merged_table_fee) {
+                          const start = new Date(item.merged_table_fee.start_at);
+                          const end = new Date(item.merged_table_fee.end_at);
+                          const diff = Math.abs(end.getTime() - start.getTime());
+                          const totalMinutes = Math.floor(diff / (1000 * 60));
+                          const h = Math.floor(totalMinutes / 60);
+                          const m = totalMinutes % 60;
+                          displayName = `Tiền giờ bàn ${item.merged_table_fee.table_name} (${h}h ${m}p)`;
+                      }
+
+                      return (
+                        <div key={item.id} className="flex justify-between text-sm">
+                          <span>{displayName || 'Phí khác'}</span>
+                          <span>{formatCurrency(Number(item.total_price))}</span>
+                        </div>
+                      );
+                  });
+              }
             })}
           </div>
         </div>

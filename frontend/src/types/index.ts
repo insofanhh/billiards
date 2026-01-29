@@ -66,12 +66,20 @@ export interface OrderItem {
     id: number;
     name: string;
     price: number;
-  };
+  } | null;
+  name?: string | null;
   qty: number;
   unit_price: number;
   total_price: number;
   is_confirmed?: boolean;
   created_at?: string;
+  merged_table_fee?: {
+    id: number;
+    table_name: string;
+    start_at: string;
+    end_at: string;
+    total_price?: number;
+  } | null;
 }
 
 export interface OrderTransaction {
@@ -118,7 +126,14 @@ export interface Order {
   total_paid: number;
   total_amount?: number; // Added for UI compatibility
   cashier?: string | null;
-  items: Array<OrderItem>;
+  merged_table_fees?: {
+    id: number;
+    table_name: string;
+    start_at: string;
+    end_at: string;
+    total_price: number;
+  }[];
+  items?: OrderItem[];
   applied_discount?: {
     code: string;
     discount_type: string;

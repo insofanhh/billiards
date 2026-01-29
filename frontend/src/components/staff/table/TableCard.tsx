@@ -5,6 +5,7 @@ import { useTableActions } from '../../../hooks/useTableActions';
 import { TableTimer } from '../../TableTimer';
 import { getCurrentPriceRate } from '../../../utils/pricing';
 import { ServiceDrawer } from '../../common/ServiceDrawer';
+import { MergeTableDialog } from './MergeTableDialog';
 
 interface TableCardProps {
     table: Table;
@@ -53,6 +54,8 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
     } = useTableActions(undefined, slug);
     
     const [showServiceDrawer, setShowServiceDrawer] = useState(false);
+    const [showMergeDialog, setShowMergeDialog] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     // Serial Hook
     // const { isConnected, sendCommand } = useWebSerial();
@@ -90,13 +93,55 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">{table.code}</h3>
                     <div className="flex flex-col items-end gap-1">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badge}`}>
-                            {table.status}
-                        </span>
-                        {/* Serial Button for Demo/Debug */}
-                        {/* <div onClick={e => e.stopPropagation()}>
-                           <SerialConnectButton />
-                        </div> */}
+                        <div className="flex items-center gap-1">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badge}`}>
+                                {table.status}
+                            </span>
+                            {table.status === 'Đang sử dụng' && (
+                                <div className="relative">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsMenuOpen(!isMenuOpen);
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+                                    >
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                                        </svg>
+                                    </button>
+                                    
+                                    {isMenuOpen && (
+                                        <>
+                                            <div 
+                                                className="fixed inset-0 z-40" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsMenuOpen(false);
+                                                }} 
+                                            />
+                                            <div className="absolute right-0 mt-2 w-36 origin-top-right rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in duration-100">
+                                                <div className="p-1">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setIsMenuOpen(false);
+                                                            setShowMergeDialog(true);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-blue-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-200 flex items-center transition-colors"
+                                                    >
+                                                        <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                        </svg>
+                                                        Gộp bàn
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -288,6 +333,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
 
             {/* Service Drawer */}
             {table.active_order && (
+                <>
                 <ServiceDrawer 
                     isOpen={showServiceDrawer} 
                     onClose={() => setShowServiceDrawer(false)}
@@ -295,6 +341,13 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                     slug={slug}
                     tableCode={table.code}
                 />
+                <MergeTableDialog 
+                    isOpen={showMergeDialog}
+                    onClose={() => setShowMergeDialog(false)}
+                    sourceTable={table}
+                    slug={slug}
+                />
+                </>
             )}
 
         </div>

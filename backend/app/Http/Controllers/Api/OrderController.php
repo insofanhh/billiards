@@ -50,7 +50,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['table', 'priceRate', 'items.service', 'transactions', 'user']);
+        $query = Order::with(['table', 'priceRate', 'items.service', 'transactions.user', 'user', 'adminConfirmedBy']);
 
         if (!$this->isStaff($request)) {
             $query->where('user_id', $request->user()->id);
@@ -153,7 +153,7 @@ class OrderController extends Controller
     public function show(Request $request, $id)
     {
         $query = Order::where('id', $id)
-            ->with(['table', 'priceRate', 'items.service', 'transactions', 'appliedDiscount', 'user']);
+            ->with(['table', 'priceRate', 'items.service', 'mergedTableFees', 'transactions.user', 'appliedDiscount', 'user', 'adminConfirmedBy']);
 
         if (!$this->isStaff($request)) {
             $query->where('user_id', $request->user()->id);
@@ -882,7 +882,9 @@ class OrderController extends Controller
             $tableCost = $this->priceCalculator->calculateTableCost($order, $startTime, $endTime);
             
             $servicesCost = $order->items->sum('total_price');
-            $totalBeforeDiscount = $tableCost + $servicesCost;
+            $mergedFeesCost = $order->mergedTableFees()->sum('total_price');
+            
+            $totalBeforeDiscount = $tableCost + $servicesCost + $mergedFeesCost;
 
             $discount = 0;
             if ($order->applied_discount_id) {
@@ -1050,6 +1052,7 @@ class OrderController extends Controller
     private function deductInventoryForOrder(Order $order): void
     {
         $items = OrderItem::where('order_id', $order->id)
+            ->whereNotNull('service_id') // Skip custom items (fees)
             ->where('is_confirmed', true)
             ->where('stock_deducted', false)
             ->with('service')
@@ -1070,6 +1073,10 @@ class OrderController extends Controller
 
     private function deductInventoryForItem(OrderItem $item): void
     {
+        if (!$item->service_id) {
+            return;
+        }
+
         $inventory = ServiceInventory::firstOrCreate(
             ['service_id' => $item->service_id],
             ['quantity' => 0]
@@ -1086,5 +1093,136 @@ class OrderController extends Controller
             'stock_deducted' => true,
             'is_confirmed' => true,
         ]);
+    }
+    /**
+     * Merge or Move table.
+     */
+    public function mergeTables(Request $request)
+    {
+        $request->validate([
+            'source_table_id' => 'required|exists:tables_billiards,id',
+            'target_table_id' => 'required|exists:tables_billiards,id|different:source_table_id',
+        ]);
+
+        $sourceTableId = $request->input('source_table_id');
+        $targetTableId = $request->input('target_table_id');
+
+        // Get Active Order for Source
+        $orderA = Order::where('table_id', $sourceTableId)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$orderA) {
+            return response()->json(['message' => 'Bàn nguồn không còn hoạt động'], 400);
+        }
+
+        // Get Active Order for Target
+        $orderB = Order::where('table_id', $targetTableId)
+            ->where('status', 'active')
+            ->first();
+
+        $targetTable = TableBilliard::find($targetTableId);
+        
+        // Scenario 1: Target is Empty -> Move Table
+        if (!$orderB) {
+            if ($targetTable->status !== 'Trống') {
+                 // Even if no active order, if status is not 'Trống' (e.g. Broken, or dirty state?), we might block?
+                 // Checking if another user just opened it?
+                 // Let's assume if no active order, we can forcefully take it if it's meant to be empty.
+            }
+
+            DB::transaction(function () use ($orderA, $targetTable, $sourceTableId) {
+                $oldTable = TableBilliard::find($sourceTableId);
+                
+                // 1. Update Order's Table ID
+                $orderA->update(['table_id' => $targetTable->id]);
+
+                // 2. Update Price Rate if Table Type is different
+                if ($oldTable->table_type_id !== $targetTable->table_type_id) {
+                     $newPriceRate = \App\Models\PriceRate::forTableTypeAtTime(
+                         $targetTable->table_type_id, 
+                         Carbon::parse($orderA->start_at)
+                     );
+                     if ($newPriceRate) {
+                         $orderA->update(['price_rate_id' => $newPriceRate->id]);
+                     }
+                }
+
+                // 3. Update Table Statuses
+                $oldTable->update(['status' => 'Trống']);
+                $targetTable->update(['status' => 'Đang sử dụng']);
+
+                // 4. IoT Switch
+                try {
+                    $this->iotService->turnOffTable($oldTable);
+                    $this->iotService->turnOnTable($targetTable);
+                } catch (\Exception $e) {
+                    Log::error("IoT Error during table move: " . $e->getMessage());
+                }
+
+                // Broadcast move event
+                broadcast(new \App\Events\OrderMoved($orderA->id, $targetTable->name));
+            });
+
+            return response()->json(['message' => 'Đã chuyển bàn thành công', 'target_order_id' => $orderA->id]);
+        }
+
+        // Scenario 2: Target is Active -> Merge Table
+        DB::transaction(function () use ($orderA, $orderB) {
+            // 1. Calculate Cost of A
+            $startA = Carbon::parse($orderA->start_at);
+            $now = Carbon::now();
+            
+            // Calculate Duration String
+            $diff = $startA->diff($now);
+            $durationStr = $diff->h . 'h ' . $diff->i . 'p';
+
+            $costA = $this->priceCalculator->calculateTableCost($orderA, $startA, $now);
+            
+            // 2. Add as Fee to Order B
+            \App\Models\MergedTableFee::create([
+                'store_id' => $orderB->store_id,
+                'order_id' => $orderB->id,
+                'table_name' => $orderA->table->name ?? $orderA->table->code ?? 'Unknown',
+                'start_at' => $startA,
+                'end_at' => $now,
+                'total_price' => $costA,
+            ]);
+
+            // 2.5 Move existing Merged Fees from Order A to Order B (for recursive merges)
+            \App\Models\MergedTableFee::where('order_id', $orderA->id)->update(['order_id' => $orderB->id]);
+
+            // Update Order B total (Current Fee + Order A's accumulated total of items/fees)
+            $orderB->increment('total_before_discount', $costA + $orderA->total_before_discount);
+
+            // 3. Move Order Items (Services)
+            OrderItem::where('order_id', $orderA->id)->update(['order_id' => $orderB->id]);
+
+            // 4. Move Transactions
+            Transaction::where('order_id', $orderA->id)->update(['order_id' => $orderB->id]);
+
+            // 5. Delete Order A
+            
+            // Broadcast merge event to user of Order A before deletion
+            broadcast(new \App\Events\OrderMerged($orderA->id, $orderA->user_id, $orderB->table->name ?? 'Mới'));
+
+            $orderA->delete();
+
+            // 6. Reset Table A
+            if ($orderA->table) {
+                $orderA->table->update(['status' => 'Trống']);
+                try {
+                    $this->iotService->turnOffTable($orderA->table);
+                } catch (\Exception $e) {
+                    Log::error("IoT Error during table merge: " . $e->getMessage());
+                }
+            }
+        });
+
+        // Trigger updates
+        $orderB->refresh();
+        broadcast(new OrderUpdated($orderB));
+
+        return response()->json(['message' => 'Gộp bàn thành công', 'target_order_id' => $orderB->id]);
     }
 }

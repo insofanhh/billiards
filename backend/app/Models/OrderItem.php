@@ -14,6 +14,7 @@ class OrderItem extends Model
         'store_id',
         'order_id',
         'service_id',
+        'name',
         'qty',
         'unit_price',
         'total_price',
@@ -36,5 +37,10 @@ class OrderItem extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function mergedTableFee()
+    {
+        return $this->hasOne(MergedTableFee::class);
     }
 }

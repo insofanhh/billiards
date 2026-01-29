@@ -81,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/store/payment-settings', [\App\Http\Controllers\Api\StorePaymentController::class, 'updateSettings']);
     
     Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders/merge', [OrderController::class, 'mergeTables']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::patch('/orders/{id}/approve', [OrderController::class, 'approve']);

@@ -74,6 +74,11 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function mergedTableFees(): HasMany
+    {
+        return $this->hasMany(MergedTableFee::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

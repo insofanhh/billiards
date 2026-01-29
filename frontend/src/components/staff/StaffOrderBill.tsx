@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Order } from '../../types';
 import { useStaffOrderActions } from '../../hooks/useStaffOrderActions';
 import { formatCurrency } from '../../utils/format';
+import { OrderDuration } from '../common/OrderDuration';
 
 interface Props {
   order: Order;
@@ -32,7 +33,7 @@ function DeletableServiceRow({ item, isActive, onDelete }: { item: any, isActive
             >
                 <div>
                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-slate-800 dark:text-white">{item.service.name}</p>
+                        <p className="font-semibold text-slate-800 dark:text-white">{item.name}</p>
                         {!item.is_confirmed && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
                                 Mới
@@ -76,7 +77,7 @@ function DeletableServiceRow({ item, isActive, onDelete }: { item: any, isActive
                             {formatCurrency(item.total_price)}
                         </p>
                         <p className="text-xs text-slate-400 dark:text-gray-500">
-                            {formatCurrency(Number(item.service.price))} / món
+                            {formatCurrency(item.unit_price)} / món
                         </p>
                     </div>
                 ) : (
@@ -153,7 +154,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000);
+    }, 60000); // Reduce update frequency for price calculation
     return () => clearInterval(timer);
   }, []);
 
@@ -163,8 +164,8 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
     }
   }, [order?.applied_discount?.code]);
 
-  const { aggregatedServices, unconfirmedItemIds } = useMemo(() => {
-    if (!order?.items) return { aggregatedServices: [], unconfirmedItemIds: [] };
+  const { aggregatedServices, unconfirmedItemIds, itemsTotal } = useMemo(() => {
+    if (!order?.items) return { aggregatedServices: [], unconfirmedItemIds: [], itemsTotal: 0 };
 
     const sorted = [...order.items].sort((a: any, b: any) => {
       const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -172,25 +173,32 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
       return timeA - timeB;
     });
 
-    const map = new Map<number, { 
-        service: any, 
+    const map = new Map<string, { 
+        service: any | null, 
+        name: string,
         qty: number, 
         total_price: number,
-        ids: number[], // Make sure to keep this if used elsewhere, or replace logic
-        items: { id: number; qty: number; is_confirmed: boolean }[], // Added detailed items
+        ids: number[], 
+        items: { id: number; qty: number; is_confirmed: boolean }[],
         unconfirmedIds: number[],
         unconfirmedQty: number,
-        is_confirmed: boolean 
+        is_confirmed: boolean,
+        unit_price: number 
     }>();
 
     const allUnconfirmedIds: number[] = [];
+    let grandTotal = 0;
 
     sorted.forEach((item: any) => {
+        grandTotal += Number(item.total_price);
+
         if (!item.is_confirmed) {
             allUnconfirmedIds.push(item.id);
         }
 
-        const existing = map.get(item.service.id);
+        const key = item.service ? `s_${item.service.id}` : `c_${item.name}_${item.unit_price}`;
+
+        const existing = map.get(key);
         if (existing) {
             existing.qty += item.qty;
             existing.total_price += Number(item.total_price);
@@ -202,29 +210,57 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
             }
             existing.is_confirmed = existing.is_confirmed && item.is_confirmed; 
         } else {
-            map.set(item.service.id, {
+            map.set(key, {
                 service: item.service,
+                name: item.service?.name ?? item.name ?? 'Custom Item',
                 qty: item.qty,
                 total_price: Number(item.total_price),
                 ids: [item.id],
                 items: [{ id: item.id, qty: item.qty, is_confirmed: item.is_confirmed }],
                 unconfirmedIds: !item.is_confirmed ? [item.id] : [],
                 unconfirmedQty: !item.is_confirmed ? item.qty : 0,
-                is_confirmed: item.is_confirmed
+                is_confirmed: item.is_confirmed,
+                unit_price: Number(item.unit_price) // Store unit price for display
             });
         }
     });
 
     return { 
         aggregatedServices: Array.from(map.values()), 
-        unconfirmedItemIds: allUnconfirmedIds 
+        unconfirmedItemIds: allUnconfirmedIds,
+        itemsTotal: grandTotal
     };
   }, [order?.items]);
 
   const hasSuccessfulTransaction = order?.transactions?.some((t: any) => t.status === 'success') ?? false;
   const pendingTransaction = order?.transactions?.find((t: any) => t.status === 'pending') ?? null;
   const orderCustomerName = order.customer_name || null;
-  const currentTotalBeforeDiscount = order.total_before_discount > 0 ? order.total_before_discount : servicesTotal;
+
+  // Calculate Live Table Cost (Provisional)
+  const liveTableCost = useMemo(() => {
+    if (!isActive || !order.start_at || !order.price_rate) return 0;
+    
+    let dateStr = order.start_at;
+    // Fix for SQL format without timezone (assume +07:00 / Asia/Ho_Chi_Minh)
+    if (dateStr && !dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('T')) {
+            dateStr = dateStr.replace(' ', 'T') + '+07:00';
+    }
+    
+    const start = new Date(dateStr).getTime();
+    const now = currentTime.getTime();
+    const diffHours = Math.max(0, now - start) / (1000 * 60 * 60);
+    return diffHours * Number(order.price_rate.price_per_hour);
+  }, [currentTime, order.start_at, order.price_rate, isActive]);
+
+  // Calculate Merged Fees Total
+  const mergedFeesTotal = useMemo(() => {
+    return order.merged_table_fees?.reduce((sum: number, fee: any) => sum + Number(fee.total_price), 0) || 0;
+  }, [order.merged_table_fees]);
+
+  // Use Live Total if Active, otherwise backend total
+  const currentTotalBeforeDiscount = isActive 
+    ? (itemsTotal + liveTableCost + mergedFeesTotal) 
+    : (order.total_before_discount > 0 ? order.total_before_discount : servicesTotal);
   
   const handlePrintBill = () => {
     window.print();
@@ -304,17 +340,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
             {isActive && order.start_at && (
               <div>
                 <p className="text-sm text-slate-500 dark:text-gray-400">Đang chơi</p>
-                <p className="font-semibold text-green-600 animate-pulse">
-                  {(() => {
-                    const start = new Date(order.start_at).getTime();
-                    const now = currentTime.getTime();
-                    const diff = Math.max(0, now - start);
-                    const hours = Math.floor(diff / (1000 * 60 * 60));
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                    return `${hours}h ${minutes}p ${seconds}s`;
-                  })()}
-                </p>
+                <OrderDuration startAt={order.start_at} isActive={isActive} />
               </div>
             )}
             {order.end_at && (
@@ -325,14 +351,52 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                 </p>
               </div>
             )}
-            {order.total_play_time_minutes && (
-              <div className="col-span-2">
-                <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian chơi</p>
-                <p className="font-semibold text-slate-800 dark:text-gray-200">
-                  {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
-                </p>
-              </div>
+            {(order.total_play_time_minutes !== null && order.total_play_time_minutes !== undefined) && (
+              <>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian chơi</p>
+                  <p className="font-semibold text-slate-800 dark:text-gray-200">
+                    {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-gray-400">Số tiền</p>
+                  <p className="font-bold text-slate-900 dark:text-white">
+                    {formatCurrency(isActive ? liveTableCost : Math.max(0, order.total_before_discount - itemsTotal - mergedFeesTotal))}
+                  </p>
+                </div>
+              </>
             )}
+
+            {/* Merge Table Fees */}
+            {order.merged_table_fees?.map((fee: any) => {
+                const start = new Date(fee.start_at);
+                const end = new Date(fee.end_at);
+                const diff = Math.abs(end.getTime() - start.getTime());
+                const totalMinutes = Math.floor(diff / (1000 * 60));
+                const h = Math.floor(totalMinutes / 60);
+                const m = totalMinutes % 60;
+                
+                const displayName = `Gộp: ${fee.table_name}`;
+                const durationStr = `${h}h ${m}p`;
+                const price = fee.total_price;
+
+                return (
+                    <div key={fee.id} className="col-span-2 flex justify-between items-center py-2 border-t border-dashed border-slate-200 dark:border-gray-700 mt-2">
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-gray-200">
+                                {displayName}
+                            </span>
+                             <span className="text-xs text-slate-500 dark:text-gray-400">
+                                Thời gian: {durationStr}
+                             </span>
+                        </div>
+                        <span className="font-bold text-slate-800 dark:text-white">
+                            {formatCurrency(price)}
+                        </span>
+                    </div>
+                );
+            })}
           </div>
 
           {(orderCustomerName || order.cashier) && (
@@ -371,7 +435,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
                     ) : (
                         aggregatedServices.map((item) => (
                                 <DeletableServiceRow 
-                                    key={item.service.id} 
+                                    key={item.service ? item.service.id : `custom-${item.name}`} 
                                     item={item} 
                                     isActive={isActive}
                                     onDelete={(qty) => {

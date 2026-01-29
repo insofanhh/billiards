@@ -11,7 +11,12 @@ export const TableTimer = ({ startTime }: TableTimerProps) => {
         if (!startTime) return;
 
         const calculate = () => {
-            const start = new Date(startTime).getTime();
+            let dateStr = startTime;
+            // Fix for SQL format without timezone (assume +07:00 / Asia/Ho_Chi_Minh)
+            if (dateStr && typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('T')) {
+                 dateStr = dateStr.replace(' ', 'T') + '+07:00';
+            }
+            const start = new Date(dateStr).getTime();
             const now = new Date().getTime();
             const diff = Math.max(0, now - start);
 
