@@ -87,10 +87,28 @@ class OrderController extends Controller
             ->first();
 
         if ($blockingOrder) {
-            return response()->json([
-                'message' => 'Bàn đang được sử dụng', 
-                'debug' => ['blocking_order_id' => $blockingOrder->id, 'status' => $blockingOrder->status]
-            ], 400);
+            // Self-healing: If table is marked as Free ('Trống') but has an active order, it's a ghost order.
+            // We should cancel the ghost order to allow the new one.
+            if ($table->status === 'Trống') {
+                Log::warning("Ghost order detected and auto-cancelled", [
+                    'table_id' => $table->id,
+                    'ghost_order_id' => $blockingOrder->id,
+                    'user_id' => $request->user()->id
+                ]);
+                
+                $blockingOrder->update([
+                    'status' => 'cancelled',
+                    'notes' => 'Hệ thống tự động hủy do lỗi trạng thái (Ghost Order)',
+                    'end_at' => now(), // Mark end time
+                ]);
+                
+                // Proceed to create new order...
+            } else {
+                return response()->json([
+                    'message' => 'Bàn đang được sử dụng', 
+                    'debug' => ['blocking_order_id' => $blockingOrder->id, 'status' => $blockingOrder->status]
+                ], 400);
+            }
         }
 
         // Check for pending orders (Requests)
@@ -111,40 +129,65 @@ class OrderController extends Controller
         }
         
         // If we are here, we can open the table.
-        $startTime = Carbon::now();
-        $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
+        // Use Transaction to ensure atomicity
+        try {
+            return DB::transaction(function () use ($request, $table) {
+                $startTime = Carbon::now();
+                $priceRate = \App\Models\PriceRate::forTableTypeAtTime($table->table_type_id, $startTime);
+                
+                if (!$priceRate) {
+                     // Throw exception to rollback logic if inside transaction (though here we haven't done anything yet)
+                     // But we can just return response. However, we are inside a Closure.
+                     // It's cleaner to check this before transaction? 
+                     // PriceRate check is read-only. We can leave it here, but throwing exception is better to escape transaction.
+                     throw new \Exception('Không tìm thấy bảng giá cho loại bàn này');
+                }
         
-        if (!$priceRate) {
-            return response()->json([
-                'message' => 'Không tìm thấy bảng giá cho loại bàn này',
-                'debug' => [
-                    'table_type_id' => $table->table_type_id,
-                    'time_checked' => $startTime->toDateTimeString(),
-                ]
-            ], 400);
-        }
-
-        $order = Order::create([
-            'order_code' => 'ORD-' . Str::upper(Str::random(8)),
-            'user_id' => $request->user()->id,
-            'customer_name' => null,
-            'table_id' => $table->id,
-            'store_id' => $table->store_id,
-            'price_rate_id' => $priceRate->id,
-            'start_at' => $startTime,
-            'status' => 'active',
-        ]);
+                $order = Order::create([
+                    'order_code' => 'ORD-' . Str::upper(Str::random(8)),
+                    'user_id' => $request->user()->id,
+                    'customer_name' => null,
+                    'table_id' => $table->id,
+                    'store_id' => $table->store_id,
+                    'price_rate_id' => $priceRate->id,
+                    'start_at' => $startTime,
+                    'status' => 'active',
+                ]);
+                
+                // Resolve and set customer name
+                $customerName = $this->resolveCustomerName($order, $request);
+                $order->update(['customer_name' => $customerName]);
         
-        // Resolve and set customer name
-        $customerName = $this->resolveCustomerName($order, $request);
-        $order->update(['customer_name' => $customerName]);
-
-        if ($table) {
-            $table->update(['status' => 'Đang sử dụng']);
-            $this->iotService->turnOnTable($table);
+                if ($table) {
+                    $table->update(['status' => 'Đang sử dụng']);
+                    
+                    try {
+                        $this->iotService->turnOnTable($table);
+                    } catch (\Exception $e) {
+                         // Decide: do we fail the whole order if IoT fails?
+                         // "Trống" vs "Đang sử dụng" is DB state. 
+                         // If light fails, maybe just Log it? 
+                         // If we throw here, transaction rolls back, order deleted, table stays 'Trống'. 
+                         // That is probably safer than having an active order on a dark table.
+                         // But for now, let's Log and proceed, or the user can't open table if IoT is flaky.
+                         Log::error("IoT Turn On Error: " . $e->getMessage());
+                    }
+                }
+        
+                return new OrderResource($order->load(['table', 'priceRate']));
+            });
+            
+        } catch (\Exception $e) {
+            if ($e->getMessage() === 'Không tìm thấy bảng giá cho loại bàn này') {
+                return response()->json([
+                    'message' => 'Không tìm thấy bảng giá cho loại bàn này',
+                    'debug' => [
+                        'table_type_id' => $table->table_type_id,
+                    ]
+                ], 400);
+            }
+            throw $e;
         }
-
-        return new OrderResource($order->load(['table', 'priceRate']));
     }
 
     /**
