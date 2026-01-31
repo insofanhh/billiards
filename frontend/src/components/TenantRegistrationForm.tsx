@@ -61,12 +61,12 @@ export function TenantRegistrationForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Tên quán (Bida Club)</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Tên quán (Billiards Club)</label>
           <input
             type="text"
             required
             className="w-full rounded-xl border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:border-blue-500 focus:ring-blue-500 dark:text-white py-3 px-4"
-            placeholder="Ví dụ: Bida Thành Công"
+            placeholder="Ví dụ: Billiards Thành Công"
             value={formData.store_name}
             onChange={(e) => setFormData({...formData, store_name: e.target.value})}
           />

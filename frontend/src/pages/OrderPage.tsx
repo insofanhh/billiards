@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
 import { BillTemplate } from '../components/BillTemplate';
+import { useEffect, useRef, useState } from 'react';
 
 // Hooks
 import { useStaffOrderSockets } from '../hooks/useStaffOrderSockets';
@@ -11,9 +12,19 @@ import { useStaffOrderSockets } from '../hooks/useStaffOrderSockets';
 import { StaffServiceList } from '../components/staff/StaffServiceList';
 import { StaffOrderBill } from '../components/staff/StaffOrderBill';
 
+
 export function OrderPage() {
   const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [showMobileBill, setShowMobileBill] = useState(false);
+
+  useEffect(() => {
+    // Scroll to hide admin navigation
+    if (pageRef.current) {
+        pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id, slug],
@@ -49,13 +60,13 @@ export function OrderPage() {
   const currentTotalBeforeDiscount = order.total_before_discount > 0 ? order.total_before_discount : servicesTotal;
 
   return (
-    <div className="font-sans text-slate-800 dark:text-gray-200">
-      <div className="print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="pt-6">
+    <div ref={pageRef} className="font-sans text-slate-800 dark:text-gray-200">
+      <div className="print:hidden h-screen flex flex-col overflow-hidden bg-[#1A1D27]">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-gray-700 bg-[#1A1D27] shrink-0 flex justify-between items-center">
             <button
               onClick={() => navigate(slug ? `/s/${slug}/staff` : '/staff')}
-              className="flex items-center text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center text-slate-500 hover:text-slate-200 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -68,15 +79,47 @@ export function OrderPage() {
               </svg>
               <span className="font-medium">Quay lại</span>
             </button>
-          </div>
-          <main className="py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {isActive ? (
-                <StaffServiceList orderId={Number(id)} services={services} />
-            ) : (
-              <div className="hidden lg:block lg:col-span-2"></div>
+
+            {/* Mobile Bill Toggle */}
+            <button 
+                onClick={() => setShowMobileBill(true)}
+                className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold"
+            >
+                <span>Hóa đơn</span>
+                <span className="bg-white/20 px-1.5 rounded text-xs">{formatCurrency(currentTotalBeforeDiscount - (order.total_discount || 0))}</span>
+            </button>
+        </div>
+
+        {/* Main Content */}
+        <main className="flex-1 flex overflow-hidden relative">
+            {/* Left Column (Service List) - Full width on mobile */}
+            {isActive && (
+                <div className="flex-1 lg:flex-[3] lg:border-r border-gray-700 overflow-hidden flex flex-col p-2 lg:p-4">
+                  <StaffServiceList orderId={Number(id)} services={services} />
+                </div>
             )}
 
-            <div className={isActive ? 'lg:col-span-1' : 'lg:col-span-3 max-w-7xl mx-auto w-full'}>
+            {/* Right Column (Bill) - Desktop: Visible, Mobile: Hidden unless toggled */}
+            <div className={`
+                ${isActive ? 'lg:flex-[1.2] lg:min-w-[400px]' : 'lg:flex-1 w-full'} 
+                bg-[#1A1D27]
+                fixed inset-0 z-50 lg:static lg:z-auto
+                transition-transform duration-300 ease-in-out
+                ${(showMobileBill || !isActive) ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+            `}>
+                {/* Mobile Close Button for Bill Overlay */}
+                 <div className="lg:hidden flex justify-between items-center px-4 pt-4 mb-4 pb-4 border-b border-gray-700">
+                    <h2 className="text-xl font-bold text-white">Chi tiết đơn hàng</h2>
+                    <button 
+                        onClick={() => !isActive ? window.location.href = '/staff' : setShowMobileBill(false)}
+                        className="p-2 text-gray-400 hover:text-white"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                 </div>
+
                  <StaffOrderBill 
                     order={order} 
                     isActive={isActive} 
@@ -86,8 +129,15 @@ export function OrderPage() {
                     slug={slug}
                 />
             </div>
-          </main>
-        </div>
+            
+            {/* Mobile Overlay Backdrop */}
+            {showMobileBill && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={() => setShowMobileBill(false)}
+                />
+            )}
+        </main>
       </div>
       <BillTemplate
         order={order}
@@ -96,4 +146,8 @@ export function OrderPage() {
       />
     </div>
   );
+}
+
+function formatCurrency(amount: number) {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }

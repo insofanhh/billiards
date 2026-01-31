@@ -8,12 +8,12 @@ interface Props {
 
 export function StaffServiceList({ orderId, services }: Props) {
   return (
-    <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 h-fit">
+    <div className="h-full flex flex-col">
       <ClientServiceList 
         orderId={orderId} 
         services={services} 
         variant="staff"
-        gridCols="grid-cols-2 md:grid-cols-3 lg:grid-cols-4" 
+        gridCols="grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" 
       />
     </div>
   );

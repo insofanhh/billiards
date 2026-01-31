@@ -134,10 +134,14 @@ function DeletableServiceRow({ item, isActive, onDelete }: { item: any, isActive
 
 export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, servicesTotal, slug }: Props) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  /* Remove bottomRef related logic */
+  // const bottomRef = useRef<HTMLDivElement>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'mobile' | null>(null);
   const [discountCodeInput, setDiscountCodeInput] = useState('');
 
   const [discountFeedback, setDiscountFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Removed internal auto-scroll useEffect
 
   const {
     approveEndMutation,
@@ -163,6 +167,8 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
       setDiscountCodeInput(order.applied_discount.code);
     }
   }, [order?.applied_discount?.code]);
+
+
 
   const { aggregatedServices, unconfirmedItemIds, itemsTotal } = useMemo(() => {
     if (!order?.items) return { aggregatedServices: [], unconfirmedItemIds: [], itemsTotal: 0 };
@@ -276,205 +282,217 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
 
   return (
 
-    <div className={`sticky top-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm w-full border border-gray-100 dark:border-gray-700`}>
-      <div className={!isActive ? "lg:grid lg:grid-cols-3 lg:gap-8" : ""}>
-        
-        {/* Left Column: Info & Services */}
-        <div className={!isActive ? "lg:col-span-2" : ""}>
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-white">Đơn hàng {order.order_code}</h2>
-            <p className="text-slate-600 dark:text-gray-400 mb-2">
-              Bàn: <span className="font-semibold">{order.table.name}</span>
-            </p>
-            <span
-              className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'active'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                : order.status === 'completed'
-                  ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-                }`}
-            >
-              {order.status === 'active'
-                ? 'Đang sử dụng'
-                : order.status === 'completed'
-                  ? 'Hoàn thành'
-                  : 'Chờ xử lý'}
-            </span>
-          </div>
+    <div className={`${
+      isActive 
+      ? "h-full flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" 
+      : "h-full flex flex-col lg:grid lg:grid-cols-3 lg:gap-6 bg-transparent"
+    }`}>
+      {/* Scrollable Content Area (Left Column in Grid) */}
+      <div className={`${
+        isActive 
+        ? "flex-1 overflow-y-auto custom-scrollbar p-6" 
+        : "flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-0 lg:col-span-2 lg:flex lg:flex-col lg:h-full lg:overflow-hidden"
+      }`}>
+          <div className={`${!isActive ? "lg:flex-1 lg:overflow-y-auto lg:custom-scrollbar lg:p-6 lg:bg-transparent" : ""}`}>
+            {/* Header Info */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-white">Đơn hàng {order.order_code}</h2>
+              <p className="text-slate-600 dark:text-gray-400 mb-2">
+                Bàn: <span className="font-semibold">{order.table.name}</span>
+              </p>
+              <span
+                className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'active'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  : order.status === 'completed'
+                    ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                  }`}
+              >
+                {order.status === 'active'
+                  ? 'Đang sử dụng'
+                  : order.status === 'completed'
+                    ? 'Hoàn thành'
+                    : 'Chờ xử lý'}
+              </span>
+            </div>
 
-          {isActive && (
-            <button
-              onClick={() => approveEndMutation.mutate()}
-              disabled={approveEndMutation.isPending}
-              className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-colors mb-4 disabled:opacity-50"
-            >
-              {approveEndMutation.isPending ? 'Đang xử lý...' : 'Kết thúc bàn'}
-            </button>
-          )}
-
-          {isPendingEnd && (
-            <div className="flex gap-2 mb-4">
+            {isActive && (
               <button
                 onClick={() => approveEndMutation.mutate()}
-                className="flex-1 bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700"
+                disabled={approveEndMutation.isPending}
+                className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-colors mb-4 disabled:opacity-50"
               >
-                Duyệt kết thúc
+                {approveEndMutation.isPending ? 'Đang xử lý...' : 'Kết thúc bàn'}
               </button>
-              <button
-                onClick={() => rejectEndMutation.mutate()}
-                className="flex-1 bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700"
-              >
-                Từ chối
-              </button>
-            </div>
-          )}
+            )}
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <p className="text-sm text-slate-500 dark:text-gray-400">Bắt đầu</p>
-              <p className="font-semibold text-slate-800 dark:text-gray-200">
-                {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
-              </p>
-            </div>
-
-            {isActive && order.start_at && (
-              <div>
-                <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian</p>
-                <OrderDuration startAt={order.start_at} isActive={isActive} />
+            {isPendingEnd && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => approveEndMutation.mutate()}
+                  className="flex-1 bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700"
+                >
+                  Duyệt kết thúc
+                </button>
+                <button
+                  onClick={() => rejectEndMutation.mutate()}
+                  className="flex-1 bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700"
+                >
+                  Từ chối
+                </button>
               </div>
             )}
-            {order.end_at && (
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-sm text-slate-500 dark:text-gray-400">Kết thúc</p>
+                <p className="text-sm text-slate-500 dark:text-gray-400">Bắt đầu</p>
                 <p className="font-semibold text-slate-800 dark:text-gray-200">
-                  {new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                  {order.start_at ? new Date(order.start_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '-'}
                 </p>
               </div>
-            )}
-            {(order.total_play_time_minutes !== null && order.total_play_time_minutes !== undefined) && (
-              <>
+
+              {isActive && order.start_at && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian</p>
-                  <p className="font-semibold text-slate-800 dark:text-gray-200">
-                    {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
-                  </p>
+                  <OrderDuration startAt={order.start_at} isActive={isActive} />
                 </div>
+              )}
+              {order.end_at && (
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-gray-400">Số tiền</p>
-                  <p className="font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(isActive ? liveTableCost : Math.max(0, order.total_before_discount - itemsTotal - mergedFeesTotal))}
+                  <p className="text-sm text-slate-500 dark:text-gray-400">Kết thúc</p>
+                  <p className="font-semibold text-slate-800 dark:text-gray-200">
+                    {new Date(order.end_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                   </p>
                 </div>
-              </>
+              )}
+              {(order.total_play_time_minutes !== null && order.total_play_time_minutes !== undefined) && (
+                <>
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian</p>
+                    <p className="font-semibold text-slate-800 dark:text-gray-200">
+                      {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-gray-400">Số tiền</p>
+                    <p className="font-bold text-slate-900 dark:text-white">
+                      {formatCurrency(isActive ? liveTableCost : Math.max(0, order.total_before_discount - itemsTotal - mergedFeesTotal))}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Merge Table Fees */}
+              {order.merged_table_fees?.map((fee: any) => {
+                  const start = new Date(fee.start_at);
+                  const end = new Date(fee.end_at);
+                  const diff = Math.abs(end.getTime() - start.getTime());
+                  const totalMinutes = Math.floor(diff / (1000 * 60));
+                  const h = Math.floor(totalMinutes / 60);
+                  const m = totalMinutes % 60;
+                  
+                  const displayName = `Gộp: ${fee.table_name}`;
+                  const durationStr = `${h}h ${m}p`;
+                  const price = fee.total_price;
+
+                  return (
+                      <div key={fee.id} className="col-span-2 flex justify-between items-center py-2 border-t border-dashed border-slate-200 dark:border-gray-700 mt-2">
+                          <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-slate-700 dark:text-gray-200">
+                                  {displayName}
+                              </span>
+                               <span className="text-xs text-slate-500 dark:text-gray-400">
+                                  Thời gian: {durationStr}
+                               </span>
+                          </div>
+                          <span className="font-bold text-slate-800 dark:text-white">
+                              {formatCurrency(price)}
+                          </span>
+                      </div>
+                  );
+              })}
+            </div>
+
+            {(orderCustomerName || order.cashier) && (
+              <div className="mb-4 text-sm border-t border-slate-200 dark:border-gray-700 pt-4">
+                {orderCustomerName && (
+                  <p className="text-slate-600 dark:text-gray-400 mb-2">
+                    Khách hàng: <span className="font-semibold text-slate-900 dark:text-white">{orderCustomerName}</span>
+                  </p>
+                )}
+                {order.cashier && (
+                  <p className="text-slate-600 dark:text-gray-400">
+                    Thu ngân: <span className="font-semibold text-slate-900 dark:text-white">{order.cashier}</span>
+                  </p>
+                )}
+              </div>
             )}
 
-            {/* Merge Table Fees */}
-            {order.merged_table_fees?.map((fee: any) => {
-                const start = new Date(fee.start_at);
-                const end = new Date(fee.end_at);
-                const diff = Math.abs(end.getTime() - start.getTime());
-                const totalMinutes = Math.floor(diff / (1000 * 60));
-                const h = Math.floor(totalMinutes / 60);
-                const m = totalMinutes % 60;
-                
-                const displayName = `Gộp: ${fee.table_name}`;
-                const durationStr = `${h}h ${m}p`;
-                const price = fee.total_price;
-
-                return (
-                    <div key={fee.id} className="col-span-2 flex justify-between items-center py-2 border-t border-dashed border-slate-200 dark:border-gray-700 mt-2">
-                        <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-slate-700 dark:text-gray-200">
-                                {displayName}
-                            </span>
-                             <span className="text-xs text-slate-500 dark:text-gray-400">
-                                Thời gian: {durationStr}
-                             </span>
-                        </div>
-                        <span className="font-bold text-slate-800 dark:text-white">
-                            {formatCurrency(price)}
-                        </span>
-                    </div>
-                );
-            })}
-          </div>
-
-          {(orderCustomerName || order.cashier) && (
-            <div className="mb-4 text-sm border-t border-slate-200 dark:border-gray-700 pt-4">
-              {orderCustomerName && (
-                <p className="text-slate-600 dark:text-gray-400 mb-2">
-                  Khách hàng: <span className="font-semibold text-slate-900 dark:text-white">{orderCustomerName}</span>
-                </p>
-              )}
-              {order.cashier && (
-                <p className="text-slate-600 dark:text-gray-400">
-                  Thu ngân: <span className="font-semibold text-slate-900 dark:text-white">{order.cashier}</span>
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="border-t border-slate-200 dark:border-gray-700 pt-4">
-            <div className="flex justify-between items-center mb-4">
-               <h3 className="font-bold text-lg text-slate-900 dark:text-white">Dịch vụ đã chọn</h3>
-               {isActive && unconfirmedItemIds.length > 0 && (
-                 <button
-                   onClick={() => confirmBatchMutation.mutate(unconfirmedItemIds)}
-                   disabled={confirmBatchMutation.isPending}
-                   className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 animate-pulse"
-                 >
-                   {confirmBatchMutation.isPending ? 'Đang xử lý...' : `Xác nhận món mới (${unconfirmedItemIds.length})`}
-                 </button>
-               )}
-            </div>
-            
-            <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-2">
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 overflow-hidden divide-y divide-slate-100 dark:divide-gray-700">
-                    {aggregatedServices.length === 0 ? (
-                        <p className="p-4 text-center text-gray-500 text-sm">Chưa có dịch vụ nào</p>
-                    ) : (
-                        aggregatedServices.map((item) => (
-                                <DeletableServiceRow 
-                                    key={item.service ? item.service.id : `custom-${item.name}`} 
-                                    item={item} 
-                                    isActive={isActive}
-                                    onDelete={(qty) => {
-                                        let remaining = qty;
-                                        // Work backwards from newest items
-                                        const itemsReversed = [...item.items].reverse();
-                                        
-                                        for (const row of itemsReversed) {
-                                            if (remaining <= 0) break;
-                                            
-                                            if (row.qty <= remaining) {
-                                                // Delete full row
-                                                removeServiceMutation.mutate(row.id);
-                                                remaining -= row.qty;
-                                            } else {
-                                                // Partial update
-                                                updateServiceMutation.mutate({ itemId: row.id, qty: row.qty - remaining });
-                                                remaining = 0;
-                                            }
-                                        }
-                                    }}
-                                />
-                        ))
-                    )}
-                </div>
+            <div className="border-t border-slate-200 dark:border-gray-700 pt-4 pb-20"> {/* Add PB to avoid overlay cut off */}
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Dịch vụ đã chọn</h3>
+                 {isActive && unconfirmedItemIds.length > 0 && (
+                   <button
+                     onClick={() => confirmBatchMutation.mutate(unconfirmedItemIds)}
+                     disabled={confirmBatchMutation.isPending}
+                     className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 animate-pulse"
+                   >
+                     {confirmBatchMutation.isPending ? 'Đang xử lý...' : `Xác nhận món mới (${unconfirmedItemIds.length})`}
+                   </button>
+                 )}
+              </div>
+              
+              <div className="space-y-4"> {/* Removed max-h constraint */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 overflow-hidden divide-y divide-slate-100 dark:divide-gray-700">
+                      {aggregatedServices.length === 0 ? (
+                          <p className="p-4 text-center text-gray-500 text-sm">Chưa có dịch vụ nào</p>
+                      ) : (
+                          aggregatedServices.map((item) => (
+                                  <DeletableServiceRow 
+                                      key={item.service ? item.service.id : `custom-${item.name}`} 
+                                      item={item} 
+                                      isActive={isActive}
+                                      onDelete={(qty) => {
+                                          let remaining = qty;
+                                          // Work backwards from newest items
+                                          const itemsReversed = [...item.items].reverse();
+                                          
+                                          for (const row of itemsReversed) {
+                                              if (remaining <= 0) break;
+                                              
+                                              if (row.qty <= remaining) {
+                                                  // Delete full row
+                                                  removeServiceMutation.mutate(row.id);
+                                                  remaining -= row.qty;
+                                              } else {
+                                                  // Partial update
+                                                  updateServiceMutation.mutate({ itemId: row.id, qty: row.qty - remaining });
+                                                  remaining = 0;
+                                              }
+                                          }
+                                      }}
+                                  />
+                          ))
+                      )}
+                  </div>
+              </div>
             </div>
           </div>
-        </div>
+      </div>
     
-            {/* Right Column: Total & Payment */}
-            <div className={!isActive ? "lg:col-span-1" : "mt-6 border-t border-slate-200 dark:border-gray-700 pt-6"}>
-              {/* ... (rest of the file remains unchanged, just ensuring context matches) */}
-          <div className="flex justify-between items-center mb-6">
-            <p className="font-bold text-lg text-slate-900 dark:text-white">Tổng cộng</p>
-            <p className="font-bold text-xl text-blue-600 dark:text-blue-400">
-              {formatCurrency(
-                (currentTotalBeforeDiscount - (order.total_discount || 0))
-              )}
-            </p>
+      {/* Sticky Bottom Footer (or Right Column) */}
+      <div className={`${
+        isActive 
+        ? "border-t border-slate-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 sticky bottom-0"
+        : "border-t border-slate-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 sticky bottom-0 lg:col-span-1 lg:h-fit lg:bg-white lg:dark:bg-gray-800 lg:rounded-lg lg:shadow-sm lg:border lg:border-gray-100 lg:dark:border-gray-700 lg:p-6 lg:static"
+      }`}>
+          <div className="flex justify-between items-center mb-4">
+             <p className="font-bold text-lg text-slate-900 dark:text-white">Tổng cộng</p>
+             <p className="font-bold text-xl text-[#13ec6d] dark:text-[#13ec6d]">
+               {formatCurrency(
+                 (currentTotalBeforeDiscount - (order.total_discount || 0))
+               )}
+             </p>
           </div>
 
           {(isCompleted || isPendingEnd) && (
@@ -589,7 +607,6 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
               )}
             </div>
           )}
-        </div>
       </div>
     </div>
   );
