@@ -29,12 +29,16 @@ class PlatformStoreController extends Controller
     public function update(Request $request, $id)
     {
         $store = Store::findOrFail($id);
+        
+        \Illuminate\Support\Facades\Log::info("Update Store ID: $id", $request->all());
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:stores,slug,' . $id,
-            // Add other fields as necessary
+            'is_active' => 'boolean',
         ]);
+
+        \Illuminate\Support\Facades\Log::info("Validated Data:", $validated);
 
         $store->update($validated);
 
@@ -48,6 +52,7 @@ class PlatformStoreController extends Controller
             'owner_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
+            'store_type' => ['required', 'string', 'in:billiards,restaurant'],
         ]);
 
         $slug = \Illuminate\Support\Str::slug($validated['store_name']);
@@ -60,14 +65,17 @@ class PlatformStoreController extends Controller
         }
 
         try {
+            \Illuminate\Support\Facades\Log::info('Register Store Request Data:', $validated);
             \Illuminate\Support\Facades\DB::beginTransaction();
 
             // 1. Create Store first
             $store = Store::create([
                 'name' => $validated['store_name'],
                 'slug' => $slug,
+                'store_type' => $validated['store_type'],
                 'owner_id' => null,
             ]);
+            \Illuminate\Support\Facades\Log::info('Created Store:', $store->toArray());
 
             // 2. Bind store to context
             app()->instance('currentStoreId', $store->id);

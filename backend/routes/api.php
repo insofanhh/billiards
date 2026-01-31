@@ -22,7 +22,7 @@ Route::post('/platform/register-store', [\App\Http\Controllers\PlatformControlle
 Route::prefix('platform')->group(function () {
     Route::post('/login', [\App\Http\Controllers\Api\PlatformAuthController::class, 'login']);
 
-    Route::middleware(['auth:sanctum', 'platform.admin'])->group(function () {
+    Route::middleware(['api.key', 'auth:sanctum', 'platform.admin'])->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\PlatformAuthController::class, 'me']);
         Route::post('/change-password', [\App\Http\Controllers\Api\PlatformAuthController::class, 'changePassword']);
         Route::post('/logout', [\App\Http\Controllers\Api\PlatformAuthController::class, 'logout']);
@@ -62,7 +62,7 @@ Route::get('/public/posts/{id}', [PostController::class, 'show']);
 Route::get('/public/posts/{id}/comments', [CommentController::class, 'index']);
 Route::get('/public/categories', [CategoryController::class, 'index']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['api.key', 'auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/auth/sync-token', [AuthController::class, 'syncToken']);
     // Route::post('/logout', [AuthController::class, 'logout']); // Moved outside for robust cleanup
@@ -71,7 +71,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/services', [ServiceController::class, 'index']);
     
     Route::get('/discount-codes/{code}', [DiscountCodeController::class, 'check']);
+    
+    // Statistics for 3rd party
     Route::get('/stats/daily-revenue', [StatsController::class, 'dailyRevenue']);
+    Route::get('/stats/product-sales', [StatsController::class, 'productSales']);
+    Route::get('/stats/product-sales/all-stores', [StatsController::class, 'allStoresProductSales']);
+    Route::get('/stats/general', [StatsController::class, 'generalStats']);
+    Route::get('/stats/all-stores', [StatsController::class, 'allStoresStats']);
+    
+    // Management APIs for 3rd party
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+    
+    Route::post('/tables', [TableController::class, 'store']);
+    Route::put('/tables/{id}', [TableController::class, 'update']);
+    
+    Route::apiResource('table-types', \App\Http\Controllers\Api\TableTypeController::class);
+    Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
+
     Route::get('/saved-discounts', [DiscountCodeController::class, 'getSavedDiscounts']);
     Route::post('/save-discount/{id}', [DiscountCodeController::class, 'saveDiscount']);
     Route::delete('/save-discount/{id}', [DiscountCodeController::class, 'removeSavedDiscount']);

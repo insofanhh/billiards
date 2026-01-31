@@ -6,6 +6,7 @@ export interface RegisterStoreRequest {
   email: string;
   password: string;
   password_confirmation: string;
+  store_type: string;
 }
 
 export const platformApi = {

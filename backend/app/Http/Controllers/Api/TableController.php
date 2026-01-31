@@ -22,18 +22,64 @@ class TableController extends Controller
         $this->guestAuthService = $guestAuthService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // Potential optimization: Eager load specific order statuses to avoid N+1 in Resource
-        // For now, keeping it simple as per request scope, but noted for future.
-        $tables = TableBilliard::with(['tableType'])->get();
+        // Attempt to authenticate using Sanctum guard even if route is public
+        $user = $request->user('sanctum');
+        
+        $query = TableBilliard::with(['tableType']);
+        
+        if ($user && $user->store_id) {
+            $query->where('store_id', $user->store_id);
+        } elseif ($request->filled('store_id')) {
+            $query->where('store_id', $request->store_id);
+        }
+        // If user->store_id is null, return all tables (Super Admin view)
+
+        $tables = $query->get();
         return TableResource::collection($tables);
+    }
+
+    public function store(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->store_id) {
+            // Super admin allow creating for store
+             $request->validate([
+                'store_id' => 'required|exists:stores,id',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:50',
+            'name' => 'required|string|max:255',
+            'seats' => 'required|integer|min:1',
+            'qr_code' => 'nullable|string',
+            'location' => 'nullable|string|max:255',
+            'status' => 'required|string|max:50',
+            'table_type_id' => 'required|exists:table_types,id',
+        ]);
+
+        if ($user->store_id) {
+            $validated['store_id'] = $user->store_id;
+        } else {
+             $validated['store_id'] = $request->store_id;
+        }
+
+        $table = TableBilliard::create($validated);
+
+        return new TableResource($table->load('tableType'));
     }
 
     public function show(Request $request, $code)
     {
+        $user = $request->user();
         $query = TableBilliard::where('code', $code)
             ->with(['tableType', 'tableType.priceRates']);
+            
+        if ($user && $user->store_id) {
+             $query->where('store_id', $user->store_id);
+        }
             
         // Eager load active order to optimize Resource usage or accessing it directly
         // However, TableResource calls ->orders(), so standard eager loading 'orders' 
@@ -42,6 +88,32 @@ class TableController extends Controller
         $table = $query->firstOrFail();
         
         return new TableResource($table);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $user = $request->user();
+        $query = TableBilliard::where('id', $id);
+            
+        if ($user->store_id) {
+            $query->where('store_id', $user->store_id);
+        }
+            
+        $table = $query->firstOrFail();
+
+        $validated = $request->validate([
+            'code' => 'sometimes|required|string|max:50',
+            'name' => 'sometimes|required|string|max:255',
+            'seats' => 'sometimes|required|integer|min:1',
+            'qr_code' => 'nullable|string',
+            'location' => 'nullable|string|max:255',
+            'status' => 'sometimes|required|string|max:50',
+            'table_type_id' => 'sometimes|required|exists:table_types,id',
+        ]);
+
+        $table->update($validated);
+
+        return new TableResource($table->load('tableType'));
     }
 
     public function requestOpen(Request $request, string $code)

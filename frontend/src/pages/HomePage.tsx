@@ -235,7 +235,7 @@ export function HomePage() {
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Đang chơi</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Đang sử dụng</p>
                             <div className="flex items-baseline space-x-2">
                                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stats.active}/{stats.total}</h3>
                                 <span className="text-sm text-gray-500">({stats.activePercentage}% Công suất)</span>

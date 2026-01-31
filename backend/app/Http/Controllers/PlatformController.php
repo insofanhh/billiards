@@ -20,6 +20,7 @@ class PlatformController extends Controller
             'owner_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'store_type' => ['required', 'string', 'in:billiards,restaurant'],
         ]);
 
         $slug = Str::slug($validated['store_name']);
@@ -38,6 +39,7 @@ class PlatformController extends Controller
             $store = Store::create([
                 'name' => $validated['store_name'],
                 'slug' => $slug,
+                'store_type' => $validated['store_type'],
                 'owner_id' => null, // Will update later
             ]);
 
@@ -111,9 +113,22 @@ class PlatformController extends Controller
             
             $token = $user->createToken('auth_token')->plainTextToken;
 
+            // Load roles and prepare permissions for frontend
+            $user->load('roles');
+            $permissions = method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : collect();
+
+            $userData = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name'),
+                'permissions' => $permissions,
+            ];
+
             return response()->json([
                 'message' => 'Đăng ký thành công',
                 'store' => $store,
+                'user' => $userData,
                 'token' => $token,
                 'redirect_url' => "/s/{$store->slug}"
             ], 201);

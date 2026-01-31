@@ -22,9 +22,9 @@ class TableBilliardResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
 
     protected static string | UnitEnum | null $navigationGroup = 'Quản lý bàn';
-    protected static ?string $navigationLabel = 'Bàn Billiards';
-    protected static ?string $modelLabel = 'Bàn Billiards';
-    protected static ?string $pluralModelLabel = 'Bàn Billiards';
+    protected static ?string $navigationLabel = 'Danh sách bàn';
+    protected static ?string $modelLabel = 'Danh sách bàn';
+    protected static ?string $pluralModelLabel = 'Danh sách bàn';
     protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema

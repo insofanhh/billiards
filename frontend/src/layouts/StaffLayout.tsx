@@ -9,7 +9,7 @@ export function StaffLayout() {
     return (
         <NotificationProvider>
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-                <AdminNavigation userName={user?.name} userRoles={user?.roles} onLogout={logout} />
+                <AdminNavigation userName={user?.name} userRoles={user?.roles} storeName={user?.store?.name} onLogout={logout} />
                 <Outlet />
             </div>
         </NotificationProvider>

@@ -5,19 +5,30 @@ import { platformClient } from '../../api/platformClient';
 export const PlatformStoreList = () => {
     const [stores, setStores] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [pagination, setPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        total: 0
+    });
+
+    const fetchStores = async (page = 1) => {
+        setLoading(true);
+        try {
+            const res = await platformClient.get('/platform/stores', { params: { page } });
+            setStores(res.data.data);
+            setPagination({
+                current_page: res.data.current_page,
+                last_page: res.data.last_page,
+                total: res.data.total
+            });
+        } catch (error) {
+            console.error("Failed to fetch stores", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchStores = async () => {
-            try {
-                const res = await platformClient.get('/platform/stores');
-                setStores(res.data.data);
-            } catch (error) {
-                console.error("Failed to fetch stores", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchStores();
     }, []);
 
@@ -33,7 +44,32 @@ export const PlatformStoreList = () => {
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    const handleToggleStatus = async (store: any) => {
+        const action = store.is_active ? 'deactivate' : 'activate';
+        if (!confirm(`Are you sure you want to ${action} this store?`)) return;
+        
+        try {
+            await platformClient.put(`/platform/stores/${store.id}`, {
+                ...store,
+                is_active: !store.is_active
+            });
+            
+            // Update local state
+            setStores(stores.map(s => s.id === store.id ? { ...s, is_active: !s.is_active } : s));
+            alert(`Store ${action}d successfully`);
+        } catch (error: any) {
+            console.error(`Failed to ${action} store`, error);
+            const message = error.response?.data?.message || `Failed to ${action} store`;
+            const errors = error.response?.data?.errors;
+            if (errors) {
+                alert(`${message}\n${JSON.stringify(errors)}`);
+            } else {
+                alert(message);
+            }
+        }
+    };
+
+
 
     return (
         <div>
@@ -107,72 +143,101 @@ export const PlatformStoreList = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[#dbe0e6] dark:divide-gray-800">
-                        {stores.map((store) => (
-                            <tr key={store.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-semibold text-[#111418] dark:text-white">{store.name}</span>
-                                        <span className="text-xs text-[#617589]">ID: #{store.id}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="size-8 rounded-full bg-[#137fec]/20 flex items-center justify-center text-[#137fec] font-bold text-xs uppercase">
-                                            {store.owner?.name ? store.owner.name.substring(0, 2) : 'NA'}
+                        {loading ? (
+                            <tr><td colSpan={6} className="p-8 text-center text-gray-500">Loading...</td></tr>
+                        ) : stores.length === 0 ? (
+                            <tr><td colSpan={6} className="p-8 text-center text-gray-500">No stores found.</td></tr>
+                        ) : (
+                            stores.map((store) => (
+                                <tr key={store.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-semibold text-[#111418] dark:text-white">{store.name}</span>
+                                            <span className="text-xs text-[#617589]">ID: #{store.id}</span>
                                         </div>
-                                        <span className="text-sm text-[#111418] dark:text-gray-300">{store.owner?.name || 'No Owner'}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="text-sm text-[#111418] dark:text-gray-300">Billiards</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                        Active
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="text-sm text-[#617589]">
-                                        {new Date().toLocaleDateString()}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <Link to={`/platform/stores/${store.id}`} className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" title="View Details">
-                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                        </Link>
-                                        <Link to={`/platform/stores/${store.id}`} className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" title="Edit Store">
-                                            <span className="material-symbols-outlined text-[20px]">edit</span>
-                                        </Link>
-                                        <button 
-                                            onClick={() => handleDelete(store.id)}
-                                            className="p-1.5 text-[#617589] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" 
-                                            title="Delete Store"
-                                        >
-                                            <span className="material-symbols-outlined text-[20px]">delete</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="size-8 rounded-full bg-[#137fec]/20 flex items-center justify-center text-[#137fec] font-bold text-xs uppercase">
+                                                {store.owner?.name ? store.owner.name.substring(0, 2) : 'NA'}
+                                            </div>
+                                            <span className="text-sm text-[#111418] dark:text-gray-300">{store.owner?.name || 'No Owner'}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="text-sm text-[#111418] dark:text-gray-300 capitalize">
+                                            {store.store_type || 'N/A'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            store.is_active 
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                        }`}>
+                                            {store.is_active ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="text-sm text-[#617589]">
+                                            {new Date().toLocaleDateString()}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button 
+                                                onClick={() => handleToggleStatus(store)}
+                                                className={`p-1.5 rounded-lg transition-all ${
+                                                    store.is_active 
+                                                        ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20' 
+                                                        : 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                                }`}
+                                                title={store.is_active ? "Deactivate Store" : "Activate Store"}
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">
+                                                    {store.is_active ? 'block' : 'check_circle'}
+                                                </span>
+                                            </button>
+                                            <Link to={`/platform/stores/${store.id}`} className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" title="View Details">
+                                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                            </Link>
+                                            <Link to={`/platform/stores/${store.id}`} className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" title="Edit Store">
+                                                <span className="material-symbols-outlined text-[20px]">edit</span>
+                                            </Link>
+                                            <button 
+                                                onClick={() => handleDelete(store.id)}
+                                                className="p-1.5 text-[#617589] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" 
+                                                title="Delete Store"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
-                
-                {stores.length === 0 && (
-                     <div className="p-8 text-center text-gray-500">
-                        No stores found.
-                    </div>
-                )}
 
-                {/* Pagination (Static for now) */}
+                {/* Pagination */}
                 <div className="px-6 py-4 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 border-t border-[#dbe0e6] dark:border-gray-800">
-                    <p className="text-xs text-[#617589]">Showing {stores.length} stores</p>
+                    <p className="text-xs text-[#617589]">Showing {stores.length} of {pagination.total} stores</p>
                     <div className="flex gap-1">
-                        <button className="p-2 border border-[#dbe0e6] dark:border-gray-700 rounded-lg text-[#617589] hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50" disabled>
+                        <button 
+                            disabled={pagination.current_page === 1}
+                            onClick={() => fetchStores(pagination.current_page - 1)}
+                            className="p-2 border border-[#dbe0e6] dark:border-gray-700 rounded-lg text-[#617589] hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50"
+                        >
                             <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                         </button>
-                        <button className="size-9 bg-[#137fec] text-white rounded-lg text-xs font-bold">1</button>
-                        <button className="p-2 border border-[#dbe0e6] dark:border-gray-700 rounded-lg text-[#617589] hover:bg-white dark:hover:bg-gray-800">
+                        <span className="flex items-center px-3 text-sm font-medium text-[#617589]">
+                            Page {pagination.current_page} of {pagination.last_page}
+                        </span>
+                        <button 
+                            disabled={pagination.current_page === pagination.last_page}
+                            onClick={() => fetchStores(pagination.current_page + 1)}
+                            className="p-2 border border-[#dbe0e6] dark:border-gray-700 rounded-lg text-[#617589] hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50"
+                        >
                              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                         </button>
                     </div>

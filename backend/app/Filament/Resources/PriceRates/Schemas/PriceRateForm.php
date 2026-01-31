@@ -34,6 +34,7 @@ class PriceRateForm
                     ->label('Giá mỗi giờ')
                     ->required()
                     ->numeric()
+                    ->default(0)
                     ->minValue(0)
                     ->prefix('₫')
                     ->helperText('Nhập giá theo VND'),

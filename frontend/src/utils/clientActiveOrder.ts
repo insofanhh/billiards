@@ -36,7 +36,7 @@ export const getClientOrderStatusLabel = (status?: Order['status'] | null) => {
     case 'pending':
       return 'Chờ duyệt';
     case 'active':
-      return 'Đang chơi';
+      return 'Đang sử dụng';
     case 'pending_end':
       return 'Chờ kết thúc';
     case 'completed':

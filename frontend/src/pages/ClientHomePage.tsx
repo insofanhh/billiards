@@ -24,17 +24,22 @@ import { InfoSection } from '../components/client/home/InfoSection';
 import { storesApi } from '../api/stores';
 import { settingsApi } from '../api/settings';
 
+import { NotFoundPage } from './NotFoundPage';
+
 export function TenantHomePage() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug?: string }>();
   const [guestName] = useState(getTemporaryUserName);
   
-  const { data: store } = useQuery({
+  const { data: store, isError } = useQuery({
     queryKey: ['public-store', slug],
     queryFn: () => storesApi.getBySlug(slug!),
     enabled: !!slug,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
   });
+
+
 
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -124,6 +129,10 @@ export function TenantHomePage() {
     console.error(error);
     setScanError('Không thể truy cập camera. Vui lòng kiểm tra quyền hoặc thử lại.');
   };
+
+  if (isError) {
+    return <NotFoundPage />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[rgb(16,34,24)] text-gray-900 dark:text-white transition-colors duration-300">

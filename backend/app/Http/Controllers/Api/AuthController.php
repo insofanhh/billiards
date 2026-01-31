@@ -26,6 +26,14 @@ class AuthController extends Controller
             ]);
         }
 
+
+        // Check if user's store is active
+        if ($user->store && !$user->store->is_active) {
+            throw ValidationException::withMessages([
+                'email' => ['Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ đội ngũ hỗ trợ.'],
+            ]);
+        }
+
         // Attempt to login to web session for sync
         try {
             \Illuminate\Support\Facades\Auth::guard('web')->login($user, $request->boolean('remember'));
