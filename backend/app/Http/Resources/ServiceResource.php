@@ -12,6 +12,7 @@ class ServiceResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'store_id' => $this->store_id,
             'name' => $this->name,
             'description' => $this->description,
             'image' => $this->image ? Storage::disk('public')->url($this->image) : null,

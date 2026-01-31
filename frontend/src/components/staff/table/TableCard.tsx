@@ -163,7 +163,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                     <p>Loại: <span className="text-gray-700 dark:text-gray-300 font-medium">{table.table_type.name}</span></p>
                     <p>Số ghế: <span className="text-gray-700 dark:text-gray-300 font-medium">{table.seats}</span></p>
                     <p>Vị trí: <span className="text-gray-700 dark:text-gray-300 font-medium">{table.location || 'N/A'}</span></p>
-                    {activePriceRate && (
+                    {activePriceRate && activePriceRate.price_per_hour > 0 && (
                         <p className="flex items-center pt-2">
                             Giá: <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activePriceRate.price_per_hour)}/h

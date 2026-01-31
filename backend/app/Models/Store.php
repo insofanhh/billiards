@@ -10,12 +10,14 @@ class Store extends Model
     protected $fillable = [
         'name',
         'slug',
+        'store_type',
         'owner_id',
         'bank_account_no',
         'bank_name',
         'bank_account_name',
         'sepay_api_key',
         'webhook_token',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -24,6 +26,7 @@ class Store extends Model
 
     protected $casts = [
         'sepay_api_key' => 'encrypted',
+        'is_active' => 'boolean',
     ];
 
     protected static function boot()

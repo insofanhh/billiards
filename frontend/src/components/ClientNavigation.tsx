@@ -43,6 +43,7 @@ export function ClientNavigation({
   const { theme, toggleTheme } = useTheme();
   const { showNotification } = useNotification();
   const user = useAuthStore((state) => state.user);
+  const canLogin = useAuthStore((state) => state.canLogin);
   const activeOrder = useClientActiveOrder();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
@@ -211,6 +212,9 @@ export function ClientNavigation({
   };
 
   const resolveRoleRedirect = () => {
+    if (!canLogin) {
+      return null;
+    }
     if (!Array.isArray(user?.roles) || user.roles.length === 0) {
       return null;
     }

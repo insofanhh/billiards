@@ -13,7 +13,8 @@ export function TenantRegistrationForm() {
     owner_name: '',
     email: '',
     password: '',
-    password_confirmation: ''
+    password_confirmation: '',
+    store_type: 'billiards'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +25,16 @@ export function TenantRegistrationForm() {
     setError(null);
     try {
       const res = await platformApi.registerStore(formData);
+      
+      // Auto login logic
+      if (res.token) {
+        localStorage.setItem('auth_token', res.token);
+      }
+      
+      if (res.user) {
+        localStorage.setItem('user', JSON.stringify(res.user));
+      }
+
       // Redirect to the new store's client page
       if (res.store && res.store.slug) {
          window.location.href = `/s/${res.store.slug}`;
@@ -71,6 +82,32 @@ export function TenantRegistrationForm() {
             value={formData.owner_name}
             onChange={(e) => setFormData({...formData, owner_name: e.target.value})}
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Lĩnh vực kinh doanh</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              onClick={() => setFormData({...formData, store_type: 'billiards'})}
+              className={`cursor-pointer rounded-xl border-2 p-4 text-center transition-all ${
+                formData.store_type === 'billiards'
+                  ? 'border-blue-600 bg-blue-50 dark:border-[#13ec6d] dark:bg-[#13ec6d]/10 text-blue-700 dark:text-[#13ec6d]'
+                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+              }`}
+            >
+              <div className="font-semibold">Quán Billiards</div>
+            </div>
+            <div
+              onClick={() => setFormData({...formData, store_type: 'restaurant'})}
+              className={`cursor-pointer rounded-xl border-2 p-4 text-center transition-all ${
+                formData.store_type === 'restaurant'
+                  ? 'border-blue-600 bg-blue-50 dark:border-[#13ec6d] dark:bg-[#13ec6d]/10 text-blue-700 dark:text-[#13ec6d]'
+                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+              }`}
+            >
+              <div className="font-semibold">Nhà hàng</div>
+            </div>
+          </div>
         </div>
 
         <div>

@@ -339,7 +339,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
 
             {isActive && order.start_at && (
               <div>
-                <p className="text-sm text-slate-500 dark:text-gray-400">Đang chơi</p>
+                <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian</p>
                 <OrderDuration startAt={order.start_at} isActive={isActive} />
               </div>
             )}
@@ -354,7 +354,7 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
             {(order.total_play_time_minutes !== null && order.total_play_time_minutes !== undefined) && (
               <>
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian chơi</p>
+                  <p className="text-sm text-slate-500 dark:text-gray-400">Thời gian</p>
                   <p className="font-semibold text-slate-800 dark:text-gray-200">
                     {Math.floor(order.total_play_time_minutes / 60)}h {order.total_play_time_minutes % 60}p
                   </p>

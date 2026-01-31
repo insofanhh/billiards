@@ -90,6 +90,7 @@ class TableResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'store_id' => $this->store_id,
             'code' => $this->code,
             'name' => $this->name,
             'seats' => $this->seats,

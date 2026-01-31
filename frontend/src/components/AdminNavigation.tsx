@@ -5,10 +5,11 @@ import { useTheme } from '../contexts/ThemeContext';
 type AdminNavigationProps = {
   userName?: string;
   userRoles?: string[];
+  storeName?: string;
   onLogout: () => void;
 };
 
-export function AdminNavigation({ userName, userRoles, onLogout }: AdminNavigationProps) {
+export function AdminNavigation({ userName, userRoles, storeName, onLogout }: AdminNavigationProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   // ... existing hooks
@@ -164,7 +165,7 @@ export function AdminNavigation({ userName, userRoles, onLogout }: AdminNavigati
             </div>
             <div>
               <p className="text-lg font-semibold">CMS</p>
-              <p className="text-xs text-gray-400">Billiards Manager</p>
+              <p className="text-xs text-gray-400">{storeName || 'Billiards Manager'}</p>
             </div>
           </button>
           <div className="hidden items-center gap-4 text-sm font-medium md:flex">

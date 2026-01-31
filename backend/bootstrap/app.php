@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
+            \App\Http\Middleware\EnsureApiKey::class,
             \App\Http\Middleware\HandleCors::class,
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\PrioritizeSanctumToken::class,
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'platform.admin' => \App\Http\Middleware\CheckPlatformAdmin::class,
+            'api.key' => \App\Http\Middleware\EnsureApiKey::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

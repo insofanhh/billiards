@@ -206,10 +206,12 @@ export function ClientTablePage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">Loại bàn</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">{table.table_type.name}</p>
             </div>
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Giá/giờ</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">{rate ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(rate.price_per_hour) : '-'}</p>
-            </div>
+            {rate && rate.price_per_hour > 0 && (
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Giá/giờ</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(rate.price_per_hour)}</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
