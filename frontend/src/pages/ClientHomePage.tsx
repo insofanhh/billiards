@@ -264,16 +264,16 @@ function PlatformHomePage() {
        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542385106-93d395a4c9c1?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
        <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-900/80 to-gray-900"></div>
 
-       <div className="relative z-10 grid lg:grid-cols-2 gap-12 w-full max-w-6xl items-center my-10">
+       <div className="relative z-10 grid lg:grid-cols-2 gap-12 w-full max-w-7xl items-center my-10">
           <div className="space-y-6 animate-fade-in-up">
              <div className="inline-block rounded-full bg-[#13ec6d]/10 px-4 py-2 text-sm font-semibold text-[#13ec6d] border border-[#13ec6d]/20">
-                Giải pháp quản lý Bida số 1
+                Giải pháp quản lý số 1 dành cho
              </div>
              <h1 className="text-5xl font-bold leading-tight">
-                Quản lý CLB Bida <br/> <span className="text-[#13ec6d] bg-clip-text text-transparent bg-gradient-to-r from-[#13ec6d] to-emerald-400">Chuyên nghiệp & Hiện đại</span>
+                CLB billiards & nhà hàng <br/> <span className="text-[#13ec6d] bg-clip-text text-transparent bg-gradient-to-r from-[#13ec6d] to-emerald-400">Chuyên nghiệp & Hiện đại</span>
              </h1>
              <p className="text-xl text-gray-300 max-w-lg leading-relaxed">
-                Nền tảng SaaS giúp bạn vận hành quán bida hiệu quả. Quét QR, gọi món, quản lý bàn và doanh thu tất cả trong một.
+                Nền tảng SaaS giúp bạn vận hành quán billiards & nhà hàng hiệu quả. Quét QR, gọi món, quản lý bàn và doanh thu tất cả trong một.
              </p>
              <ul className="space-y-4 pt-4">
                {[

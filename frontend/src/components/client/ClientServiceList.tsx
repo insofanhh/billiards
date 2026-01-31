@@ -401,7 +401,10 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                             No Image
                                         </div>
                                     )}
-
+                                    {/* Stock Badge */}
+                                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded z-10">
+                                        Kho: {availableQuantity}
+                                    </div>
                                 </div>
                                 
                                 <div className="flex-1 flex flex-col">
@@ -466,7 +469,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
             {hasSelected && (() => {
                 const cartContent = (
                     <div className={`${isStaff 
-                        ? 'flex-none z-10 p-4 border-t border-gray-800' 
+                        ? 'fixed bottom-0 left-0 right-0 z-[60] bg-[#1A1D27] border-t border-gray-800 p-5 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all duration-300 animate-slide-up rounded-t-3xl lg:rounded-none lg:shadow-lg lg:sticky lg:bottom-0 lg:z-10 lg:p-4 lg:animate-none' 
                         : 'fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-[#1a2e23] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl border-t border-gray-100 dark:border-white/5 p-5 pb-8 backdrop-blur-md transition-all duration-300 animate-slide-up'
                     }`}>
                         <div className={`${!isStaff ? 'max-w-4xl mx-auto' : ''}`}>
@@ -480,34 +483,40 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                 {/* Optional: Clear all button */}
                             </div>
 
-                            <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff ? 'max-h-[140px]' : 'max-h-[140px]'} overflow-y-auto pr-1`}>
-                                {Object.entries(selected).map(([id, qty]) => {
-                                    const service = services.find((s) => s.id === Number(id));
-                                    if (!service) return null;
-                                    return (
-                                        <SelectedItemRow 
-                                            key={id} 
-                                            service={service} 
-                                            qty={qty} 
-                                            isStaff={isStaff} 
-                                            onDelete={() => {
-                                                setSelected(prev => {
-                                                    const next = { ...prev };
-                                                    delete next[Number(id)];
-                                                    return next;
-                                                });
-                                            }} 
-                                        />
-                                    );
-                                })}
+                            <div className={isStaff ? "lg:flex lg:gap-4 lg:items-center" : ""}>
+                                <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff 
+                                    ? 'max-h-[30vh] overflow-y-auto lg:flex-1 lg:max-h-[140px] lg:mb-0 lg:flex lg:flex-nowrap lg:overflow-x-auto lg:overflow-y-hidden lg:gap-2 lg:space-y-0' 
+                                    : 'max-h-[140px] overflow-y-auto pr-1'
+                                }`}>
+                                    {Object.entries(selected).map(([id, qty]) => {
+                                        const service = services.find((s) => s.id === Number(id));
+                                        if (!service) return null;
+                                        return (
+                                            <div key={id} className={isStaff ? "w-full lg:w-auto lg:min-w-[200px]" : "w-full"}>
+                                                <SelectedItemRow 
+                                                    service={service} 
+                                                    qty={qty} 
+                                                    isStaff={isStaff} 
+                                                    onDelete={() => {
+                                                        setSelected(prev => {
+                                                            const next = { ...prev };
+                                                            delete next[Number(id)];
+                                                            return next;
+                                                        });
+                                                    }} 
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className={`${isStaff ? 'w-full lg:w-auto lg:px-8 lg:h-12 lg:whitespace-nowrap' : 'w-full'} font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black shadow-lg shadow-[#13ec6d]/20`}
+                                >
+                                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
+                                </button>
                             </div>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting}
-                                className={`w-full font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black shadow-lg shadow-[#13ec6d]/20`}
-                            >
-                                {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
-                            </button>
                         </div>
                     </div>
                 );
