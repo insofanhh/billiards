@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'platform' => [
+        'key' => env('SUPER_ADMIN_KEY'),
+    ],
+
 ];

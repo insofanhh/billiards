@@ -18,7 +18,7 @@ class EnsureApiKey
     public function handle(Request $request, Closure $next): Response
     {
         // 1. Check if allowed key is set in .env
-        $allowedKey = env('SUPER_ADMIN_KEY');
+        $allowedKey = config('services.platform.key');
         if (!$allowedKey) {
             // If internal config is missing, fail safe or proceed to normal auth?
             // Safer to just proceed to normal auth if no key configured, 
