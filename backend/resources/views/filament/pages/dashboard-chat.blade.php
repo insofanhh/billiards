@@ -8,7 +8,7 @@
 <script>
     window.difyChatbotConfig = {
         token: 'djztYsdKqgVsLCo0',
-        baseUrl: 'http://chat.billiardscms.io.vn',
+        baseUrl: 'https://chat.billiardscms.io.vn',
         inputs: {
             "id_store": "{{ $storeId }}",
             "owner_name": "{{ $ownerName }}"
@@ -23,7 +23,7 @@
         },
     }
 </script>
-<script src="http://chat.billiardscms.io.vn/embed.min.js" id="djztYsdKqgVsLCo0" defer>
+<script src="https://chat.billiardscms.io.vn/embed.min.js" id="djztYsdKqgVsLCo0" defer>
 </script>
 <style>
     #dify-chatbot-bubble-button {
