@@ -18,6 +18,7 @@ use App\Models\Transaction;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\Response;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\View;
 
 class Dashboard extends BaseDashboard
 {
@@ -99,6 +100,7 @@ class Dashboard extends BaseDashboard
             ->components([
                 $this->getFiltersFormContentComponent(),
                 $this->getWidgetsContentComponent(),
+                View::make('filament.pages.dashboard-chat'),
             ]);
     }
 
