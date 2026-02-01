@@ -1,7 +1,7 @@
 @php
     $user = auth()->user();
     // Assuming user belongs to a store or we use a fallback
-    $storeId = $user?->store?->slug ?? $user?->store_id ?? 'default_store'; 
+    $storeId = $user?->store?->id ?? $user?->store_id ?? 'default_store'; 
     $ownerName = $user?->name ?? 'Guest';
 @endphp
 
