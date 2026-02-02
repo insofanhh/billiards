@@ -12,11 +12,11 @@ export default defineConfig({
         name: 'Billiards Client',
         short_name: 'Billiards',
         description: 'Billiards Management System - Client Interface',
-        theme_color: '#000000',
-        background_color: '#ffffff',
+        theme_color: '#1A1D27',
+        background_color: '#1A1D27',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: '/login',
         scope: '/',
         icons: [
           {
