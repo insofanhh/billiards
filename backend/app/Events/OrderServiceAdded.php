@@ -36,10 +36,7 @@ class OrderServiceAdded implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'order' => [
-                'id' => $this->order->id,
-                'order_code' => $this->order->order_code,
-            ],
+            'order' => $this->order->toArray(),
         ];
     }
 }
