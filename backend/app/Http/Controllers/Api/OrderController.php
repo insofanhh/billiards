@@ -561,6 +561,7 @@ class OrderController extends Controller
             DB::commit();
 
             // Broadcast events...
+            $order->load('table');
             if ($shouldAutoConfirm) {
                  broadcast(new OrderUpdated($order));
             } else {

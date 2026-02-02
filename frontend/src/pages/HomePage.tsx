@@ -335,13 +335,14 @@ export function HomePage() {
                                 const showNotification = !!(hasNotification && !isViewingOrderDetail && table.active_order);
 
                                 return (
-                                    <TableCard 
-                                        key={table.id}
-                                        table={table}
-                                        slug={slug}
-                                        hasNotification={showNotification}
-                                        onClick={() => setSelectedTable(table)}
-                                    />
+                                    <div id={`table-${table.id}`} key={table.id} className="h-full">
+                                        <TableCard 
+                                            table={table}
+                                            slug={slug}
+                                            hasNotification={showNotification}
+                                            onClick={() => setSelectedTable(table)}
+                                        />
+                                    </div>
                                 );
                             })}
                         </div>

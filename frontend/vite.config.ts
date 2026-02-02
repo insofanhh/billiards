@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
         name: 'Billiards Client',
@@ -49,6 +49,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Exclude admin routes from being cached or handled by service worker
         navigateFallbackDenylist: [/^\/api/, /^\/admin/],
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
