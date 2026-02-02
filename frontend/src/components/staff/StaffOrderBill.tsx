@@ -483,8 +483,8 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
       {/* Sticky Bottom Footer (or Right Column) */}
       <div className={`${
         isActive 
-        ? "border-t border-slate-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 sticky bottom-0"
-        : "border-t border-slate-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 sticky bottom-0 lg:col-span-1 lg:h-fit lg:bg-white lg:dark:bg-gray-800 lg:rounded-lg lg:shadow-sm lg:border lg:border-gray-100 lg:dark:border-gray-700 lg:p-6 lg:static"
+        ? "border-t border-slate-200 dark:border-gray-700 px-4 pt-4 pb-20 lg:p-4 bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 sticky bottom-0"
+        : "border-t border-slate-200 dark:border-gray-700 px-4 pt-4 pb-20 lg:p-6 bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 sticky bottom-0 lg:col-span-1 lg:h-fit lg:bg-white lg:dark:bg-gray-800 lg:rounded-lg lg:shadow-sm lg:border lg:border-gray-100 lg:dark:border-gray-700 lg:static"
       }`}>
           <div className="flex justify-between items-center mb-4">
              <p className="font-bold text-lg text-slate-900 dark:text-white">Tổng cộng</p>
