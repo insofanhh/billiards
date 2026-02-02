@@ -103,7 +103,7 @@ export function OrderPage() {
             <div className={`
                 ${isActive ? 'lg:flex-[1.2] lg:min-w-[400px]' : 'lg:flex-1 w-full'} 
                 bg-[#1A1D27]
-                fixed inset-0 z-50 lg:static lg:z-auto
+                fixed top-0 left-0 w-full h-[100dvh] z-50 lg:static lg:h-auto lg:z-auto
                 transition-transform duration-300 ease-in-out
                 ${(showMobileBill || !isActive) ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
             `}>
