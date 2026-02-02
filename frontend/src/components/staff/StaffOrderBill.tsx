@@ -275,8 +275,17 @@ export function StaffOrderBill({ order, isActive, isPendingEnd, isCompleted, ser
   const handlApplyDiscount = () => {
       const code = discountCodeInput.trim().toUpperCase();
       if(!code) return;
-      applyDiscountMutation.mutate(code);
+      
       setDiscountFeedback(null);
+      applyDiscountMutation.mutate(code, {
+        onSuccess: () => {
+          setDiscountFeedback({ type: 'success', message: 'Áp dụng thành công' });
+        },
+        onError: (error: any) => {
+          const msg = error.response?.data?.message || 'Lỗi áp dụng mã';
+          setDiscountFeedback({ type: 'error', message: msg });
+        }
+      });
   };
 
 

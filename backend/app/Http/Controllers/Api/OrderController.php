@@ -616,7 +616,12 @@ class OrderController extends Controller
         }
 
         $code = Str::upper(trim($request->input('code')));
-        $discountCode = DiscountCode::whereRaw('LOWER(code) = ?', [Str::lower($code)])->first();
+        
+        // Check for discount code explicitly within the order's store
+        $discountCode = DiscountCode::withoutGlobalScopes()
+            ->where('store_id', $order->store_id)
+            ->whereRaw('LOWER(code) = ?', [Str::lower($code)])
+            ->first();
         
         if (!$discountCode) {
             return response()->json(['message' => 'Mã giảm giá không tồn tại'], 404);
@@ -638,7 +643,13 @@ class OrderController extends Controller
         }
 
         if ($discountCode->min_spend && $totalBefore < (float) $discountCode->min_spend) {
-            return response()->json(['message' => 'Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã'], 422);
+            return response()->json([
+                'message' => 'Đơn hàng chưa đạt giá trị tối thiểu (' . number_format($discountCode->min_spend) . ' đ)',
+                'detail' => [
+                    'required' => $discountCode->min_spend,
+                    'current' => $totalBefore
+                ]
+            ], 422);
         }
 
         $discountAmount = 0.0;
