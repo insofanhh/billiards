@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '../types';
+import { authApi } from '../api/auth';
 
 interface AuthState {
   user: User | null;
@@ -66,8 +67,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // If more than 1 hour has passed, verify session with backend
     try {
-      const { checkSession } = await import('../api/auth'); 
-      const user = await checkSession();
+      const user = await authApi.checkSession();
       
       // Session is still valid on backend, update local state
       localStorage.setItem('user', JSON.stringify(user));
@@ -109,8 +109,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       // Call API to logout from server (clears session + all tokens)
-      const { logout: apiLogout } = await import('../api/auth');
-      await apiLogout();
+      await authApi.logout();
     } catch (error) {
       // Continue even if API call fails (network issues, etc)
       console.error('API logout failed', error);
@@ -136,8 +135,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('auth_token', token);
         
         // Fetch user data
-        const { checkSession } = await import('../api/auth');
-        const user = await checkSession();
+        // Fetch user data
+        const user = await authApi.checkSession();
         
         // Update store
         get().setAuth(user, token);
@@ -166,8 +165,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     
     try {
       // Try to generate token from active session (uses cookies)
-      const { syncTokenFromSession } = await import('../api/auth');
-      const response = await syncTokenFromSession();
+      // Try to generate token from active session (uses cookies)
+      const response = await authApi.syncTokenFromSession();
       
       // Successfully got token from session
       get().setAuth(response.user, response.token);
