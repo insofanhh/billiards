@@ -13,6 +13,7 @@ class CreateApiToken extends Command
      *
      * @var string
      */
+    // php artisan app:create-api-token 1 "SuperAmin"
     protected $signature = 'app:create-api-token {user_id : The ID of the user} {name : The name of the token}';
 
     /**
