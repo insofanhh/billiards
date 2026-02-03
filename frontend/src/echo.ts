@@ -48,7 +48,7 @@ export const echo = new Echo({
       return {
           authorize: (socketId: string, callback: Function) => {
               const headers = getAuthHeaders();
-              const url = `${API_BASE_URL.replace('/api', '')}/broadcasting/auth`;
+              const url = `${LARAVEL_BASE_URL}/broadcasting/auth`;
               
               axios.post(url, {
                   socket_id: socketId,
