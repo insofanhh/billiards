@@ -28,9 +28,14 @@ export function NotificationDrawer() {
   // Filter notifications by tab
   const requests = notifications.filter(n => n.type === 'request');
   const services = notifications.filter(n => n.type === 'service');
-  const payments = notifications.filter(n => n.type === 'payment');
+  const payments = notifications.filter(n => n.type === 'payment' || n.type === 'payment_success');
 
-  const getUnreadCountByTab = (type: string) => notifications.filter(n => n.type === type && !n.read).length;
+  const getUnreadCountByTab = (type: string) => notifications.filter(n => {
+      if (type === 'payment') {
+          return (n.type === 'payment' || n.type === 'payment_success') && !n.read;
+      }
+      return n.type === type && !n.read;
+  }).length;
 
   const isHomePage = location.pathname === `/s/${slug}/staff`;
 

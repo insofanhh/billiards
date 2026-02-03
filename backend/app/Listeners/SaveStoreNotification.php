@@ -9,6 +9,7 @@ use App\Events\OrderRequested;
 use App\Events\OrderEndRequested;
 use App\Events\OrderServiceAdded;
 use App\Events\TransactionCreated;
+use App\Events\TransactionConfirmed;
 use App\Events\NotificationCreated;
 use App\Models\StoreNotification;
 use Illuminate\Events\Dispatcher;
@@ -22,6 +23,7 @@ class SaveStoreNotification
             OrderEndRequested::class => 'handleOrderEndRequested',
             OrderServiceAdded::class => 'handleOrderServiceAdded',
             TransactionCreated::class => 'handleTransactionCreated',
+            TransactionConfirmed::class => 'handleTransactionConfirmed',
         ];
     }
 
@@ -114,6 +116,8 @@ class SaveStoreNotification
 
     public function handleTransactionCreated(TransactionCreated $event)
     {
+        // ... (previous content remains mostly same, just updating context around it if needed, but the chunks need to be specific)
+        // Since I'm appending a new method, I will add it after handleTransactionCreated.
         $transaction = $event->transaction;
         // Ensure relations loaded
         if (!$transaction->relationLoaded('order')) {
@@ -173,6 +177,48 @@ class SaveStoreNotification
                 'order_id' => $transaction->order_id,
                 'table_id' => $transaction->order->table_id,
                 'amount' => $transaction->amount,
+            ]
+        );
+    }
+
+    public function handleTransactionConfirmed(TransactionConfirmed $event)
+    {
+        $transaction = $event->transaction;
+        
+        // Only notify for transfer methods (SePay usually) if requested, or all?
+        // User asked: "khi customer thanh toán chuyển khoản thành công"
+        // Let's restrict to transfer/mobile/bank_transfer to match request precisely, 
+        // OR allow all but differentiate message.
+        // User's requested message: "Bàn {table} thanh toán thành công {amount} đồng!"
+        // This message is generic enough for any payment, but let's check method.
+        
+        if (!$transaction->relationLoaded('order')) {
+            $transaction->load('order.table');
+        }
+
+        // We only care about success (which TransactionConfirmed implies)
+        if ($transaction->status !== 'success') {
+            return;
+        }
+
+        $tableName = $transaction->order->table->name ?? '?';
+        $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
+        
+        $amountFormatted = number_format($transaction->amount, 0, ',', '.');
+        $message = "Bàn {$tableName} thanh toán thành công {$amountFormatted} đồng!";
+
+        // Use a new type 'payment_success' to differentiate logic in frontend
+        $this->createNotification(
+            $transaction->store_id,
+            'payment_success',
+            $title,
+            $message,
+            [
+                'transaction_id' => $transaction->id,
+                'order_id' => $transaction->order_id,
+                'table_id' => $transaction->order->table_id,
+                'amount' => $transaction->amount,
+                'amount_formatted' => $amountFormatted
             ]
         );
     }
