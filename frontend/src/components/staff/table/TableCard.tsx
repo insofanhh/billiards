@@ -297,7 +297,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                         onClick={(e) => {
                             e.stopPropagation();
                             if (table.active_order?.id) {
-                                navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}` : `/order/${table.active_order.id}`);
+                                navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}?view=bill` : `/order/${table.active_order.id}?view=bill`);
                             }
                         }}
                         className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-[1px] rounded-xl flex items-center justify-center z-10 cursor-pointer"
@@ -313,7 +313,7 @@ export function TableCard({ table, slug, hasNotification, onClick }: TableCardPr
                     onClick={(e) => {
                         e.stopPropagation();
                         if (table.active_order?.id) {
-                            navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}` : `/order/${table.active_order.id}`);
+                            navigate(slug ? `/s/${slug}/staff/order/${table.active_order.id}?view=bill` : `/order/${table.active_order.id}?view=bill`);
                         }
                     }}
                     className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-[1px] rounded-xl flex items-center justify-center z-10 cursor-pointer"

@@ -12,6 +12,7 @@ interface Props {
     variant?: 'client' | 'staff';
     gridCols?: string;
     onSuccess?: () => void;
+    drawerLayout?: 'horizontal' | 'vertical'; // Control drawer layout: horizontal for staff inline, vertical for modals
 }
 
 interface SelectedItemRowProps {
@@ -73,7 +74,7 @@ function SelectedItemRow({ service, qty, isStaff, onDelete }: SelectedItemRowPro
     );
 }
 
-export function ClientServiceList({ orderId, services, variant = 'client', gridCols, onSuccess }: Props) {
+export function ClientServiceList({ orderId, services, variant = 'client', gridCols, onSuccess, drawerLayout = 'vertical' }: Props) {
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
     const [selected, setSelected] = useState<Record<number, number>>({});
     const [searchTerm, setSearchTerm] = useState('');
@@ -472,6 +473,8 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
             {/* Cart / Selected Items Drawer */}
             {/* Cart / Selected Items Drawer */}
             {hasSelected && (() => {
+                const shouldBeHorizontal = drawerLayout === 'horizontal'; // Only horizontal when explicitly set
+                
                 const cartContent = (
                     <div className={`${isStaff 
                         ? 'fixed bottom-0 left-0 right-0 z-[60] bg-[#1A1D27] border-t border-gray-800 p-5 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all duration-300 animate-slide-up rounded-t-3xl lg:rounded-none lg:shadow-lg lg:sticky lg:bottom-0 lg:z-10 lg:p-4 lg:animate-none' 
@@ -488,16 +491,16 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                 {/* Optional: Clear all button */}
                             </div>
 
-                            <div className={isStaff ? "lg:flex lg:gap-4 lg:items-center" : ""}>
+                            <div className={shouldBeHorizontal ? "lg:flex lg:gap-4 lg:items-center" : ""}>
                                 <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff 
-                                    ? 'max-h-[170px] overflow-y-auto lg:flex-1 lg:max-h-[140px] lg:mb-0 lg:flex lg:flex-nowrap lg:overflow-x-auto lg:overflow-y-hidden lg:gap-2 lg:space-y-0' 
+                                    ? shouldBeHorizontal ? 'max-h-[170px] overflow-y-auto lg:flex-1 lg:max-h-[140px] lg:mb-0 lg:flex lg:flex-nowrap lg:overflow-x-auto lg:overflow-y-hidden lg:gap-2 lg:space-y-0' : 'max-h-[170px] overflow-y-auto'
                                     : 'max-h-[140px] overflow-y-auto pr-1'
                                 }`}>
                                     {Object.entries(selected).map(([id, qty]) => {
                                         const service = services.find((s) => s.id === Number(id));
                                         if (!service) return null;
                                         return (
-                                            <div key={id} className={isStaff ? "w-full lg:w-auto lg:min-w-[200px]" : "w-full"}>
+                                            <div key={id} className={shouldBeHorizontal ? "w-full lg:w-auto lg:min-w-[200px]" : "w-full"}>
                                                 <SelectedItemRow 
                                                     service={service} 
                                                     qty={qty} 
@@ -517,7 +520,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                 <button
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
-                                    className={`${isStaff ? 'w-full lg:w-auto lg:px-8 lg:h-12 lg:whitespace-nowrap' : 'w-full'} font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black shadow-lg shadow-[#13ec6d]/20`}
+                                    className={`${shouldBeHorizontal ? 'w-full lg:w-auto lg:px-8 lg:h-12 lg:whitespace-nowrap' : 'w-full'} font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-[#13ec6d] text-black shadow-lg shadow-[#13ec6d]/20`}
                                 >
                                     {isSubmitting ? 'Đang xử lý...' : 'Xác nhận gọi món'}
                                 </button>

@@ -14,6 +14,7 @@ export function StaffServiceList({ orderId, services }: Props) {
         services={services} 
         variant="staff"
         gridCols="grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" 
+        drawerLayout="horizontal"
       />
     </div>
   );
