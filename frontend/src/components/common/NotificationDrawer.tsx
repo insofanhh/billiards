@@ -16,7 +16,8 @@ export function NotificationDrawer() {
     unreadCount, 
     activeTab, 
     setActiveTab,
-    handleNotificationClick
+    handleNotificationClick,
+    clearAll
   } = useRealtimeNotifications();
 
   // Filter notifications by tab
@@ -168,17 +169,47 @@ export function NotificationDrawer() {
                             })}
                          </Tab.List>
                          
-                         <Tab.Panels className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
+                          <Tab.Panels className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
                             <Tab.Panel className="outline-none">
+                                {getUnreadCountByTab('request') > 0 && (
+                                    <div className="flex justify-end mb-2">
+                                        <button 
+                                            onClick={clearAll}
+                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                        >
+                                            Đánh dấu là đã đọc
+                                        </button>
+                                    </div>
+                                )}
                                 <NotificationList items={requests} />
                             </Tab.Panel>
                             <Tab.Panel className="outline-none">
+                                {getUnreadCountByTab('service') > 0 && (
+                                    <div className="flex justify-end mb-2">
+                                        <button 
+                                            onClick={clearAll}
+                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                        >
+                                            Đánh dấu là đã đọc
+                                        </button>
+                                    </div>
+                                )}
                                 <NotificationList items={services} />
                             </Tab.Panel>
                             <Tab.Panel className="outline-none">
+                                {getUnreadCountByTab('payment') > 0 && (
+                                    <div className="flex justify-end mb-2">
+                                        <button 
+                                            onClick={clearAll}
+                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                        >
+                                            Đánh dấu là đã đọc
+                                        </button>
+                                    </div>
+                                )}
                                 <NotificationList items={payments} />
                             </Tab.Panel>
-                         </Tab.Panels>
+                          </Tab.Panels>
                       </Tab.Group>
 
                     </div>

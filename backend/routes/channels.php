@@ -1,51 +1,21 @@
 <?php
 
 use Illuminate\Support\Facades\Broadcast;
-use Illuminate\Support\Facades\Log;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-Broadcast::channel('user.{userId}', function ($user, $userId) {
-    if (!$user) {
-        return false;
-    }
-    return (int) $user->id === (int) $userId;
-});
-
-Broadcast::channel('staff', function ($user) {
-    if (!$user) {
-        return false;
-    }
-    
-    $user->load('roles');
-    
-    $roles = $user->roles->pluck('name')->toArray();
-    $isStaff = in_array('staff', $roles) || 
-               in_array('admin', $roles) || 
-               in_array('super_admin', $roles);
-    
-    if ($isStaff) {
+Broadcast::channel('store.{storeId}', function ($user, $storeId) {
+    // Check if user belongs to the store
+    if ((int) $user->store_id === (int) $storeId) {
         return true;
     }
     
-    try {
-        if (method_exists($user, 'hasAnyRole')) {
-            if ($user->hasAnyRole(['admin', 'staff', 'super_admin'])) {
-                return true;
-            }
-        }
-    } catch (\Throwable $e) {
-        Log::warning('Broadcast channel staff - Role check error', [
-            'error' => $e->getMessage(),
-            'user_id' => $user->id
-        ]);
+    // Also allow super_admin, admin, and staff roles regardless of store_id
+    if ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('staff')) {
+        return true;
     }
-    
-    return false;
-});
 
-Broadcast::channel('orders', function ($user) {
-    return $user !== null;
+    return false;
 });

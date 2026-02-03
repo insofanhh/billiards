@@ -1,0 +1,177 @@
+<?php
+
+namespace App\Listeners;
+
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
+
+use App\Events\OrderRequested;
+use App\Events\OrderEndRequested;
+use App\Events\OrderServiceAdded;
+use App\Events\TransactionCreated;
+use App\Events\NotificationCreated;
+use App\Models\StoreNotification;
+use Illuminate\Events\Dispatcher;
+
+class SaveStoreNotification
+{
+    public function subscribe(Dispatcher $events): array
+    {
+        return [
+            OrderRequested::class => 'handleOrderRequested',
+            OrderEndRequested::class => 'handleOrderEndRequested',
+            OrderServiceAdded::class => 'handleOrderServiceAdded',
+            TransactionCreated::class => 'handleTransactionCreated',
+        ];
+    }
+
+    public function handleOrderRequested(OrderRequested $event)
+    {
+        $order = $event->order;
+        $order->load('table');
+
+        // Deduplication
+        if ($this->checkDuplicate($order->store_id, 'request', $order->id, 'request_open')) {
+            return;
+        }
+
+        $tableName = $order->table->name ?? '?';
+        $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
+
+        $this->createNotification(
+            $order->store_id,
+            'request',
+            $title,
+            "Có yêu cầu mở bàn mới!",
+            [
+                'order_id' => $order->id,
+                'table_id' => $order->table_id,
+                'event_type' => 'request_open'
+            ]
+        );
+    }
+
+    public function handleOrderEndRequested(OrderEndRequested $event)
+    {
+        $order = $event->order;
+        $order->load('table');
+
+        if ($this->checkDuplicate($order->store_id, 'request', $order->id, 'request_end')) {
+            return;
+        }
+
+        $tableName = $order->table->name ?? '?';
+        $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
+
+        $this->createNotification(
+            $order->store_id,
+            'request',
+            $title,
+            "Có yêu cầu thanh toán/kết thúc",
+            [
+                'order_id' => $order->id,
+                'table_id' => $order->table_id,
+                'event_type' => 'request_end'
+            ]
+        );
+    }
+
+    public function handleOrderServiceAdded(OrderServiceAdded $event)
+    {
+        $order = $event->order;
+        $order->load('table');
+
+        if ($this->checkDuplicate($order->store_id, 'service', $order->id, 'service_added')) {
+            return;
+        }
+
+        $tableName = $order->table->name ?? '?';
+        $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
+
+        $this->createNotification(
+            $order->store_id,
+            'service', 
+            $title,
+            "Có yêu cầu gọi dịch vụ mới!",
+            [
+                'order_id' => $order->id,
+                'table_id' => $order->table_id,
+                'event_type' => 'service_added'
+            ]
+        );
+    }
+
+    protected function checkDuplicate($storeId, $type, $orderId, $eventType)
+    {
+        return StoreNotification::where('store_id', $storeId)
+            ->where('type', $type)
+            ->where('data->order_id', $orderId)
+            ->where('data->event_type', $eventType)
+            ->where('created_at', '>=', now()->subSeconds(5))
+            ->exists();
+    }
+
+
+    public function handleTransactionCreated(TransactionCreated $event)
+    {
+        $transaction = $event->transaction;
+        // Ensure relations loaded
+        if (!$transaction->relationLoaded('order')) {
+            $transaction->load('order.table');
+        }
+
+        $methodLabel = $transaction->method ? match($transaction->method) {
+            'cash' => 'Tiền mặt',
+            'transfer', 'bank_transfer', 'mobile' => 'Chuyển khoản',
+            'card' => 'Thẻ',
+            default => $transaction->method,
+        } : '';
+
+        $message = "Có yêu cầu thanh toán" . ($methodLabel ? " ({$methodLabel})" : "");
+
+        // Deduplication/Update logic
+        $existing = StoreNotification::where('store_id', $transaction->store_id)
+            ->where('type', 'payment')
+            ->where('data->transaction_id', $transaction->id) // JSON query
+            ->whereNull('read_at')
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'message' => $message,
+                'updated_at' => now(),
+            ]);
+            event(new NotificationCreated($existing));
+            return;
+        }
+
+        $tableName = $transaction->order->table->name ?? '?';
+        $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
+
+        $this->createNotification(
+            $transaction->store_id,
+            'payment',
+            $title,
+            $message,
+            [
+                'transaction_id' => $transaction->id,
+                'order_id' => $transaction->order_id,
+                'table_id' => $transaction->order->table_id,
+                'amount' => $transaction->amount,
+            ]
+        );
+    }
+
+    protected function createNotification($storeId, $type, $title, $message, $data = [])
+    {
+        $notification = StoreNotification::create([
+            'store_id' => $storeId,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'data' => $data,
+        ]);
+
+        event(new NotificationCreated($notification));
+    }
+}

@@ -402,9 +402,11 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                                         </div>
                                     )}
                                     {/* Stock Badge */}
-                                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded z-10">
-                                        Kho: {availableQuantity}
-                                    </div>
+                                    {isStaff && (
+                                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded z-10">
+                                            Kho: {availableQuantity}
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 <div className="flex-1 flex flex-col">

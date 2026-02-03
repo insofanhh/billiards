@@ -2,9 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode, useCall
 import { echo } from '../echo';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { apiClient as axiosClient } from '../api/client';
 
 export interface NotificationItem {
-    id: string; // Unique ID (e.g., event ID or constructed from orderId + timestamp)
+    id: string; // Unique ID
     type: 'request' | 'service' | 'payment';
     tableId: number;
     tableName: string;
@@ -12,7 +13,7 @@ export interface NotificationItem {
     message: string;
     timestamp: Date;
     read: boolean;
-    data?: any; // Extra data like transaction method, service items...
+    data?: any;
 }
 
 interface RealtimeNotificationContextType {
@@ -30,7 +31,7 @@ interface RealtimeNotificationContextType {
 const RealtimeNotificationContext = createContext<RealtimeNotificationContextType | undefined>(undefined);
 
 export function RealtimeNotificationProvider({ children }: { children: ReactNode }) {
-    const { user } = useAuthStore();
+    const { user, token } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
     
@@ -46,108 +47,92 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
         // Optional: Play sound here
     }, []);
 
-    const markAsRead = (id: string) => {
+    const markAsRead = async (id: string) => {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+        try {
+            await axiosClient.put(`/notifications/${id}/read`);
+        } catch (error) {
+            console.error('Failed to mark as read', error);
+        }
     };
 
-    const clearAll = () => {
-        setNotifications([]);
+    const clearAll = async () => {
+        // Optimistic update: remove notifications match activeTab
+        setNotifications(prev => prev.filter(n => n.type !== activeTab));
+        try {
+            await axiosClient.post('/notifications/clear', { type: activeTab });
+        } catch (error) {
+            console.error('Failed to clear notifications', error);
+        }
     };
 
+    // Fetch initial notifications
     useEffect(() => {
-        if (!user) {
-            console.log('RealtimeNotificationContext: No user, skipping subscription');
+        const storeId = user?.store_id || user?.store?.id;
+        if (!storeId) return;
+
+        const fetchNotifications = async () => {
+            try {
+                const { data } = await axiosClient.get('/notifications');
+                const items = data.map((n: any) : NotificationItem => ({
+                    id: n.id.toString(),
+                    type: n.type,
+                    tableId: n.data?.table_id,
+                    tableName: n.title.replace('Bàn ', ''),
+                    orderId: n.data?.order_id,
+                    message: n.message,
+                    timestamp: new Date(n.created_at),
+                    read: !!n.read_at,
+                    data: n.data
+                }));
+                // Merge with existing? Or just set? Initial load -> set.
+                setNotifications(items);
+            } catch (error) {
+                console.error('Failed to fetch notifications', error);
+            }
+        };
+
+        fetchNotifications();
+    }, [user?.store_id, user?.store?.id]);
+
+    // Socket Subscription
+    useEffect(() => {
+        const storeId = user?.store_id || user?.store?.id;
+        
+        if (!storeId || !token) {
             return;
         }
 
-        console.log('RealtimeNotificationContext: Subscribing to orders channel');
-        const ordersChannel = echo.channel('orders');
+        // Use private channel for authenticated store events
+        const channel = echo.private(`store.${storeId}`);
 
-        ordersChannel.subscribed(() => {
-            console.log('RealtimeNotificationContext: Subscription confirmed for orders channel');
-        });
+        const handleNotificationCreated = (e: any) => {
+             const n = e.notification;
+             if (!n) return;
 
-        // const staffChannel = echo.private('staff'); // If needed for private events
-
-        // 1. Table Requests (Open/Close)
-        const handleOrderRequested = (data: any) => {
-            addNotification({
-                id: `req_${data.order?.id}`,
-                type: 'request',
-                tableId: data.table?.id || data.order?.table_id,
-                tableName: data.table?.name || data.order?.table?.name || 'Bàn ?',
-                orderId: data.order?.id,
-                message: `Có yêu cầu mở bàn mới!`,
-                timestamp: new Date(),
-                read: false,
-                data
-            });
+             const item: NotificationItem = {
+                id: n.id.toString(),
+                type: n.type,
+                tableId: n.data?.table_id,
+                tableName: n.title.replace('Bàn ', ''),
+                orderId: n.data?.order_id,
+                message: n.message,
+                timestamp: new Date(n.created_at),
+                read: !!n.read_at,
+                data: n.data
+             };
+             addNotification(item);
         };
 
-        const handleOrderEndRequested = (data: any) => {
-             addNotification({
-                id: `req_end_${data.order?.id}`,
-                type: 'request',
-                tableId: data.table?.id || data.order?.table_id,
-                tableName: data.table?.name || data.order?.table?.name || 'Bàn ?',
-                orderId: data.order?.id,
-                message: `Có yêu cầu thanh toán/kết thúc`,
-                timestamp: new Date(),
-                read: false,
-                data
-            });
-        };
-
-        // 2. Service Orders
-        const handleServiceAdded = (data: any) => {
-             addNotification({
-                id: `srv_${Date.now()}_${data.order?.id}`,
-                type: 'service',
-                tableId: data.order?.table_id,
-                tableName: data.order?.table?.name || 'Bàn ?',
-                orderId: data.order?.id,
-                message: `Có yêu cầu gọi dịch vụ mới!`,
-                timestamp: new Date(),
-                read: false,
-                data
-            });
-        };
-
-        // 3. Payment Requests (Transaction Created)
-        const handleTransactionCreated = (data: any) => {
-             // Relaxed check: Simply checking for transaction existence
-             addNotification({
-                id: `pay_${data.transaction?.id}`,
-                type: 'payment',
-                tableId: data.order?.table_id,
-                tableName: data.order?.table?.name || 'Bàn ?',
-                orderId: data.order?.id,
-                message: `Có yêu cầu thanh toán${data.transaction?.method ? ` (${data.transaction.method === 'cash' ? 'Tiền mặt' : data.transaction.method === 'card' ? 'Thẻ' : 'CK'})` : ''}`,
-                timestamp: new Date(),
-                read: false,
-                data
-            });
-        };
-
-
-        ordersChannel.listen('.order.requested', handleOrderRequested);
-        ordersChannel.listen('.order.end.requested', handleOrderEndRequested); // Maps to 'request' tab or 'payment'? User said "Yêu cầu mở bàn thì hiển thị bên tab Yêu cầu". "Yêu cầu thanh toán thì hiển thị bên tab Thanh toán".
-        // Actually "Yêu cầu kết thúc" often implies payment or just stopping time. 
-        // Let's put "Request End" in 'request' tab for now as "Stop Time Request", unless it has transaction. 
-        // But user said: "Khi có thông báo từ yêu cầu thanh toán thì hiển thị bên tab: Thanh toán". "transaction.created" is definitely Payment.
-        // "order.end.requested" is usually just "I want to stop". Let's put in 'request'.
+        channel.listen('.notification.created', handleNotificationCreated);
+        channel.listen('notification.created', handleNotificationCreated);
         
-        ordersChannel.listen('.order.service.added', handleServiceAdded);
-        ordersChannel.listen('.transaction.created', handleTransactionCreated);
-
         return () => {
-            ordersChannel.stopListening('.order.requested');
-            ordersChannel.stopListening('.order.end.requested');
-            ordersChannel.stopListening('.order.service.added');
-            ordersChannel.stopListening('.transaction.created');
-            echo.leave('orders');
+            channel.stopListening('.notification.created');
+            channel.stopListening('notification.created');
+            echo.leave(`store.${storeId}`);
         };
-    }, [user, addNotification]);
+    }, [user, token, addNotification]);
 
     const handleNotificationClick = (notification: NotificationItem) => {
         markAsRead(notification.id);
@@ -161,9 +146,6 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
              if (!isHomePage) {
                  const targetPath = user?.store?.slug ? `/s/${user.store.slug}/staff` : '/staff';
                  navigate(targetPath);
-                 // We need to wait for navigation to scroll. 
-                 // Simple hack: Store target table ID in sessionStorage or URL search param to scroll after load?
-                 // Or simple timeout.
                  setTimeout(() => {
                      const el = document.getElementById(`table-${notification.tableId}`);
                      if(el) {
@@ -188,9 +170,6 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
             navigate(targetPath);
         }
         
-        // Don't close drawer immediately? User said "click vào thì chuyển đến...". 
-        // Usually good to close drawer on mobile, keeps open on desktop? 
-        // Let's close it for now to give clear view of content.
         setIsOpen(false); 
     };
 
