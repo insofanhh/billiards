@@ -6,7 +6,7 @@ import { apiClient as axiosClient } from '../api/client';
 
 export interface NotificationItem {
     id: string; // Unique ID
-    type: 'request' | 'service' | 'payment';
+    type: 'request' | 'service' | 'payment' | 'payment_success';
     tableId: number;
     tableName: string;
     orderId: number;
@@ -44,7 +44,32 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
             const filtered = prev.filter(n => n.id !== item.id);
             return [item, ...filtered];
         });
-        // Optional: Play sound here
+        
+        // Notification Sound / TTS Logic
+        if (item.type === 'payment_success') {
+            try {
+                // Text-to-Speech for Payment Success
+                const utterance = new SpeechSynthesisUtterance(item.message);
+                utterance.lang = 'vi-VN';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            } catch (error) {
+                console.error('Failed to play TTS', error);
+                 // Fallback to ping
+                 try {
+                    const audio = new Audio('/notification.mp3');
+                    audio.play().catch(e => console.error('Error playing sound:', e));
+                } catch(e) {}
+            }
+        } else {
+            // Standard Ping for others
+            try {
+                const audio = new Audio('/notification.mp3');
+                audio.play().catch(e => console.error('Error playing sound:', e));
+            } catch (error) {
+                console.error('Failed to initialize audio', error);
+            }
+        }
     }, []);
 
     const markAsRead = async (id: string) => {
@@ -58,7 +83,15 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
 
     const clearAll = async () => {
         // Optimistic update: remove notifications match activeTab
-        setNotifications(prev => prev.filter(n => n.type !== activeTab));
+        // Treat payment_success as payment tab
+        const targetType = activeTab;
+        setNotifications(prev => prev.filter(n => {
+            if (activeTab === 'payment') {
+                return n.type !== 'payment' && n.type !== 'payment_success';
+            }
+            return n.type !== activeTab;
+        }));
+        
         try {
             await axiosClient.post('/notifications/clear', { type: activeTab });
         } catch (error) {
@@ -162,7 +195,7 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
                      setTimeout(() => el.classList.remove('ring-4', 'ring-blue-500', 'ring-opacity-50'), 3000);
                  }
              }
-        } else if (notification.type === 'service' || notification.type === 'payment') {
+        } else if (notification.type === 'service' || notification.type === 'payment' || notification.type === 'payment_success') {
             // Navigate to Order Page
             const targetPath = user?.store?.slug 
                 ? `/s/${user.store.slug}/staff/order/${notification.orderId}?view=bill` 
