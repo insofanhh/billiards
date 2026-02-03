@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders';
 import { servicesApi } from '../api/services';
@@ -17,6 +17,7 @@ export function OrderPage() {
   const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
   const pageRef = useRef<HTMLDivElement>(null);
+  const [searchParams] = useSearchParams();
   const [showMobileBill, setShowMobileBill] = useState(false);
 
   useEffect(() => {
@@ -24,7 +25,12 @@ export function OrderPage() {
     if (pageRef.current) {
         pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, []);
+
+    // Check for view param
+    if (searchParams.get('view') === 'bill') {
+        setShowMobileBill(true);
+    }
+  }, [searchParams]);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id, slug],

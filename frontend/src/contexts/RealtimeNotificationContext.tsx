@@ -165,8 +165,8 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
         } else if (notification.type === 'service' || notification.type === 'payment') {
             // Navigate to Order Page
             const targetPath = user?.store?.slug 
-                ? `/s/${user.store.slug}/staff/order/${notification.orderId}` 
-                : `/order/${notification.orderId}`;
+                ? `/s/${user.store.slug}/staff/order/${notification.orderId}?view=bill` 
+                : `/order/${notification.orderId}?view=bill`;
             navigate(targetPath);
         }
         

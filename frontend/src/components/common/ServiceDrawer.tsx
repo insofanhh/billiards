@@ -76,7 +76,7 @@ export function ServiceDrawer({ isOpen, onClose, orderId, slug, tableCode }: Ser
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         </div>
                     ) : (
-                        <ClientServiceList orderId={orderId} services={services} variant="staff" onSuccess={onClose} />
+                        <ClientServiceList orderId={orderId} services={services} variant="staff" drawerLayout="vertical" onSuccess={onClose} />
                     )}
                 </div>
             </div>
