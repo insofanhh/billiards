@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { User } from '../types';
-import { updateEchoAuth } from '../echo';
 
 interface AuthState {
   user: User | null;
@@ -104,7 +103,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     
     set({ user, token, isAuthenticated: true, canLogin, lastActivityAt: now });
-    updateEchoAuth();
   },
   
   
@@ -123,7 +121,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('user');
     localStorage.removeItem('last_activity_at');
     set({ user: null, token: null, isAuthenticated: false, canLogin: false, lastActivityAt: null });
-    updateEchoAuth();
   },
 
   initFromUrlToken: async () => {

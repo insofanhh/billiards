@@ -5,7 +5,8 @@ export const tablesApi = {
   getAll: async (storeSlug?: string): Promise<Table[]> => {
     const url = storeSlug ? `/tables?store_slug=${storeSlug}` : '/tables';
     const response = await apiClient.get(url);
-    return response.data.data || response.data;
+    const data = response.data.data || response.data;
+    return Array.isArray(data) ? data : [];
   },
 
   getByCode: async (code: string, storeSlug?: string): Promise<Table> => {

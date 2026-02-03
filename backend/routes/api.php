@@ -117,6 +117,12 @@ Route::middleware(['api.key', 'auth:sanctum'])->group(function () {
     Route::post('/orders/{id}/transactions', [OrderController::class, 'createTransaction']);
     Route::patch('/orders/{id}/transactions/{txnId}/confirm', [OrderController::class, 'confirmTransaction']);
 
+    // Notifications
+    Route::get('/notifications', [\App\Http\Controllers\Api\StoreNotificationController::class, 'index']);
+    Route::put('/notifications/{id}/read', [\App\Http\Controllers\Api\StoreNotificationController::class, 'markAsRead']);
+    Route::post('/notifications/clear', [\App\Http\Controllers\Api\StoreNotificationController::class, 'clearAll']);
+
+
     // Blog Routes
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('posts', PostController::class);

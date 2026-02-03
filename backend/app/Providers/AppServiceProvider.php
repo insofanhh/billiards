@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\URL;
 use App\Settings\GeneralSettings;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Event;
+use App\Listeners\SaveStoreNotification;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Event::subscribe(SaveStoreNotification::class);
+
         $directories = [
             'services',
         ];

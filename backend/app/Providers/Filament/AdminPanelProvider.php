@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->font('Quicksand')
             ->brandLogo(asset('/icons/icon-512x512.png'))
             ->brandLogoHeight('2.5rem')
             ->homeUrl(function () {
@@ -85,6 +86,9 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::head.start',
                 fn (): string => <<<'HTML'
+                    <link rel="preconnect" href="https://fonts.googleapis.com">
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
                     <!-- PWA Meta Tags -->
                     <meta name="theme-color" content="#000000ff">
                     <meta name="apple-mobile-web-app-capable" content="yes">

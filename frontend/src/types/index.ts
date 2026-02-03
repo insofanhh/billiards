@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
+  store_id?: number;
   roles?: string[];
   permissions?: string[];
   store?: {
