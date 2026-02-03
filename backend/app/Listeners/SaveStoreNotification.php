@@ -120,6 +120,21 @@ class SaveStoreNotification
             $transaction->load('order.table');
         }
 
+        // Fix: Do not notify if transaction is successful (Created by staff)
+        // or if created by staff (redundant check but safe)
+        if ($transaction->status === 'success') {
+             return;
+        }
+        
+        
+        // Also check if user is staff (if logic allows pending for staff?)
+        // Usually staff creates 'success' transaction. 
+        // Logic: Only notify 'pending' transactions which are Requests from customers.
+        if ($transaction->user && $this->userHasStaffRole($transaction->user)) {
+             return;
+        }
+
+
         $methodLabel = $transaction->method ? match($transaction->method) {
             'cash' => 'Tiền mặt',
             'transfer', 'bank_transfer', 'mobile' => 'Chuyển khoản',
@@ -173,5 +188,17 @@ class SaveStoreNotification
         ]);
 
         event(new NotificationCreated($notification));
+    }
+
+    protected function userHasStaffRole($user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+        if (!$user->relationLoaded('roles')) {
+            $user->load('roles');
+        }
+        $roles = $user->roles->pluck('name')->map(fn ($role) => strtolower($role))->toArray();
+        return !empty(array_intersect(['staff', 'admin', 'super_admin'], $roles));
     }
 }
