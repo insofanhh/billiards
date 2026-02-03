@@ -19,7 +19,6 @@ const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || (isProd ? '443' : '8080'
 const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || (isProd ? 'https' : 'http');
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isProd ? 'https://billiardscms.io.vn/api' : 'http://localhost:8000/api');
-const LARAVEL_BASE_URL = API_BASE_URL.replace('/api', '') || 'https://billiardscms.io.vn';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token') || '';
@@ -48,7 +47,7 @@ export const echo = new Echo({
       return {
           authorize: (socketId: string, callback: Function) => {
               const headers = getAuthHeaders();
-              const url = `${LARAVEL_BASE_URL}/broadcasting/auth`;
+              const url = `${API_BASE_URL}/broadcasting/auth`;
               
               axios.post(url, {
                   socket_id: socketId,
