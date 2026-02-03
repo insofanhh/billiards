@@ -247,17 +247,17 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
 
     const gridContainerClass = isStaff 
-        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar px-2 pb-4' 
-        : `grid ${finalGridCols} gap-4 pr-2 custom-scrollbar max-h-[80vh] overflow-y-auto`;
+        ? 'flex-1 overflow-y-auto min-h-0 custom-scrollbar px-2 pb-4'
+        : `pr-2 custom-scrollbar max-h-[80vh] overflow-y-auto`; // Removed grid props from here for client
 
     // Wrapper for staff grid content
     const StaffGridWrapper = ({ children }: { children: React.ReactNode }) => (
         <div className={`grid ${finalGridCols} gap-4`}>{children}</div>
     );
     
-    // Wrapper for client grid (already is the grid)
+    // Wrapper for client grid (now includes the grid class)
     const ClientGridWrapper = ({ children }: { children: React.ReactNode }) => (
-        <>{children}</>
+        <div className={`grid ${finalGridCols} gap-4`}>{children}</div>
     );
     
     const GridWrapper = isStaff ? StaffGridWrapper : ClientGridWrapper;
@@ -464,6 +464,9 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
                         );
                     })}
                 </GridWrapper>
+                {isStaff && hasSelected && (
+                    <div className="w-full h-[300px] shrink-0 lg:hidden" aria-hidden="true" />
+                )}
             </div>
 
             {/* Cart / Selected Items Drawer */}
@@ -487,7 +490,7 @@ export function ClientServiceList({ orderId, services, variant = 'client', gridC
 
                             <div className={isStaff ? "lg:flex lg:gap-4 lg:items-center" : ""}>
                                 <div className={`space-y-2 mb-4 custom-scrollbar ${isStaff 
-                                    ? 'max-h-[30vh] overflow-y-auto lg:flex-1 lg:max-h-[140px] lg:mb-0 lg:flex lg:flex-nowrap lg:overflow-x-auto lg:overflow-y-hidden lg:gap-2 lg:space-y-0' 
+                                    ? 'max-h-[170px] overflow-y-auto lg:flex-1 lg:max-h-[140px] lg:mb-0 lg:flex lg:flex-nowrap lg:overflow-x-auto lg:overflow-y-hidden lg:gap-2 lg:space-y-0' 
                                     : 'max-h-[140px] overflow-y-auto pr-1'
                                 }`}>
                                     {Object.entries(selected).map(([id, qty]) => {
