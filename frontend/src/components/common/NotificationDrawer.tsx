@@ -8,7 +8,12 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
+import { useLocation, useParams } from 'react-router-dom';
+
 export function NotificationDrawer() {
+  const location = useLocation();
+  const { slug } = useParams();
+  
   const { 
     isOpen, 
     setIsOpen, 
@@ -27,7 +32,10 @@ export function NotificationDrawer() {
 
   const getUnreadCountByTab = (type: string) => notifications.filter(n => n.type === type && !n.read).length;
 
+  const isHomePage = location.pathname === `/s/${slug}/staff`;
+
   const NotificationList = ({ items }: { items: NotificationItem[] }) => {
+      // ... (keep existing implementation)
       if (items.length === 0) {
           return (
               <div className="flex flex-col items-center justify-center py-10 text-gray-500">
@@ -70,7 +78,8 @@ export function NotificationDrawer() {
 
   return (
     <>
-      {/* Floating Action Buffer (FAB) */}
+      {/* Floating Action Buffer (FAB) - Only show on HomePage */}
+      {isHomePage && (
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-40 p-3 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-transform active:scale-95"
@@ -87,6 +96,7 @@ export function NotificationDrawer() {
             )}
         </div>
       </button>
+      )}
 
       {/* Drawer */}
       <Transition show={isOpen} as={Fragment}>
