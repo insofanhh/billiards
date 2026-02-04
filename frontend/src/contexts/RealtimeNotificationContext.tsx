@@ -50,9 +50,42 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
             try {
                 // Text-to-Speech for Payment Success
                 const utterance = new SpeechSynthesisUtterance(item.message);
+                
+                // Optimized Voice Selection
+                const voices = window.speechSynthesis.getVoices();
+                // Priority: Google Vietnamese -> Microsoft Vietnamese -> Any Vietnamese
+                const vnVoice = voices.find(v => v.lang.includes('vi') && v.name.includes('Google')) 
+                             || voices.find(v => v.lang.includes('vi') && v.name.includes('Vietton')) // Microsoft typically
+                             || voices.find(v => v.lang.includes('vi'));
+                             
+                if (vnVoice) {
+                    utterance.voice = vnVoice;
+                }
+                
                 utterance.lang = 'vi-VN';
                 utterance.rate = 1.0;
-                window.speechSynthesis.speak(utterance);
+
+                // Play Ting sound first
+                const tingAudio = new Audio('/ting.mp3');
+                tingAudio.play()
+                    .then(() => {
+                        // Wait for sound to finish or mostly finish before speaking
+                        tingAudio.onended = () => {
+                             window.speechSynthesis.speak(utterance);
+                        };
+                        // Fallback in case onended doesn't fire for some reason (e.g. very short)
+                        setTimeout(() => {
+                            if (!window.speechSynthesis.speaking) {
+                                // Double check status to avoid double speak if onended worked
+                                // Actually safest to just rely on onended for standard audio
+                            }
+                        }, 2000);
+                    })
+                    .catch(e => {
+                        console.error('Error playing ting.mp3, falling back to clean TTS', e);
+                        window.speechSynthesis.speak(utterance);
+                    });
+
             } catch (error) {
                 console.error('Failed to play TTS', error);
                  // Fallback to ping
