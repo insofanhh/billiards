@@ -221,7 +221,7 @@ class SaveStoreNotification
         $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
         
         $amountFormatted = number_format($transaction->amount, 0, ',', '.');
-        $message = "Bàn {$tableName} thanh toán thành công {$amountFormatted} đồng!";
+        $message = "{$tableName} thanh toán thành công {$amountFormatted} đồng!";
 
         // Deduplication
         if ($this->checkDuplicate($transaction->store_id, 'payment_success', $transaction->id, null, 'transaction_id')) {
