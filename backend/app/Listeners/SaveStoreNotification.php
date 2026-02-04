@@ -103,12 +103,16 @@ class SaveStoreNotification
         );
     }
 
-    protected function checkDuplicate($storeId, $type, $orderId, $eventType)
+    protected function checkDuplicate($storeId, $type, $id, $eventType, $idKey = 'order_id')
     {
         return StoreNotification::where('store_id', $storeId)
             ->where('type', $type)
-            ->where('data->order_id', $orderId)
-            ->where('data->event_type', $eventType)
+            ->where("data->{$idKey}", $id)
+            // For payment_success we don't necessarily have event_type in data, or we can just ignore it if null
+            // But previous usages pass explicit strings.
+            ->when($eventType !== null, function($q) use ($eventType) {
+                 $q->where('data->event_type', $eventType);
+            })
             ->where('created_at', '>=', now()->subSeconds(5))
             ->exists();
     }
@@ -206,6 +210,11 @@ class SaveStoreNotification
         
         $amountFormatted = number_format($transaction->amount, 0, ',', '.');
         $message = "Bàn {$tableName} thanh toán thành công {$amountFormatted} đồng!";
+
+        // Deduplication
+        if ($this->checkDuplicate($transaction->store_id, 'payment_success', $transaction->id, null, 'transaction_id')) {
+             return;
+        }
 
         // Use a new type 'payment_success' to differentiate logic in frontend
         $this->createNotification(
