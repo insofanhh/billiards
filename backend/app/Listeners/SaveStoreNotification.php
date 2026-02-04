@@ -205,6 +205,18 @@ class SaveStoreNotification
             return;
         }
 
+        // Logic: Only notify (TTS) for Customer Transfers
+        // 1. Skip if created by Staff
+        if ($transaction->user && $this->userHasStaffRole($transaction->user)) {
+             return;
+        }
+
+        // 2. Skip if not a transfer method
+        $transferMethods = ['transfer', 'bank_transfer', 'mobile'];
+        if (!in_array($transaction->method, $transferMethods)) {
+             return;
+        }
+
         $tableName = $transaction->order->table->name ?? '?';
         $title = \Illuminate\Support\Str::startsWith($tableName, 'Bàn') ? $tableName : "Bàn $tableName";
         
