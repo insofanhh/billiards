@@ -115,14 +115,16 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
     };
 
     const clearAll = async () => {
-        // Optimistic update: remove notifications match activeTab
-        // Treat payment_success as payment tab
-
-        setNotifications(prev => prev.filter(n => {
+        // Optimistic update: mark notifications match activeTab as read
+        setNotifications(prev => prev.map(n => {
             if (activeTab === 'payment') {
-                return n.type !== 'payment' && n.type !== 'payment_success';
+                if (n.type === 'payment' || n.type === 'payment_success') {
+                    return { ...n, read: true };
+                }
+            } else if (n.type === activeTab) {
+                return { ...n, read: true };
             }
-            return n.type !== activeTab;
+            return n;
         }));
         
         try {

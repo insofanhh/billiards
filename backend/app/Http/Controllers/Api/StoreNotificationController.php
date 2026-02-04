@@ -14,7 +14,10 @@ class StoreNotificationController extends Controller
         $user = $request->user();
         
         $notifications = StoreNotification::where('store_id', $user->store_id)
-            ->whereNull('read_at')
+            ->where(function ($query) {
+                $query->whereNull('read_at')
+                      ->orWhereDate('created_at', today());
+            })
             ->orderBy('created_at', 'desc')
             ->limit(100)
             ->get();
