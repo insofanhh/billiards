@@ -158,12 +158,10 @@ export function RealtimeNotificationProvider({ children }: { children: ReactNode
         };
 
         channel.listen('.notification.created', handleNotificationCreated);
-        channel.listen('notification.created', handleNotificationCreated);
         
         return () => {
-            channel.stopListening('.notification.created');
-            channel.stopListening('notification.created');
-            echo.leave(`store.${storeId}`);
+             channel.stopListening('.notification.created');
+             echo.leave(`store.${storeId}`);
         };
     }, [user, token, addNotification]);
 
