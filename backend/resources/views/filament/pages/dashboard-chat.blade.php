@@ -32,6 +32,10 @@
 
     #dify-chatbot-bubble-window {
         width: 24rem !important;
-        height: 40rem !important;
+        height: 35rem !important;
+        position: fixed !important;
+        bottom: 1rem !important;
+        right: 1rem !important;
+        z-index: 50 !important;
     }
 </style>
