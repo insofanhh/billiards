@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->font('Quicksand')
-            ->brandLogo(asset('/icons/icon-512x512.png'))
+            ->brandLogo(asset('/icons/logo_white.png'))
             ->brandLogoHeight('2.5rem')
             ->homeUrl(function () {
                 $tenant = \Filament\Facades\Filament::getTenant();
@@ -45,7 +45,7 @@ class AdminPanelProvider extends PanelProvider
                 }
                 return '/';
             })
-            ->favicon(asset('images/favicon.svg'))
+            ->favicon(asset('icons/logo.png'))
             ->profile(\Filament\Auth\Pages\EditProfile::class)
             ->navigationGroups([
                 'Quản lý đơn hàng',
@@ -93,9 +93,9 @@ class AdminPanelProvider extends PanelProvider
                     <meta name="theme-color" content="#000000ff">
                     <meta name="apple-mobile-web-app-capable" content="yes">
                     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-                    <meta name="apple-mobile-web-app-title" content="Billiards CMS">
+                    <meta name="apple-mobile-web-app-title" content="Verda CMS">
                     <link rel="manifest" href="/manifest.json">
-                    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
+                    <link rel="apple-touch-icon" href="/icons/logo.png">
                 HTML
             )
             ->renderHook(

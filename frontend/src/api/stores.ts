@@ -4,6 +4,7 @@ export interface PublicStore {
   id: number;
   name: string;
   slug: string;
+  store_type?: string;
 }
 
 export interface StorePaymentInfo {

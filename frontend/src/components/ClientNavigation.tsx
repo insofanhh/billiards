@@ -17,6 +17,7 @@ type ClientNavigationProps = {
   vouchersActive?: boolean;
   blogActive?: boolean;
   isOverBanner?: boolean;
+  storeType?: 'billiards' | 'restaurant' | string;
 };
 
 export function ClientNavigation({
@@ -29,6 +30,7 @@ export function ClientNavigation({
   vouchersActive = false,
   blogActive = false,
   isOverBanner = false,
+  storeType,
 }: ClientNavigationProps) {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug?: string }>();
@@ -110,7 +112,11 @@ export function ClientNavigation({
   const iconClasses = 'h-5 w-5';
   const icons = {
     home: (
-      <img src="/icons/icon-192x192.png" alt="Trang chủ" className="h-8 w-8 rounded-lg" />
+      <img 
+        src={(isOverBanner && !isScrolled) || theme === 'dark' ? "/icons/logo_white.png" : "/icons/logo.png"} 
+        alt="Trang chủ" 
+        className="h-8 w-8" 
+      />
     ),
     user: (
       <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -261,12 +267,14 @@ export function ClientNavigation({
               onClick={() => navigate(slug ? `/s/${slug}` : '/client')}
               className={`flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
             >
-              <div className="rounded-xl bg-yellow-500/20 p-2 text-yellow-600 dark:text-yellow-400">
+              <div className="">
                 {icons.home}
               </div>
               <div>
                 <p className={`text-lg font-semibold ${textColorClass}`}>CMS</p>
-                <p className={`text-xs ${subTextColorClass}`}>Billiards Client</p>
+                <p className={`text-xs ${subTextColorClass}`}>
+                  {storeType === 'restaurant' ? 'Restaurant Client' : 'Billiards Client'}
+                </p>
               </div>
             </button>
           </div>
@@ -476,7 +484,7 @@ export function ClientNavigation({
               className="w-full text-left rounded-2xl border border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 p-4 transition hover:bg-gray-100 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 dark:focus-visible:ring-white"
             >
               <div className="flex items-center gap-3">
-                <span className="rounded-xl bg-white dark:bg-white/10 p-2 text-yellow-600 dark:text-yellow-400 shadow-sm dark:shadow-none">
+                <span className="rounded-xl p-2 dark:shadow-none">
                   {icons.user}
                 </span>
                 <div>

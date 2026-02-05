@@ -43,8 +43,8 @@ export const PlatformLayout = () => {
                 <div className="flex flex-col gap-6">
                     <div className="flex gap-3 items-center px-2">
                         <div 
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-gray-200" 
-                            style={{ backgroundImage: 'url("https://ui-avatars.com/api/?name=Admin+Panel&background=random")' }}
+                            className="bg-center bg-no-repeat aspect-square bg-contain rounded-full size-10 border border-gray-200" 
+                            style={{ backgroundImage: 'url("/icons/logo.png")' }}
                         ></div>
                         <div className="flex flex-col overflow-hidden">
                             <h1 className="text-[#111418] dark:text-white text-base font-semibold leading-tight truncate">Admin Panel</h1>

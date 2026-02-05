@@ -10,7 +10,7 @@ class PublicStoreController extends Controller
 {
     public function show(string $slug): JsonResponse
     {
-        $store = Store::where('slug', $slug)->firstOrFail(['id', 'name', 'slug']);
+        $store = Store::where('slug', $slug)->firstOrFail(['id', 'name', 'slug', 'store_type']);
 
         return response()->json($store);
     }
