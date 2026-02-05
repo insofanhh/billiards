@@ -19,6 +19,7 @@ return [
     'allowed_origins' => [
         'https://billiardscms.io.vn',
         'https://www.billiardscms.io.vn',
+        'https://chat.billiardscms.io.vn',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ],

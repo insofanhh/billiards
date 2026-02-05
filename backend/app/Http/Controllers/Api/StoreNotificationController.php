@@ -46,7 +46,11 @@ class StoreNotificationController extends Controller
             ->whereNull('read_at');
 
         if ($type) {
-            $query->where('type', $type);
+            if ($type === 'payment') {
+                $query->whereIn('type', ['payment', 'payment_success']);
+            } else {
+                $query->where('type', $type);
+            }
         }
 
         $query->update(['read_at' => now()]);
