@@ -53,7 +53,7 @@ export function AdminNavigation({ userName, userRoles, storeName, onLogout }: Ad
   const iconClasses = 'h-5 w-5';
   const icons = {
     dashboard: (
-      <img src="/icons/icon-192x192.png" alt="Dashboard" className="h-8 w-8 rounded-lg" />
+      <img src="/icons/logo_white.png" alt="Dashboard" className="h-8 w-8" />
     ),
     orders: (
       <svg className={iconClasses} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -160,7 +160,7 @@ export function AdminNavigation({ userName, userRoles, storeName, onLogout }: Ad
             onClick={() => handleNavigate('/staff')}
             className="flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
-            <div className="rounded-xl bg-yellow-500/20 p-2 text-yellow-400">
+            <div className="">
               {icons.dashboard}
             </div>
             <div>
@@ -289,7 +289,7 @@ export function AdminNavigation({ userName, userRoles, storeName, onLogout }: Ad
                       disabled={!item.action}
                       className={`flex w-full items-center gap-3 rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${item.action ? '' : 'cursor-default opacity-75'}`}
                     >
-                      <span className="rounded-xl bg-white/10 p-2 text-yellow-400">
+                      <span className="rounded-xl p-2">
                         {item.icon}
                       </span>
                       <span>

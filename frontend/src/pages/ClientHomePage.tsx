@@ -142,6 +142,7 @@ export function TenantHomePage() {
         onHistoryClick={() => navigate(slug ? `/s/${slug}/history` : '/client/history')}
         onVouchersClick={() => navigate(slug ? `/s/${slug}/vouchers` : '/client/vouchers')}
         isOverBanner={true}
+        storeType={store?.store_type}
       />
 
       <BannerSlider onScanClick={() => setIsScannerOpen(true)} storeName={store?.name || slug} />
