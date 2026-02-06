@@ -133,6 +133,7 @@ class AdminPanelProvider extends PanelProvider
             ->tenant(\App\Models\Store::class, slugAttribute: 'slug')
             ->tenantMiddleware([
                 \App\Http\Middleware\SyncFilamentTenant::class,
+                \App\Http\Middleware\CheckStoreExpiration::class,
             ], isPersistent: true);
     }
 }
