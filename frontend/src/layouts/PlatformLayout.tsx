@@ -93,6 +93,18 @@ export const PlatformLayout = () => {
                             <span className="text-sm font-medium">Analytics</span>
                         </a>
 
+                        <Link 
+                            to="/platform/transactions"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                                isActive('/platform/transactions') 
+                                ? 'bg-[#137fec]/10 text-[#137fec]' 
+                                : 'text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                            <span className={`material-symbols-outlined ${isActive('/platform/transactions') ? 'active-icon' : ''}`}>receipt_long</span>
+                            <span className="text-sm font-medium">Transactions</span>
+                        </Link>
+
                         <div className="my-2 border-t border-gray-100 dark:border-gray-800"></div>
 
                         <Link 

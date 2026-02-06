@@ -28,10 +28,17 @@ class AuthController extends Controller
 
 
         // Check if user's store is active
-        if ($user->store && !$user->store->is_active) {
-            throw ValidationException::withMessages([
-                'email' => ['Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ đội ngũ hỗ trợ.'],
-            ]);
+        if ($user->store) {
+            // Automatically deactivate if expired
+            if ($user->store->expires_at && $user->store->expires_at->isPast()) {
+                if ($user->store->is_active) {
+                    $user->store->update(['is_active' => false]);
+                }
+            }
+            
+            // Allow login to proceed even if expired/inactive, 
+            // the Frontend will handle the redirect to payment page
+            // and Middleware will protect routes.
         }
 
         // Attempt to login to web session for sync
@@ -50,10 +57,18 @@ class AuthController extends Controller
         // Check if user has a store association for redirects
         $storeData = null;
         if ($user->store) {
+            $isExpired = false;
+            // Check expiry again
+             if ($user->store->expires_at && $user->store->expires_at->isPast()) {
+                $isExpired = true;
+            }
+            
             $storeData = [
                 'id' => $user->store->id,
                 'name' => $user->store->name,
                 'slug' => $user->store->slug,
+                'is_active' => $user->store->is_active,
+                'is_expired' => $isExpired,
             ];
         }
 
@@ -179,6 +194,8 @@ class AuthController extends Controller
                 'id' => $user->store->id,
                 'name' => $user->store->name,
                 'slug' => $user->store->slug,
+                'is_active' => $user->store->is_active,
+                'is_expired' => ($user->store->expires_at && $user->store->expires_at->isPast()),
             ] : null,
         ]);
     }
@@ -206,6 +223,8 @@ class AuthController extends Controller
                     'id' => $user->store->id,
                     'name' => $user->store->name,
                     'slug' => $user->store->slug,
+                    'is_active' => $user->store->is_active,
+                    'is_expired' => ($user->store->expires_at && $user->store->expires_at->isPast()),
                 ] : null,
             ],
         ]);

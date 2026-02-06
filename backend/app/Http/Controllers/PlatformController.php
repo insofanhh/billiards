@@ -41,6 +41,8 @@ class PlatformController extends Controller
                 'slug' => $slug,
                 'store_type' => $validated['store_type'],
                 'owner_id' => null, // Will update later
+                'expires_at' => now()->addDays(\App\Models\SettingPlatform::first()?->trial_days ?? 7),
+                'is_active' => true,
             ]);
 
             // 2. Bind store to context BEFORE creating user

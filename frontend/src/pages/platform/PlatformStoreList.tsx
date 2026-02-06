@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { platformClient } from '../../api/platformClient';
+import { StoreDetailModal } from './components/StoreDetailModal';
 
 export const PlatformStoreList = () => {
     const [stores, setStores] = useState<any[]>([]);
+    const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+    const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({
         current_page: 1,
@@ -139,14 +142,15 @@ export const PlatformStoreList = () => {
                             <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Category</th>
                             <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Status</th>
                             <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Joined Date</th>
+                            <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Expiry Date</th>
                             <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[#dbe0e6] dark:divide-gray-800">
                         {loading ? (
-                            <tr><td colSpan={6} className="p-8 text-center text-gray-500">Loading...</td></tr>
+                            <tr><td colSpan={7} className="p-8 text-center text-gray-500">Loading...</td></tr>
                         ) : stores.length === 0 ? (
-                            <tr><td colSpan={6} className="p-8 text-center text-gray-500">No stores found.</td></tr>
+                            <tr><td colSpan={7} className="p-8 text-center text-gray-500">No stores found.</td></tr>
                         ) : (
                             stores.map((store) => (
                                 <tr key={store.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
@@ -180,7 +184,12 @@ export const PlatformStoreList = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="text-sm text-[#617589]">
-                                            {new Date().toLocaleDateString()}
+                                            {store.created_at ? new Date(store.created_at).toLocaleDateString('vi-VN') : 'N/A'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`text-sm ${store.expires_at && new Date(store.expires_at) < new Date() ? 'text-red-500 font-bold' : 'text-[#617589]'}`}>
+                                            {store.expires_at ? new Date(store.expires_at).toLocaleDateString('vi-VN') : 'Unlimited'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
@@ -198,12 +207,27 @@ export const PlatformStoreList = () => {
                                                     {store.is_active ? 'block' : 'check_circle'}
                                                 </span>
                                             </button>
-                                            <Link to={`/platform/stores/${store.id}`} className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" title="View Details">
+                                            <button 
+                                                onClick={() => {
+                                                    setModalMode('view');
+                                                    setSelectedStoreId(store.id);
+                                                }}
+                                                className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" 
+                                                title="View/Edit Details"
+                                            >
                                                 <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                            </Link>
-                                            <Link to={`/platform/stores/${store.id}`} className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" title="Edit Store">
+                                            </button>
+                                            {/* Edit button is now redundant if visibility opens the same edit modal, but keeping it for clarity or mapping it to same action */}
+                                            <button 
+                                                onClick={() => {
+                                                    setModalMode('edit');
+                                                    setSelectedStoreId(store.id);
+                                                }}
+                                                className="p-1.5 text-[#617589] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-lg transition-all" 
+                                                title="Edit Store"
+                                            >
                                                 <span className="material-symbols-outlined text-[20px]">edit</span>
-                                            </Link>
+                                            </button>
                                             <button 
                                                 onClick={() => handleDelete(store.id)}
                                                 className="p-1.5 text-[#617589] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" 
@@ -243,6 +267,18 @@ export const PlatformStoreList = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal */}
+            <StoreDetailModal 
+                isOpen={!!selectedStoreId}
+                storeId={selectedStoreId}
+                isReadOnly={modalMode === 'view'}
+                onClose={() => setSelectedStoreId(null)}
+                onSaveSuccess={() => {
+                    fetchStores(pagination.current_page);
+                    setSelectedStoreId(null);
+                }}
+            />
         </div>
     );
 };

@@ -52,14 +52,19 @@ export function LoginPage() {
           localStorage.setItem('guest_name', response.user.name);
         }
         showNotification('Đăng nhập thành công. Chuyển tới khu vực khách hàng.');
-        
-        // Redirect to registered store if available and not already redirecting specific place
-        if (response.user?.store?.slug && (!redirectParam || !redirectParam.includes('/s/'))) {
-             navigate(`/s/${response.user.store.slug}`);
-             return;
+        if (response.user?.store?.slug) {
+            if (response.user.store.is_expired || response.user.store.is_active === false) {
+                showNotification('Cửa hàng đã hết hạn dùng thử/đăng ký. Vui lòng gia hạn.');
+                navigate(`/s/${response.user.store.slug}/extend`);
+                return;
+            }
+            navigate(`/s/${response.user.store.slug}`);
+        } else if (response.user?.roles?.includes('super_admin') || response.user?.roles?.includes('platform_admin')) {
+            navigate('/platform/dashboard');
+        } else {
+            navigate('/');
         }
 
-        navigate(safeRedirect);
         return;
       }
 
@@ -71,6 +76,11 @@ export function LoginPage() {
       }
       navigate(safeRedirect);
     } catch (err: any) {
+      if (err.response?.data?.code === 'STORE_EXPIRED' && err.response?.data?.store_slug) {
+        showNotification('Cửa hàng đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng.');
+        navigate(`/s/${err.response.data.store_slug}/extend`);
+        return;
+      }
       setError(err.response?.data?.message || 'Đăng nhập thất bại');
     }
   };

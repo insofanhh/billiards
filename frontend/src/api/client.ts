@@ -62,13 +62,26 @@ export const registerLogoutCallback = (cb: () => void) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: any) => {
     if (error.response?.status === 401 || error.response?.status === 419) {
       localStorage.removeItem('auth_token');
       if (logoutCallback) {
         logoutCallback();
       }
     }
+
+    // Handle Store Expiry
+    if (error.response?.status === 403 && error.response?.data?.code === 'STORE_EXPIRED') {
+      const slug = error.response?.data?.store_slug;
+      if (slug) {
+        // Use window.location to avoid circular dependencies with router
+        // Check if we are already on the extension page to avoid loops
+        if (!window.location.pathname.includes(`/s/${slug}/extend`)) {
+            window.location.href = `/s/${slug}/extend`;
+        }
+      }
+    }
+
     return Promise.reject(error);
   }
 );
