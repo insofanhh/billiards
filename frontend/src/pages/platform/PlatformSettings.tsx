@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { platformClient } from '../../api/platformClient';
-import { useNotification } from '../../contexts/NotificationContext';
+
 import { toast } from 'react-hot-toast';
 
 interface SeoSettings {
@@ -21,7 +21,7 @@ interface SeoSettings {
 }
 
 export const PlatformSettings = () => {
-    const { showNotification } = useNotification();
+
     const [settings, setSettings] = useState<SeoSettings>({
         seo_title: '',
         seo_description: '',
