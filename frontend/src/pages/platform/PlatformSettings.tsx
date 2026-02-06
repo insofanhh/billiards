@@ -214,15 +214,21 @@ export const PlatformSettings = () => {
                         <div className="flex gap-2">
                             <input
                                 type="text"
-                                value={settings.sepay_webhook_token ? `${window.location.protocol}//${window.location.hostname}:8000/api/webhook/platform/sepay/${settings.sepay_webhook_token}` : ''}
+                                value={settings.sepay_webhook_token ? (() => {
+                                    const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://billiardscms.io.vn/api' : 'http://localhost:8000/api');
+                                    return `${apiBase}/webhook/platform/sepay/${settings.sepay_webhook_token}`;
+                                })() : ''}
                                 readOnly
                                 className="flex-1 bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-gray-400 cursor-not-allowed font-mono text-sm"
                             />
                              <button
                                 onClick={() => {
-                                    const url = settings.sepay_webhook_token ? `${window.location.protocol}//${window.location.hostname}:8000/api/webhook/platform/sepay/${settings.sepay_webhook_token}` : '';
-                                    navigator.clipboard.writeText(url);
-                                    toast.success('Webhook URL copied!');
+                                    if (settings.sepay_webhook_token) {
+                                        const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://billiardscms.io.vn/api' : 'http://localhost:8000/api');
+                                        const url = `${apiBase}/webhook/platform/sepay/${settings.sepay_webhook_token}`;
+                                        navigator.clipboard.writeText(url);
+                                        toast.success('Webhook URL copied!');
+                                    }
                                 }}
                                 type="button"
                                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-white transition-colors"
