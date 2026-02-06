@@ -1,3 +1,12 @@
+export interface Store {
+  id: number;
+  name: string;
+  slug: string;
+  is_expired?: boolean;
+  is_active?: boolean;
+  expires_at?: string;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -6,11 +15,7 @@ export interface User {
   store_id?: number;
   roles?: string[];
   permissions?: string[];
-  store?: {
-    id: number;
-    name: string;
-    slug: string;
-  } | null;
+  store?: Store | null;
 }
 
 export interface Table {

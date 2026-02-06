@@ -42,6 +42,9 @@ Route::prefix('platform')->group(function () {
         Route::get('/users', [\App\Http\Controllers\Api\PlatformUserController::class, 'index']);
         Route::get('/users/{id}', [\App\Http\Controllers\Api\PlatformUserController::class, 'show']);
         Route::delete('/users/{id}', [\App\Http\Controllers\Api\PlatformUserController::class, 'destroy']);
+
+        // Transactions
+        Route::get('/transactions', [\App\Http\Controllers\Api\PlatformTransactionController::class, 'index']);
     });
 });
 
@@ -62,7 +65,16 @@ Route::get('/public/posts/{id}', [PostController::class, 'show']);
 Route::get('/public/posts/{id}/comments', [CommentController::class, 'index']);
 Route::get('/public/categories', [CategoryController::class, 'index']);
 
-Route::middleware(['api.key', 'auth:sanctum'])->group(function () {
+// Public Location Proxy (to avoid CORS)
+Route::get('/public/locations/provinces', [\App\Http\Controllers\Api\LocationController::class, 'getProvinces']);
+Route::get('/public/locations/provinces/{code}', [\App\Http\Controllers\Api\LocationController::class, 'getProvinceDetails']);
+
+// Store Extension Flow
+Route::get('/public/store-extensions/{slug}', [\App\Http\Controllers\Api\StoreExtensionController::class, 'checkStatus']);
+Route::put('/public/store-extensions/{slug}/profile', [\App\Http\Controllers\Api\StoreExtensionController::class, 'updateProfile']);
+Route::get('/public/store-extensions/{slug}/payment-info', [\App\Http\Controllers\Api\StoreExtensionController::class, 'getPaymentInfo']);
+
+Route::middleware(['api.key', 'auth:sanctum', 'store.expiry'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/auth/sync-token', [AuthController::class, 'syncToken']);
     // Route::post('/logout', [AuthController::class, 'logout']); // Moved outside for robust cleanup
@@ -131,6 +143,7 @@ Route::middleware(['api.key', 'auth:sanctum'])->group(function () {
 });
 
 // Webhook endpoints for SePay
+Route::post('/webhook/platform/sepay/{token}', [\App\Http\Controllers\Api\PlatformSePayWebhookController::class, 'handle']);
 Route::post('/webhook/sepay/{storeSlug}/{webhookToken}', [SePayWebhookController::class, 'handle']);
 Route::post('/webhook/sepay/{storeSlug?}', [SePayWebhookController::class, 'handle'])->where('storeSlug', '[a-z0-9-]+'); // Legacy support 
 

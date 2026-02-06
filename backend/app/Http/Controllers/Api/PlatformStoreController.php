@@ -36,6 +36,16 @@ class PlatformStoreController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:stores,slug,' . $id,
             'is_active' => 'boolean',
+            'expires_at' => 'nullable|date',
+            'birthday' => 'nullable|date',
+            'cccd' => 'nullable|string|max:20',
+            'phone_contact' => 'nullable|string|max:20',
+            'email_contact' => 'nullable|email|max:255',
+            'country' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'address_detail' => 'nullable|string|max:500',
         ]);
 
         \Illuminate\Support\Facades\Log::info("Validated Data:", $validated);
@@ -68,12 +78,17 @@ class PlatformStoreController extends Controller
             \Illuminate\Support\Facades\Log::info('Register Store Request Data:', $validated);
             \Illuminate\Support\Facades\DB::beginTransaction();
 
+            $settings = app(\App\Settings\GeneralSettings::class);
+            $expiresAt = now()->addDays($settings->trial_days);
+
             // 1. Create Store first
             $store = Store::create([
                 'name' => $validated['store_name'],
                 'slug' => $slug,
                 'store_type' => $validated['store_type'],
                 'owner_id' => null,
+                'is_active' => true,
+                'expires_at' => $expiresAt,
             ]);
             \Illuminate\Support\Facades\Log::info('Created Store:', $store->toArray());
 

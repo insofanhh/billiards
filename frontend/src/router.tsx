@@ -24,6 +24,8 @@ import { PlatformStoreDetail } from './pages/platform/PlatformStoreDetail';
 import { PlatformStoreCreate } from './pages/platform/PlatformStoreCreate';
 import { PlatformSettings } from './pages/platform/PlatformSettings';
 import { PlatformUserList } from './pages/platform/PlatformUserList';
+import { PlatformTransactions } from './pages/platform/PlatformTransactions';
+import { SubscriptionExtensionPage } from './pages/SubscriptionExtensionPage';
 
 
 export const router = createBrowserRouter([
@@ -140,6 +142,10 @@ export const router = createBrowserRouter([
       },
     ]
   },
+  {
+    path: '/s/:slug/extend',
+    element: <SubscriptionExtensionPage />,
+  },
 
   // Platform Admin Routes
   {
@@ -173,6 +179,10 @@ export const router = createBrowserRouter([
         {
             path: 'users',
             element: <PlatformUserList />,
+        },
+        {
+            path: 'transactions',
+            element: <PlatformTransactions />,
         },
         {
             index: true,

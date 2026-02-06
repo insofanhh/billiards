@@ -29,6 +29,7 @@ const queryClient = new QueryClient({
 const TokenInitializer = () => {
   const initFromUrlToken = useAuthStore((state) => state.initFromUrlToken);
   const syncTokenFromSession = useAuthStore((state) => state.syncTokenFromSession);
+  const checkSession = useAuthStore((state) => state.checkSession);
   
   useEffect(() => {
     const init = async () => {
@@ -39,10 +40,15 @@ const TokenInitializer = () => {
       if (!fromUrl) {
         await syncTokenFromSession();
       }
+      
+      // Ensure we have fresh user data and valid session
+      if (useAuthStore.getState().isAuthenticated) {
+          await checkSession();
+      }
     };
     
     init();
-  }, [initFromUrlToken, syncTokenFromSession]);
+  }, [initFromUrlToken, syncTokenFromSession, checkSession]);
   
   return null;
 };

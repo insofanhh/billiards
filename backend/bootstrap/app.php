@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'platform.admin' => \App\Http\Middleware\CheckPlatformAdmin::class,
             'api.key' => \App\Http\Middleware\EnsureApiKey::class,
+            'store.expiry' => \App\Http\Middleware\CheckStoreExpiry::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

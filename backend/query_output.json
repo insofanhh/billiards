@@ -1,0 +1,125 @@
+{
+    "current_page": 1,
+    "data": [
+        {
+            "id": 7,
+            "store_id": 32,
+            "amount": "100000.00",
+            "months": 1,
+            "status": "pending",
+            "transaction_code": "GHTEST-67613",
+            "content": "GHTEST-67613",
+            "description": "Auto-generated renewal for 1 month(s)",
+            "paid_at": null,
+            "created_at": "2026-02-06T06:53:02.000000Z",
+            "updated_at": "2026-02-06T06:53:02.000000Z",
+            "store": {
+                "id": 32,
+                "name": "Test 6",
+                "slug": "test-6"
+            }
+        },
+        {
+            "id": 6,
+            "store_id": 31,
+            "amount": "100000.00",
+            "months": 1,
+            "status": "paid",
+            "transaction_code": "GHTEST51887",
+            "content": "GHTEST51887",
+            "description": "Renewal for 1 month(s)",
+            "paid_at": "2026-02-06T06:50:12.000000Z",
+            "created_at": "2026-02-06T06:50:01.000000Z",
+            "updated_at": "2026-02-06T06:50:12.000000Z",
+            "store": {
+                "id": 31,
+                "name": "test 5",
+                "slug": "test-5"
+            }
+        },
+        {
+            "id": 5,
+            "store_id": 30,
+            "amount": "100000.00",
+            "months": 1,
+            "status": "paid",
+            "transaction_code": "GHTEST43863",
+            "content": "GHTEST43863",
+            "description": "Renewal for 1 month(s)",
+            "paid_at": "2026-02-06T06:37:59.000000Z",
+            "created_at": "2026-02-06T06:37:48.000000Z",
+            "updated_at": "2026-02-06T06:37:59.000000Z",
+            "store": {
+                "id": 30,
+                "name": "Test 4",
+                "slug": "test-4"
+            }
+        },
+        {
+            "id": 3,
+            "store_id": 27,
+            "amount": "100000.00",
+            "months": 1,
+            "status": "paid",
+            "transaction_code": "GHEXPIRY9243",
+            "content": "GHEXPIRY9243",
+            "description": "Renewal for 1 month(s)",
+            "paid_at": "2026-02-06T04:52:11.000000Z",
+            "created_at": "2026-02-06T04:51:58.000000Z",
+            "updated_at": "2026-02-06T04:52:11.000000Z",
+            "store": {
+                "id": 27,
+                "name": "Expiry",
+                "slug": "expiry"
+            }
+        },
+        {
+            "id": 2,
+            "store_id": 28,
+            "amount": "300000.00",
+            "months": 3,
+            "status": "paid",
+            "transaction_code": "GHTRINH4256",
+            "content": "GHTRINH4256",
+            "description": "Renewal for 3 month(s)",
+            "paid_at": "2026-02-06T04:59:05.000000Z",
+            "created_at": "2026-02-06T04:42:25.000000Z",
+            "updated_at": "2026-02-06T04:59:05.000000Z",
+            "store": {
+                "id": 28,
+                "name": "Trinh",
+                "slug": "trinh"
+            }
+        }
+    ],
+    "first_page_url": "http:\/\/127.0.0.1:8000?page=1",
+    "from": 1,
+    "last_page": 1,
+    "last_page_url": "http:\/\/127.0.0.1:8000?page=1",
+    "links": [
+        {
+            "url": null,
+            "label": "&laquo; Previous",
+            "page": null,
+            "active": false
+        },
+        {
+            "url": "http:\/\/127.0.0.1:8000?page=1",
+            "label": "1",
+            "page": 1,
+            "active": true
+        },
+        {
+            "url": null,
+            "label": "Next &raquo;",
+            "page": null,
+            "active": false
+        }
+    ],
+    "next_page_url": null,
+    "path": "http:\/\/127.0.0.1:8000",
+    "per_page": 10,
+    "prev_page_url": null,
+    "to": 5,
+    "total": 5
+}

@@ -30,6 +30,8 @@ class GeneralSettings extends Settings
     
     public ?string $daily_report_email = null;
 
+    public int $trial_days = 7;
+
     public static function group(): string
     {
         return 'general';
@@ -49,6 +51,7 @@ class GeneralSettings extends Settings
             'notification_content' => null,
             'extra_notifications' => [],
             'daily_report_email' => null,
+            'trial_days' => 7,
         ];
     }
 }

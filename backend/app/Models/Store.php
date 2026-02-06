@@ -18,6 +18,15 @@ class Store extends Model
         'sepay_api_key',
         'webhook_token',
         'is_active',
+        'expires_at',
+        'birthday',
+        'cccd',
+        'phone_contact',
+        'email_contact',
+        'country',
+        'province',
+        'ward',
+        'address_detail',
     ];
 
     protected $hidden = [
@@ -27,6 +36,8 @@ class Store extends Model
     protected $casts = [
         'sepay_api_key' => 'encrypted',
         'is_active' => 'boolean',
+        'expires_at' => 'datetime',
+        'birthday' => 'date',
     ];
 
     protected static function boot()
@@ -38,6 +49,11 @@ class Store extends Model
                 $store->webhook_token = Str::random(64);
             }
         });
+    }
+
+    public function platformTransactions()
+    {
+        return $this->hasMany(PlatformTransaction::class);
     }
 
     public function owner()

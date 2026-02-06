@@ -10,7 +10,7 @@ interface AuthState {
   lastActivityAt: number | null;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
-  checkSession: () => Promise<void>;
+  checkSession: (force?: boolean) => Promise<void>;
   updateActivity: () => void;
   initFromUrlToken: () => Promise<boolean>;
   syncTokenFromSession: () => Promise<boolean>;
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ lastActivityAt: now });
   },
   
-  checkSession: async () => {
+  checkSession: async (force: boolean = false) => {
     const state = get();
     
     // If not authenticated, no need to check session
@@ -59,13 +59,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const timeSinceLastActivity = now - lastActivity;
 
     // If last activity was less than 1 hour ago, session is still valid
-    if (timeSinceLastActivity < INACTIVITY_TIMEOUT) {
+    // BUT if force is true, we skip this check
+    if (!force && timeSinceLastActivity < INACTIVITY_TIMEOUT) {
       // Update activity timestamp to show user is active
       get().updateActivity();
       return;
     }
 
-    // If more than 1 hour has passed, verify session with backend
+    // If more than 1 hour has passed or forced, verify session with backend
     try {
       const user = await authApi.checkSession();
       
