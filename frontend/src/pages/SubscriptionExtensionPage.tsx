@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -91,8 +91,14 @@ const PlanCard = ({ month, price, selected, onSelect }: { month: number, price: 
 
 export const SubscriptionExtensionPage = () => {
     const { slug } = useParams();
+    const navigate = useNavigate(); // Add this
     const { showNotification } = useNotification();
     const { user, logout } = useAuthStore();
+    
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
     
     const [loading, setLoading] = useState(true);
     const [storeInfo, setStoreInfo] = useState<any>(null);
@@ -247,7 +253,7 @@ export const SubscriptionExtensionPage = () => {
                 userName={user?.name} 
                 userRoles={user?.roles} 
                 storeName={storeInfo?.name || user?.store?.name} 
-                onLogout={logout} 
+                onLogout={handleLogout} 
             />
 
             <div className="max-w-5xl mx-auto px-6 py-10">

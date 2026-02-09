@@ -15,6 +15,7 @@ import {
   persistClientActiveOrderFromOrder,
 } from '../utils/clientActiveOrder';
 import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
+import { useAuthStore } from '../store/authStore';
 
 // New Components
 import { LatestPosts } from '../components/blog/LatestPosts';
@@ -29,7 +30,12 @@ import { NotFoundPage } from './NotFoundPage';
 export function TenantHomePage() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug?: string }>();
-  const [guestName] = useState(getTemporaryUserName);
+  
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  // Reactive guest name: User name if logged in, otherwise from temp storage
+  const guestName = user?.name || getTemporaryUserName();
   
   const { data: store, isError } = useQuery({
     queryKey: ['public-store', slug],
@@ -39,12 +45,9 @@ export function TenantHomePage() {
     retry: false,
   });
 
-
-
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [isHandlingScan, setIsHandlingScan] = useState(false);
-  const isAuthenticated = !!localStorage.getItem('auth_token');
   const activeOrderSnapshot = useClientActiveOrder();
 
   useEffect(() => {
