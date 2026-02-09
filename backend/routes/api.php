@@ -56,6 +56,15 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/auth/google/redirect', [\App\Http\Controllers\Api\SocialAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [\App\Http\Controllers\Api\SocialAuthController::class, 'callback']);
 
+// Email Verification
+Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Api\VerificationController::class, 'verify'])
+    ->name('verification.verify');
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/email/resend', [App\Http\Controllers\Api\VerificationController::class, 'resend'])
+        ->name('verification.resend');
+});
+
 // Public endpoints for guests
 Route::get('/tables', [TableController::class, 'index']);
 Route::get('/public/stores/{slug}', [\App\Http\Controllers\Api\PublicStoreController::class, 'show']);

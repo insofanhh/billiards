@@ -78,6 +78,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'email_verified_at' => $user->email_verified_at,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
                 'store' => $storeData,
@@ -142,6 +143,8 @@ class AuthController extends Controller
             'store_id' => $storeId, // Associate user with store
         ]);
 
+        event(new \Illuminate\Auth\Events\Registered($user));
+
         $customerRole = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
         if (!$user->hasRole($customerRole)) {
             $user->assignRole($customerRole);
@@ -170,6 +173,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'email_verified_at' => $user->email_verified_at,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
                 'store' => $storeData,
@@ -188,6 +192,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'email_verified_at' => $user->email_verified_at,
             'roles' => $user->roles->pluck('name'),
             'permissions' => $permissions,
             'store' => $user->store ? [
@@ -217,6 +222,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'email_verified_at' => $user->email_verified_at,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
                 'store' => $user->store ? [

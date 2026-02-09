@@ -34,7 +34,8 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->font('Quicksand')
-            ->brandLogo(asset('/icons/logo_white.png'))
+            ->brandLogo(asset('/icons/logo.png'))
+            ->darkModeBrandLogo(asset('/icons/logo_white.png'))
             ->brandLogoHeight('2.5rem')
             ->homeUrl(function () {
                 $tenant = \Filament\Facades\Filament::getTenant();
@@ -45,7 +46,7 @@ class AdminPanelProvider extends PanelProvider
                 }
                 return '/';
             })
-            ->favicon(asset('icons/logo.png'))
+            ->favicon(asset('icons/favicon.png'))
             ->profile(\Filament\Auth\Pages\EditProfile::class)
             ->navigationGroups([
                 'Quản lý đơn hàng',
@@ -89,13 +90,29 @@ class AdminPanelProvider extends PanelProvider
                     <link rel="preconnect" href="https://fonts.googleapis.com">
                     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
+                    <style>
+                        ::-webkit-scrollbar {
+                            width: 4px;
+                            height: 4px;
+                        }
+                        ::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        ::-webkit-scrollbar-thumb {
+                            background-color: rgba(156, 163, 175, 0.5);
+                            border-radius: 20px;
+                        }
+                        ::-webkit-scrollbar-thumb:hover {
+                            background-color: rgba(156, 163, 175, 0.8);
+                        }
+                    </style>
                     <!-- PWA Meta Tags -->
                     <meta name="theme-color" content="#000000ff">
                     <meta name="apple-mobile-web-app-capable" content="yes">
                     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
                     <meta name="apple-mobile-web-app-title" content="Verda CMS">
                     <link rel="manifest" href="/manifest.json">
-                    <link rel="apple-touch-icon" href="/icons/logo.png">
+                    <link rel="apple-touch-icon" href="/icons/favicon.png">
                 HTML
             )
             ->renderHook(
@@ -129,6 +146,7 @@ class AdminPanelProvider extends PanelProvider
             )
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\EnsureEmailIsVerifiedFilament::class,
             ])
             ->tenant(\App\Models\Store::class, slugAttribute: 'slug')
             ->tenantMiddleware([

@@ -51,6 +51,10 @@ export function LoginPage() {
       const hasRole = (...roles: string[]) => normalizedRoles.some((role) => roles.includes(role));
 
       if (hasRole('staff', 'admin', 'super_admin')) {
+        if (!response.user.email_verified_at) {
+            navigate('/email-verify-prompt');
+            return;
+        }
         showNotification('Đăng nhập thành công. Chuyển tới trang quản lý bàn.');
         navigate('/staff');
         return;
@@ -60,6 +64,12 @@ export function LoginPage() {
         if (response.user?.name) {
           localStorage.setItem('guest_name', response.user.name);
         }
+
+        if (!response.user.email_verified_at) {
+            navigate('/email-verify-prompt');
+            return;
+        }
+
         showNotification('Đăng nhập thành công. Chuyển tới khu vực khách hàng.');
         if (response.user?.store?.slug) {
             if (response.user.store.is_expired || response.user.store.is_active === false) {

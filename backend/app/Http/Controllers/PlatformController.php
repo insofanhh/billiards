@@ -113,6 +113,8 @@ class PlatformController extends Controller
 
             DB::commit();
             
+            event(new \Illuminate\Auth\Events\Registered($user));
+            
             $token = $user->createToken('auth_token')->plainTextToken;
 
             // Load roles and prepare permissions for frontend
@@ -123,6 +125,7 @@ class PlatformController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'email_verified_at' => $user->email_verified_at,
                 'roles' => $user->roles->pluck('name'),
                 'permissions' => $permissions,
             ];

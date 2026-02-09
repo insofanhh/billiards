@@ -65,6 +65,18 @@ export const authApi = {
     const response = await apiClient.post('/auth/sync-token');
     return response.data;
   },
+
+  verifyEmail: async (id: string, hash: string, query: string) => {
+    // No CSRF needed for simple GET, but good practice if session involved
+    const response = await apiClient.get(`/email/verify/${id}/${hash}?${query}`);
+    return response.data;
+  },
+
+  resendVerification: async () => {
+    await getCsrfToken();
+    const response = await apiClient.post('/email/resend');
+    return response.data;
+  },
 };
 
 // Export standalone checkSession for dynamic import usage if needed, or just rely on authApi
