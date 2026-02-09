@@ -123,7 +123,7 @@ export function LoginPage() {
 
         <div className="mb-6">
             <a
-              href={`${import.meta.env.VITE_API_URL || ''}/api/auth/google/redirect${searchParams.get('slug') ? `?slug=${searchParams.get('slug')}` : ''}`}
+              href={`${(import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')}/api/auth/google/redirect${searchParams.get('slug') ? `?slug=${searchParams.get('slug')}` : ''}`}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 dark:border-white/10 rounded-xl shadow-sm bg-white dark:bg-white/5 text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
