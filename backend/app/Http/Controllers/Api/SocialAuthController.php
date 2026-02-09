@@ -33,7 +33,7 @@ class SocialAuthController extends Controller
 
     public function callback(Request $request)
     {
-        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+        $frontendUrl = config('app.frontend_url', config('app.url'));
 
         try {
             /** @var \Laravel\Socialite\Two\User $socialUser */
