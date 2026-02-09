@@ -104,6 +104,8 @@ class PlatformStoreController extends Controller
                 'store_id' => $store->id,
             ]);
 
+            event(new \Illuminate\Auth\Events\Registered($user));
+
             // 4. Update Store's owner
             $store->owner_id = $user->id;
             $store->save();

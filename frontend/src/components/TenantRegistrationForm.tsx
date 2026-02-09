@@ -36,7 +36,9 @@ export function TenantRegistrationForm() {
       }
 
       // Redirect to the new store's client page
-      if (res.store && res.store.slug) {
+      if (res.user && !res.user.email_verified_at) {
+        navigate('/email-verify-prompt');
+      } else if (res.store && res.store.slug) {
          window.location.href = `/s/${res.store.slug}`;
       } else {
          navigate('/login');

@@ -26,6 +26,8 @@ import { PlatformSettings } from './pages/platform/PlatformSettings';
 import { PlatformUserList } from './pages/platform/PlatformUserList';
 import { PlatformTransactions } from './pages/platform/PlatformTransactions';
 import { SubscriptionExtensionPage } from './pages/SubscriptionExtensionPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { EmailVerificationPromptPage } from './pages/EmailVerificationPromptPage';
 
 
 export const router = createBrowserRouter([
@@ -36,6 +38,14 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  {
+    path: '/verify-email/:id/:hash',
+    element: <VerifyEmailPage />,
+  },
+  {
+    path: '/email-verify-prompt',
+    element: <EmailVerificationPromptPage />,
   },
   {
     path: '/',
