@@ -146,6 +146,7 @@ class AdminPanelProvider extends PanelProvider
             )
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\EnsureEmailIsVerifiedFilament::class,
             ])
             ->tenant(\App\Models\Store::class, slugAttribute: 'slug')
             ->tenantMiddleware([
