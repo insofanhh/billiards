@@ -52,6 +52,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
+// Social Auth
+Route::get('/auth/google/redirect', [\App\Http\Controllers\Api\SocialAuthController::class, 'redirect']);
+Route::get('/auth/google/callback', [\App\Http\Controllers\Api\SocialAuthController::class, 'callback']);
+
 // Public endpoints for guests
 Route::get('/tables', [TableController::class, 'index']);
 Route::get('/public/stores/{slug}', [\App\Http\Controllers\Api\PublicStoreController::class, 'show']);

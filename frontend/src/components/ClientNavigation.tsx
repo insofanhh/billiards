@@ -45,12 +45,13 @@ export function ClientNavigation({
   const { theme, toggleTheme } = useTheme();
   const { showNotification } = useNotification();
   const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const canLogin = useAuthStore((state) => state.canLogin);
+  const logout = useAuthStore((state) => state.logout);
   const activeOrder = useClientActiveOrder();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
-  const [canLogout, setCanLogout] = useState(() => !!localStorage.getItem('auth_token'));
   const [isScrolled, setIsScrolled] = useState(false);
   const hideDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideGuestDropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,7 +177,6 @@ export function ClientNavigation({
 
   const handleHistory = () => {
     // Check if user is authenticated and not a guest
-    const isAuthenticated = !!localStorage.getItem('auth_token');
     const isGuest = isGuestUser();
 
     if (!isAuthenticated || isGuest) {
@@ -198,18 +198,15 @@ export function ClientNavigation({
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('guest_name');
+    logout();
     setMobileMenuOpen(false);
-    setCanLogout(false);
     setShowLogoutDesktop(false);
     navigate('/login');
   };
 
   const handleLogin = () => {
     setShowGuestDropdown(false);
-    navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+    navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}${slug ? `&slug=${slug}` : ''}`);
   };
 
   const handleRegister = () => {
@@ -334,7 +331,7 @@ export function ClientNavigation({
             >
               {theme === 'dark' ? icons.sun : icons.moon}
             </button>
-            {canLogout ? (
+            {isAuthenticated ? (
               <div
                 className="relative"
                 onMouseEnter={() => {
@@ -557,7 +554,7 @@ export function ClientNavigation({
                 </svg>
               </span>
             </button>
-            {canLogout ? (
+            {isAuthenticated ? (
               <button
                 type="button"
                 onClick={handleLogout}
@@ -567,16 +564,16 @@ export function ClientNavigation({
               </button>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleLogin();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white transition hover:bg-gray-50 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                >
-                  Đăng nhập
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleLogin();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white transition hover:bg-gray-50 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    Đăng nhập
+                  </button>
                 <button
                   type="button"
                   onClick={() => {

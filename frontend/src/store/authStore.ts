@@ -124,26 +124,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initFromUrlToken: async () => {
-    // Check for token in URL fragment (#token=...)
-    const hash = window.location.hash;
-    const tokenMatch = hash.match(/#token=(.+)/);
+    // Check for token in URL query params (?token=...) or fragment (#token=...)
+    const searchParams = new URLSearchParams(window.location.search);
+    let token = searchParams.get('token');
     
-    if (tokenMatch && tokenMatch[1]) {
-      const token = tokenMatch[1];
-      
+    // Fallback to hash if not in query
+    if (!token) {
+        const hash = window.location.hash;
+        const tokenMatch = hash.match(/#token=(.+)/);
+        if (tokenMatch && tokenMatch[1]) {
+            token = tokenMatch[1];
+        }
+    }
+    
+    if (token) {
       try {
         // Set token first
         localStorage.setItem('auth_token', token);
         
         // Fetch user data
-        // Fetch user data
-        const user = await authApi.checkSession();
+        const response = await authApi.checkSession();
+        // Handle different response structures if checkSession returns just user or {user, ...}
+        // Assuming checkSession returns User object based on existing code, but let's be safe
+        const user = response; 
         
         // Update store
         get().setAuth(user, token);
         
-        // Clean up URL (remove token from fragment)
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        // Clean up URL (remove token from query or fragment)
+        const url = new URL(window.location.href);
+        url.searchParams.delete('token');
+        url.hash = url.hash.replace(/#token=.+/, '');
+        if (url.hash === '#') url.hash = ''; // Clean empty hash
+        
+        window.history.replaceState({}, document.title, url.toString());
         
         return true;
       } catch (error) {
