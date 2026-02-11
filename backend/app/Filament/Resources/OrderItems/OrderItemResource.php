@@ -19,6 +19,12 @@ class OrderItemResource extends Resource
 {
     protected static ?string $model = OrderItem::class;
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['order', 'service', 'inventoryTransaction']);
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
     protected static string|UnitEnum|null $navigationGroup = 'Quản lý đơn hàng';

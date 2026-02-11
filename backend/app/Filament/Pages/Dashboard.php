@@ -36,7 +36,7 @@ class Dashboard extends BaseDashboard
     public function getTitle(): string
     {
         $user = auth()->user();
-        return $user ? 'Mừng trở lại, '.$user->name.' !' : 'Tổng quan';
+        return $user ? 'Chào mừng, '.$user->name.' !' : 'Tổng quan';
     }
 
     public function filtersForm(Schema $schema): Schema

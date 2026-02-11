@@ -43,4 +43,9 @@ class OrderItem extends Model
     {
         return $this->hasOne(MergedTableFee::class);
     }
+
+    public function inventoryTransaction(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return $this->morphOne(InventoryTransaction::class, 'reference');
+    }
 }

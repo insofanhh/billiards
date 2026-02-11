@@ -33,7 +33,13 @@ class ServiceInventoryForm
                     ->numeric()
                     ->required()
                     ->minValue(0)
-                    ->default(0),
+                    ->default(0)
+                    ->disabled(),
+                TextInput::make('average_cost')
+                    ->label('Giá vốn trung bình')
+                    ->numeric()
+                    ->readOnly()
+                    ->suffix('VNĐ'),
             ]);
     }
 }

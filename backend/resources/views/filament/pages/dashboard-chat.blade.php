@@ -8,6 +8,9 @@
 <script src="https://chat.billiardscms.io.vn/static/script/embedding.js" data-id-store="{{ $storeId }}"></script>
 
 <style>
+    :root {
+        --font-family: 'Quicksand', sans-serif !important;
+    }
     .chat-fab-pulse {
         border: 2px solid #FFB400 !important;
         top: 0 !important;

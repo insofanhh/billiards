@@ -25,7 +25,7 @@ class DiscountCodeResource extends Resource
     protected static ?string $navigationLabel = 'Mã giảm giá';
     protected static ?string $modelLabel = 'Mã giảm giá';
     protected static ?string $pluralModelLabel = 'Mã giảm giá';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     public static function form(Schema $schema): Schema
     {

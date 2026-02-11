@@ -38,11 +38,16 @@ class OrderController extends Controller
 {
     protected PriceCalculatorService $priceCalculator;
     protected \App\Services\IotService $iotService;
+    protected \App\Services\InventoryService $inventoryService;
 
-    public function __construct(PriceCalculatorService $priceCalculator, \App\Services\IotService $iotService)
-    {
+    public function __construct(
+        PriceCalculatorService $priceCalculator, 
+        \App\Services\IotService $iotService,
+        \App\Services\InventoryService $inventoryService
+    ) {
         $this->priceCalculator = $priceCalculator;
         $this->iotService = $iotService;
+        $this->inventoryService = $inventoryService;
     }
 
     /**
@@ -298,20 +303,21 @@ class OrderController extends Controller
 
             if ($orderItem->stock_deducted) {
                 // Item was already deducted from stock. We need to handle the difference.
-                $inventory = ServiceInventory::firstOrCreate(
-                    ['service_id' => $service->id],
-                    ['quantity' => 0]
-                );
-
                 if ($diff > 0) {
-                    // Increasing quantity: Check if we have enough FOR THE DIFFERENCE
-                    if ($inventory->quantity < $diff) {
-                         throw new \Exception("Dịch vụ {$service->name} không đủ số lượng trong kho (cần thêm {$diff})");
-                    }
-                    $inventory->decrement('quantity', $diff);
+                    // Increasing quantity: Deduct more stock
+                    $this->inventoryService->decreaseStock($service, $diff, $orderItem, 'sale', "Cập nhật số lượng (+{$diff})");
                 } else {
                     // Decreasing quantity: Return stock
-                    $inventory->increment('quantity', abs($diff));
+                    // Use current average cost to keep MAC stable
+                    $currentCost = $service->inventory->average_cost ?? 0;
+                    $this->inventoryService->increaseStock(
+                        $service, 
+                        abs($diff), 
+                        $currentCost, 
+                        $orderItem, 
+                        'return',
+                        "Cập nhật số lượng ({$diff})"
+                    );
                 }
             } else {
                 // Stock NOT deducted yet. Just check if we have enough for the NEW TOTAL
@@ -350,11 +356,15 @@ class OrderController extends Controller
         DB::transaction(function () use ($orderItem) {
             if ($orderItem->stock_deducted) {
                 // Return stock to inventory
-                $inventory = ServiceInventory::firstOrCreate(
-                    ['service_id' => $orderItem->service_id],
-                    ['quantity' => 0]
+                $currentCost = $orderItem->service->inventory->average_cost ?? 0;
+                $this->inventoryService->increaseStock(
+                    $orderItem->service,
+                    $orderItem->qty,
+                    $currentCost,
+                    $orderItem,
+                    'return',
+                    "Hủy dịch vụ khỏi đơn hàng"
                 );
-                $inventory->increment('quantity', $orderItem->qty);
             }
             $orderItem->delete();
         });
@@ -1132,18 +1142,10 @@ class OrderController extends Controller
             return;
         }
 
-        $inventory = ServiceInventory::firstOrCreate(
-            ['service_id' => $item->service_id],
-            ['quantity' => 0]
-        );
 
-        if ($inventory->quantity < $item->qty) {
-            throw ValidationException::withMessages([
-                'inventory' => "Kho của {$item->service->name} không đủ để trừ",
-            ]);
-        }
-
-        $inventory->decrement('quantity', $item->qty);
+        
+        $this->inventoryService->decreaseStock($item->service, $item->qty, $item, 'sale', "Xác nhận dịch vụ đơn hàng");
+        
         $item->update([
             'stock_deducted' => true,
             'is_confirmed' => true,

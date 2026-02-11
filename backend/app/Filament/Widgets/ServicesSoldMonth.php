@@ -10,18 +10,18 @@ use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
-class ServicesSoldToday extends BaseWidget
+class ServicesSoldMonth extends BaseWidget
 {
     use InteractsWithPageFilters;
 
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 5;
 
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Dịch vụ bán ' . $this->getSelectedDateLabel())
+            ->heading('Dịch vụ bán tháng ' . $this->getSelectedDateLabel())
             ->query($this->getTableQuery())
             ->columns([
                 Tables\Columns\TextColumn::make('service.name')
@@ -49,7 +49,7 @@ class ServicesSoldToday extends BaseWidget
             ->defaultKeySort(false)
             ->defaultPaginationPageOption(5)
             ->paginated([5, 10, 25])
-            ->emptyStateHeading('Chưa có dịch vụ nào bán ' . $this->getSelectedDateLabel());
+            ->emptyStateHeading('Chưa có dịch vụ nào bán trong tháng ' . $this->getSelectedDateLabel());
     }
 
     protected function getTableQuery(): Builder
@@ -96,14 +96,13 @@ class ServicesSoldToday extends BaseWidget
             : Carbon::now('Asia/Ho_Chi_Minh');
 
         return [
-            $selectedDate->copy()->startOfDay(),
-            $selectedDate->copy()->endOfDay(),
+            $selectedDate->copy()->startOfMonth(),
+            $selectedDate->copy()->endOfMonth(),
         ];
     }
 
     protected function getSelectedDateLabel(): string
     {
-        return $this->getSelectedDateRange()[0]->format('d/m/Y');
+        return $this->getSelectedDateRange()[0]->format('m/Y');
     }
 }
-

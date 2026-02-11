@@ -71,6 +71,7 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\RevenueChart::class,
                 
                 \App\Filament\Widgets\ServicesSoldToday::class,
+                \App\Filament\Widgets\ServicesSoldMonth::class,
             ])
             ->middleware([
                 EncryptCookies::class,
