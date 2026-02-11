@@ -31,8 +31,9 @@
         margin-right: 5px !important;
     }
     @media (max-width: 480px) {
-    .chat-window {
-        bottom: 0 !important;
-        right: 0 !important;
+        .chat-window {
+            bottom: 0 !important;
+            right: 0 !important;
+        }
     }
 </style>
