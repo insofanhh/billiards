@@ -107,6 +107,8 @@ Route::middleware(['api.key', 'auth:sanctum', 'store.expiry'])->group(function (
     // Management APIs for 3rd party
     Route::post('/services', [ServiceController::class, 'store']);
     Route::put('/services/{id}', [ServiceController::class, 'update']);
+    Route::get('/stores/{id}/category-services', [\App\Http\Controllers\Api\CategoryServiceController::class, 'getByStore']);
+    Route::apiResource('category-services', \App\Http\Controllers\Api\CategoryServiceController::class);
     
     Route::post('/tables', [TableController::class, 'store']);
     Route::put('/tables/{id}', [TableController::class, 'update']);
