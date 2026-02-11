@@ -143,6 +143,17 @@ class AdminPanelProvider extends PanelProvider
                         }
                     </script>
                 HTML
+
+            )
+            ->renderHook(
+                'panels::body.end',
+                function (): string {
+                    $tenant = \Filament\Facades\Filament::getTenant();
+                    if ($tenant) {
+                         return view('filament.pages.dashboard-chat', ['storeId' => $tenant->id])->render();
+                    }
+                    return '';
+                }
             )
             ->authMiddleware([
                 Authenticate::class,
