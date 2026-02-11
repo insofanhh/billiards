@@ -112,6 +112,15 @@ Route::middleware(['api.key', 'auth:sanctum', 'store.expiry'])->group(function (
     Route::put('/tables/{id}', [TableController::class, 'update']);
     
     Route::apiResource('table-types', \App\Http\Controllers\Api\TableTypeController::class);
+    
+    // Price Rates
+    Route::get('/price-rates/all', [\App\Http\Controllers\Api\PriceRateController::class, 'getAll']);
+    Route::get('/stores/{id}/price-rates', [\App\Http\Controllers\Api\PriceRateController::class, 'getByStore']);
+    Route::get('/table-types/{id}/price-rates', [\App\Http\Controllers\Api\PriceRateController::class, 'index']);
+    Route::post('/price-rates', [\App\Http\Controllers\Api\PriceRateController::class, 'store']);
+    Route::put('/price-rates/{id}', [\App\Http\Controllers\Api\PriceRateController::class, 'update']);
+    Route::delete('/price-rates/{id}', [\App\Http\Controllers\Api\PriceRateController::class, 'destroy']);
+
     Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
 
     Route::get('/saved-discounts', [DiscountCodeController::class, 'getSavedDiscounts']);

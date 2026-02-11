@@ -50,12 +50,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 $message = $e->getMessage();
                 if (
-                    $e instanceof \Illuminate\Database\QueryException ||
-                    $e instanceof \PDOException ||
                     str_contains($message, 'Connection refused') ||
-                    str_contains($message, 'SQLSTATE[HY000]') ||
+                    str_contains($message, 'SQLSTATE[HY000] [2002]') ||
                     str_contains($message, 'No connection could be made')
                 ) {
+                    \Illuminate\Support\Facades\Log::error('Database Connection Error: ' . $e->getMessage());
                     return response()->json([
                         'message' => 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.',
                         'error' => 'Database connection failed'
