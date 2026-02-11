@@ -51,7 +51,15 @@ class TableController extends Controller
         }
 
         $validated = $request->validate([
-            'code' => 'required|string|max:50',
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                \Illuminate\Validation\Rule::unique('tables_billiards')->where(function ($query) use ($request, $user) {
+                    $storeId = $user->store_id ?: $request->store_id;
+                    return $query->where('store_id', $storeId);
+                })
+            ],
             'name' => 'required|string|max:255',
             'seats' => 'required|integer|min:1',
             'qr_code' => 'nullable|string',
@@ -68,7 +76,7 @@ class TableController extends Controller
 
         $table = TableBilliard::create($validated);
 
-        return new TableResource($table->load('tableType'));
+        return new TableResource($table->load(['tableType', 'tableType.priceRates']));
     }
 
     public function show(Request $request, $code)
