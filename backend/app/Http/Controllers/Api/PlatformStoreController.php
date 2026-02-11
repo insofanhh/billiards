@@ -14,8 +14,14 @@ class PlatformStoreController extends Controller
 
         if ($request->has('search')) {
             $search = $request->input('search');
-            $query->where('name', 'like', "%{$search}%")
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
                   ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('id')) {
+            $query->where('id', $request->input('id'));
         }
 
         return $query->paginate(10);
