@@ -54,6 +54,16 @@ class Service extends Model
         return $this->hasOne(ServiceInventory::class);
     }
 
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
+
+    public function purchaseOrderItems(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
+
     public function getAvailableQuantityAttribute(): int
     {
         return $this->inventory?->quantity ?? 0;

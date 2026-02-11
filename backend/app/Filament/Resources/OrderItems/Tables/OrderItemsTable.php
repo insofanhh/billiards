@@ -42,6 +42,23 @@ class OrderItemsTable
                     ->sortable()
                     ->alignEnd()
                     ->weight('bold'),
+                TextColumn::make('inventoryTransaction.unit_cost')
+                    ->label('Giá vốn')
+                    ->money('VND', locale: 'vi')
+                    ->state(fn (\App\Models\OrderItem $record) => $record->inventoryTransaction?->unit_cost ?? $record->service->inventory?->average_cost ?? 0)
+                    ->color(fn (\App\Models\OrderItem $record) => $record->inventoryTransaction ? null : 'gray')
+                    ->tooltip(fn (\App\Models\OrderItem $record) => $record->inventoryTransaction ? 'Giá vốn thực tế tại thời điểm bán' : 'Giá vốn ước tính hiện tại (do đơn cũ chưa có lịch sử)')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: false),
+                TextColumn::make('profit')
+                    ->label('Lợi nhuận')
+                    ->money('VND', locale: 'vi')
+                    ->state(function (\App\Models\OrderItem $record): float {
+                        $cost = $record->inventoryTransaction?->unit_cost ?? $record->service->inventory?->average_cost ?? 0;
+                        return ($record->unit_price - $cost) * $record->qty;
+                    })
+                    ->color(fn (string $state): string => (float) $state >= 0 ? 'success' : 'danger')
+                    ->toggleable(isToggledHiddenByDefault: false),
                 TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->dateTime('d/m/Y H:i')

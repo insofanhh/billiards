@@ -47,25 +47,25 @@ class StatsOverview extends StatsOverviewWidget
         
         return [
             Stat::make("Tổng doanh thu {$dateLabel}", Number::currency($todayRevenue, 'VND', 'vi'))
-                ->description('Tổng doanh thu từ bàn và dịch vụ trong ngày đã chọn')
+                ->description('Tổng doanh thu từ bàn và dịch vụ trong ngày')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success')
                 ->chart([7, 3, 4, 5, 6, 3, 5]),
 
             Stat::make("Doanh thu bàn {$dateLabel}", Number::currency($todayTablesRevenue, 'VND', 'vi'))
-                ->description('Tổng doanh thu từ các bàn trong ngày đã chọn')
+                ->description('Tổng doanh thu từ các bàn trong ngày')
                 ->descriptionIcon('heroicon-m-table-cells')
                 ->color('warning')
                 ->chart([7, 3, 4, 5, 6, 3, 5]),
 
             Stat::make("Doanh thu dịch vụ {$dateLabel}", Number::currency($todayServicesSold, 'VND', 'vi'))
-                ->description('Tổng doanh thu từ các dịch vụ trong ngày đã chọn')
+                ->description('Tổng doanh thu từ các dịch vụ trong ngày')
                 ->descriptionIcon('heroicon-m-shopping-bag')
                 ->color('info')
                 ->chart([7, 3, 4, 5, 6, 3, 5]),
             
             Stat::make("Đơn hàng {$dateLabel}", $todayOrders)
-                ->description('Số đơn hàng được tạo trong ngày đã chọn')
+                ->description('Số đơn hàng được tạo trong ngày')
                 ->descriptionIcon('heroicon-m-shopping-bag')
                 ->color('info'),
             

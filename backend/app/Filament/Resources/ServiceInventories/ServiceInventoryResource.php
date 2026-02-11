@@ -14,6 +14,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
+use App\Filament\Resources\ServiceInventories\RelationManagers;
 
 class ServiceInventoryResource extends Resource
 {
@@ -39,7 +40,9 @@ class ServiceInventoryResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            RelationManagers\TransactionsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
@@ -47,6 +50,7 @@ class ServiceInventoryResource extends Resource
         return [
             'index' => ListServiceInventories::route('/'),
             'create' => CreateServiceInventory::route('/create'),
+            'view' => \App\Filament\Resources\ServiceInventories\Pages\ViewServiceInventory::route('/{record}'),
             'edit' => EditServiceInventory::route('/{record}/edit'),
         ];
     }
